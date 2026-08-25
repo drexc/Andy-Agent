@@ -140,6 +140,16 @@ export {
 } from "./core/extensions/index.js";
 // Footer data provider (git branch + extension statuses - data not otherwise available to extensions)
 export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.js";
+// Graft Engine
+export {
+	CodeGraph,
+	GraftEngine,
+	generateFileSkeleton,
+	generateRepoMap,
+	graftGrep,
+	parseFileAst,
+	renderSkeleton,
+} from "./core/graft/index.js";
 export { convertToLlm } from "./core/messages.js";
 export { ModelRegistry } from "./core/model-registry.js";
 export type {
@@ -242,6 +252,7 @@ export {
 	type SkillPythonMetadata,
 } from "./core/skills.js";
 export { createSyntheticSourceInfo } from "./core/source-info.js";
+export { createGraftTools } from "./core/tools/graft-tools.js";
 // Tools
 export {
 	type BashOperations,

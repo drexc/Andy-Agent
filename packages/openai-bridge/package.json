@@ -1,0 +1,30 @@
+{
+  "name": "@andy-agent/openai-bridge",
+  "version": "0.8.0",
+  "description": "OpenAI-compatible HTTP/SSE bridge for Andy Agent RLM Core",
+  "type": "module",
+  "bin": {
+    "andy-agent-bridge": "dist/cli.js",
+    "prime-agent-bridge": "dist/cli.js"
+  },
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "tsx src/cli.ts",
+    "dev": "tsx watch src/cli.ts"
+  },
+  "dependencies": {
+    "@earendil-works/pi-agent-core": "^0.8.0",
+    "@earendil-works/pi-ai": "^0.8.0",
+    "@earendil-works/pi-coding-agent": "^0.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22.8.0"
+  }
+}

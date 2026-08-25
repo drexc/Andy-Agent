@@ -602,11 +602,15 @@ let BUILTIN_THEMES: Record<string, ThemeJson> | undefined;
 function getBuiltinThemes(): Record<string, ThemeJson> {
 	if (!BUILTIN_THEMES) {
 		const themesDir = getThemesDir();
-		const primePath = path.join(themesDir, "prime.json");
+		const andyPath = fs.existsSync(path.join(themesDir, "andy.json"))
+			? path.join(themesDir, "andy.json")
+			: path.join(themesDir, "prime.json");
 		const darkPath = path.join(themesDir, "dark.json");
 		const lightPath = path.join(themesDir, "light.json");
+		const andyTheme = JSON.parse(fs.readFileSync(andyPath, "utf-8")) as ThemeJson;
 		BUILTIN_THEMES = {
-			prime: JSON.parse(fs.readFileSync(primePath, "utf-8")) as ThemeJson,
+			andy: andyTheme,
+			prime: andyTheme,
 			dark: JSON.parse(fs.readFileSync(darkPath, "utf-8")) as ThemeJson,
 			light: JSON.parse(fs.readFileSync(lightPath, "utf-8")) as ThemeJson,
 		};
@@ -812,8 +816,8 @@ function detectTerminalBackground(): "dark" | "light" {
 }
 
 function getDefaultTheme(): string {
-	// Prime brand is dark-first; only fall back to light when the terminal is light.
-	return detectTerminalBackground() === "light" ? "light" : "prime";
+	// Andy brand is dark-first; only fall back to light when the terminal is light.
+	return detectTerminalBackground() === "light" ? "light" : "andy";
 }
 
 // ============================================================================
@@ -954,6 +958,7 @@ function startThemeWatcher(): void {
 	// Only watch if it's a custom theme (not built-in)
 	if (
 		!currentThemeName ||
+		currentThemeName === "andy" ||
 		currentThemeName === "prime" ||
 		currentThemeName === "dark" ||
 		currentThemeName === "light"

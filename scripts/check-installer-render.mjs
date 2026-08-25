@@ -10,6 +10,14 @@ const ansiPattern = /\x1b\[[0-?]*[ -/]*[@-~]/g;
 const syncEnd = "\x1b[?2026l";
 const failures = [];
 
+if (process.platform === "win32") {
+	const probe = spawnSync("sh", ["-c", "echo ok"]);
+	if (probe.error || probe.status !== 0) {
+		console.log("Installer render check skipped on Windows (sh is not available).");
+		process.exit(0);
+	}
+}
+
 if (mainCallIndex === -1) {
 	console.error('Installer render check failed: could not find final main "$@" call.');
 	process.exit(1);

@@ -1,0 +1,30 @@
+{
+  "name": "@andy-agent/webui",
+  "version": "0.8.0",
+  "description": "Modern WebUI for Andy Agent RLM Core & Graft Engine",
+  "type": "module",
+  "bin": {
+    "andy-agent-webui": "dist/server/cli.js",
+    "prime-agent-webui": "dist/server/cli.js"
+  },
+  "main": "dist/server/index.js",
+  "types": "dist/server/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "tsx src/server/cli.ts",
+    "dev": "tsx watch src/server/cli.ts"
+  },
+  "dependencies": {
+    "@earendil-works/pi-agent-core": "^0.8.0",
+    "@earendil-works/pi-ai": "^0.8.0",
+    "@earendil-works/pi-coding-agent": "^0.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22.8.0"
+  }
+}

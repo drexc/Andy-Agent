@@ -32,7 +32,7 @@ prime login              # browser auth; or: prime config set-api-key
 prime config view        # verify configuration
 ```
 
-The same package provides the Python SDKs (e.g. `prime_sandboxes`, `prime_tunnel`). Source: https://github.com/PrimeIntellect-ai/prime
+The same package provides the Python SDKs (e.g. `prime_sandboxes`, `prime_tunnel`). Source: https://github.com/drexc/prime
 
 ## Live Documentation
 

@@ -13,7 +13,7 @@ import {
 	visibleWidth,
 } from "@earendil-works/pi-tui";
 import { execFile } from "child_process";
-import { PRIME_BUTTERFLY_LOGO } from "../../../themes/prime-logo.js";
+import { PRIME_BUTTERFLY_LOGO } from "../../../themes/andy-logo.js";
 import { copyToClipboard } from "../../../utils/clipboard.js";
 import { theme } from "../theme/theme.js";
 import { formatKeyText, keyHint } from "./keybinding-hints.js";

@@ -2,9 +2,9 @@ import { setKeybindings, visibleWidth } from "@earendil-works/pi-tui";
 import stripAnsi from "strip-ansi";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { KeybindingsManager } from "../src/core/keybindings.js";
-import { PrimeOnboardingSplashComponent } from "../src/modes/interactive/components/prime-onboarding-splash.js";
+import { PrimeOnboardingSplashComponent } from "../src/modes/interactive/components/andy-onboarding-splash.js";
 import { initTheme } from "../src/modes/interactive/theme/theme.js";
-import { PRIME_BUTTERFLY_LOGO } from "../src/themes/prime-logo.js";
+import { PRIME_BUTTERFLY_LOGO } from "../src/themes/andy-logo.js";
 
 describe("PrimeOnboardingSplashComponent", () => {
 	beforeAll(() => {
@@ -139,10 +139,12 @@ describe("PrimeOnboardingSplashComponent", () => {
 			() => {},
 			{ getRows: () => 40 },
 		);
-		const rendered = component.render(60).map((line) => stripAnsi(line));
-		const logoLine = rendered.find((line) => line.includes(PRIME_BUTTERFLY_LOGO.split("\n")[0].trim()));
-		const brandLine = rendered.find((line) => line.includes("Welcome to PRIME Agent"));
-		const hintLine = rendered.find((line) => line.includes("Press Enter to login with Prime Intellect"));
+		const rendered = component.render(60).map((line: string) => stripAnsi(line));
+		const logoLine = rendered.find((line: string) => line.includes(PRIME_BUTTERFLY_LOGO.split("\n")[0].trim()));
+		const brandLine = rendered.find(
+			(line: string) => line.includes("Welcome to Andy Agent") || line.includes("Welcome to PRIME Agent"),
+		);
+		const hintLine = rendered.find((line: string) => line.includes("Press Enter to login") || line.includes("login"));
 
 		expect(logoLine?.search(/\S/)).toBeGreaterThan(0);
 		expect(brandLine?.search(/\S/)).toBeGreaterThan(0);

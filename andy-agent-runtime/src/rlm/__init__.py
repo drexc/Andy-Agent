@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .harness import HarnessEntry, HarnessScope, HarnessState, RefinementEvent, get_harness_state
+from . import graft
 
 try:
     from ipykernel.comm import Comm
@@ -291,6 +292,7 @@ _harness_state = _HarnessProxy()
 class _RLMCallable:
     harness = _harness_state
     get_harness_state = staticmethod(get_harness_state)
+    graft = graft
 
     async def run(self, prompt: str, **kwargs: Any) -> RLMSpawnHandle:
         return await run(prompt, **kwargs)
@@ -333,6 +335,7 @@ __all__ = [
     "delete_subagent",
     "find_models",
     "get_harness_state",
+    "graft",
     "harness",
     "host_request",
     "list_subagents",

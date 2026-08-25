@@ -1,6 +1,10 @@
 // UI Components for extensions
 
 export { AgentMessageComponent } from "./agent-message.js";
+export {
+	PrimeOnboardingSplashComponent,
+	PrimeOnboardingSplashComponent as AndyOnboardingSplashComponent,
+} from "./andy-onboarding-splash.js";
 export { ArminComponent } from "./armin.js";
 export { AssistantMessageComponent } from "./assistant-message.js";
 export { BashExecutionComponent } from "./bash-execution.js";
@@ -35,7 +39,6 @@ export { keyHint, keyText, rawKeyHint } from "./keybinding-hints.js";
 export { LoginDialogComponent } from "./login-dialog.js";
 export { ModelSelectorComponent } from "./model-selector.js";
 export { OAuthSelectorComponent } from "./oauth-selector.js";
-export { PrimeOnboardingSplashComponent } from "./prime-onboarding-splash.js";
 export { type ModelsCallbacks, type ModelsConfig, ScopedModelsSelectorComponent } from "./scoped-models-selector.js";
 export { type SettingsCallbacks, type SettingsConfig, SettingsSelectorComponent } from "./settings-selector.js";
 export { ShowImagesSelectorComponent } from "./show-images-selector.js";

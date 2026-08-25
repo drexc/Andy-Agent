@@ -235,7 +235,24 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	const allowedToolNames = options.allowedToolNames ?? options.tools ?? (options.noTools === "all" ? [] : undefined);
 	const includeGoals = options.includeGoals ?? (options.tools !== undefined || options.noTools !== "all");
 	const initialActiveToolNames: string[] =
-		options.initialActiveToolNames ?? (options.tools ? [...options.tools] : options.noTools ? [] : ["ipython"]);
+		options.initialActiveToolNames ??
+		(options.tools
+			? [...options.tools]
+			: options.noTools
+				? []
+				: [
+						"ipython",
+						"bash",
+						"edit",
+						"read",
+						"write",
+						"graft_map",
+						"graft_skeleton",
+						"graft_callers",
+						"graft_blast",
+						"graft_grep",
+						"graft_ask",
+					]);
 
 	let agent: Agent;
 

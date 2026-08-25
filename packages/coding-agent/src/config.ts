@@ -35,7 +35,7 @@ export const isBunBinary =
 /** Detect if Bun is the runtime (compiled binary or bun run) */
 export const isBunRuntime = !!process.versions.bun;
 
-export const SELF_UPDATE_INTERACTIVE_CHILD_ENV = "PRIME_AGENT_INTERACTIVE_SELF_UPDATE";
+export const SELF_UPDATE_INTERACTIVE_CHILD_ENV = "ANDY_AGENT_INTERACTIVE_SELF_UPDATE";
 export const SELF_UPDATE_NOT_ATTEMPTED_EXIT_CODE = 75;
 
 // =============================================================================
@@ -328,7 +328,7 @@ export function getSelfUpdateUnavailableInstruction(
 ): string {
 	const method = detectInstallMethod();
 	if (method === "bun-binary") {
-		return `Download from: https://github.com/PrimeIntellect-ai/prime-agent/releases/latest`;
+		return `Download from: https://github.com/drexc/prime-agent/releases/latest`;
 	}
 	if (method === "homebrew") {
 		return `Update with: brew upgrade ${APP_NAME}`;
@@ -495,10 +495,10 @@ const envPrefix =
 export const PACKAGE_NAME: string = pkg.name || "@earendil-works/pi-coding-agent";
 export const APP_NAME: string = piConfigName || "pi";
 export const APP_TITLE: string = piConfigName ? APP_NAME : "π";
-export const CONFIG_DIR_NAME: string = pkg.piConfig?.configDir || ".prime/agent";
+export const CONFIG_DIR_NAME: string = pkg.piConfig?.configDir || ".andy/agent";
 export const VERSION: string = pkg.version || "0.0.0";
 
-// e.g., PI_CODING_AGENT_DIR or PRIME_AGENT_CODING_AGENT_DIR
+// e.g., PI_CODING_AGENT_DIR or ANDY_AGENT_CODING_AGENT_DIR
 export const ENV_AGENT_DIR = `${envPrefix}_CODING_AGENT_DIR`;
 export const ENV_SESSION_DIR = `${envPrefix}_SESSION_DIR`;
 export const ENV_LEGACY_SESSION_DIR = `${envPrefix}_CODING_AGENT_SESSION_DIR`;
@@ -518,16 +518,21 @@ export function getShareViewerUrl(gistId: string): string {
 }
 
 // =============================================================================
-// User Config Paths (~/.prime/agent/*)
+// User Config Paths (~/.andy/agent/*)
 // =============================================================================
 
-/** Get the agent config directory (e.g., ~/.prime/agent/) */
+/** Get the agent config directory (e.g., ~/.andy/agent/) */
 export function getAgentDir(): string {
-	const envDir = process.env[ENV_AGENT_DIR];
+	const envDir = process.env[ENV_AGENT_DIR] || process.env.PRIME_AGENT_CODING_AGENT_DIR;
 	if (envDir) {
 		return expandTildePath(envDir);
 	}
-	return join(homedir(), CONFIG_DIR_NAME);
+	const andyDir = join(homedir(), CONFIG_DIR_NAME);
+	const primeDir = join(homedir(), ".prime", "agent");
+	if (!existsSync(andyDir) && existsSync(primeDir)) {
+		return primeDir;
+	}
+	return andyDir;
 }
 
 /** Get path to user's custom themes directory */

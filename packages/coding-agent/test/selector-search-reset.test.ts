@@ -2,9 +2,9 @@ import { setKeybindings, type TUI } from "@earendil-works/pi-tui";
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { AuthStorage } from "../src/core/auth-storage.js";
 import { KeybindingsManager } from "../src/core/keybindings.js";
+import { PrimeTeamSelectorComponent } from "../src/modes/interactive/components/andy-team-selector.js";
 import { ModelSelectorComponent } from "../src/modes/interactive/components/model-selector.js";
 import { OAuthSelectorComponent } from "../src/modes/interactive/components/oauth-selector.js";
-import { PrimeTeamSelectorComponent } from "../src/modes/interactive/components/prime-team-selector.js";
 import { ScopedModelsSelectorComponent } from "../src/modes/interactive/components/scoped-models-selector.js";
 import { initTheme } from "../src/modes/interactive/theme/theme.js";
 import { createHarness, type Harness } from "./suite/harness.js";
@@ -99,7 +99,7 @@ describe("searchable selector navigation", () => {
 				name: `Team ${String(index + 1).padStart(2, "0")}`,
 			})),
 			undefined,
-			(team) => {
+			(team: any) => {
 				selectedTeamId = team?.teamId;
 			},
 			() => {},

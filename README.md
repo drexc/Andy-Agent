@@ -14,16 +14,16 @@ Prime Agent: A Self-Improving RLM Harness
 
 <p align="center">
   <a href="packages/coding-agent/docs/index.md">Documentation</a> &bull;
-  <a href="https://github.com/PrimeIntellect-ai/verifiers">Verifiers</a> &bull;
-  <a href="https://github.com/PrimeIntellect-ai/prime-rl">PRIME-RL</a>
+  <a href="https://github.com/drexc/verifiers">Verifiers</a> &bull;
+  <a href="https://github.com/drexc/prime-rl">PRIME-RL</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/PrimeIntellect-ai/prime-agent/actions/workflows/ci.yml">
-    <img src="https://github.com/PrimeIntellect-ai/prime-agent/actions/workflows/ci.yml/badge.svg" alt="CI" />
+  <a href="https://github.com/drexc/prime-agent/actions/workflows/ci.yml">
+    <img src="https://github.com/drexc/prime-agent/actions/workflows/ci.yml/badge.svg" alt="CI" />
   </a>
-  <a href="https://github.com/PrimeIntellect-ai/prime-agent/actions/workflows/build-binaries.yml">
-    <img src="https://github.com/PrimeIntellect-ai/prime-agent/actions/workflows/build-binaries.yml/badge.svg" alt="Build Binaries" />
+  <a href="https://github.com/drexc/prime-agent/actions/workflows/build-binaries.yml">
+    <img src="https://github.com/drexc/prime-agent/actions/workflows/build-binaries.yml/badge.svg" alt="Build Binaries" />
   </a>
   <a href="https://arxiv.org/abs/2608.23552">
     <img src="https://img.shields.io/badge/arXiv-2608.23552-b31b1b.svg" alt="arXiv" />
@@ -32,7 +32,7 @@ Prime Agent: A Self-Improving RLM Harness
 
 <p align="center">
   <a href="https://trendshift.io/repositories/104249?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-104249" target="_blank" rel="noopener noreferrer">
-    <img src="https://trendshift.io/api/badge/repositories/104249" alt="PrimeIntellect-ai%2Fprime-agent | Trendshift" width="250" height="55" />
+    <img src="https://trendshift.io/api/badge/repositories/104249" alt="drexc%2Fprime-agent | Trendshift" width="250" height="55" />
   </a>
 </p>
 
@@ -109,7 +109,7 @@ Prime Agent is built for long-running work, especially for evaluations in resear
 
 ## Contributing
 
-Start with a GitHub Discussion for [general questions](https://github.com/PrimeIntellect-ai/prime-agent/discussions/categories/general), [bug reports](https://github.com/PrimeIntellect-ai/prime-agent/discussions/categories/bug-reports), and [feature requests](https://github.com/PrimeIntellect-ai/prime-agent/discussions/categories/feature-requests). Maintainers promote accepted work into Issues, and pull requests are reviewed from maintainers and vouched contributors.
+Start with a GitHub Discussion for [general questions](https://github.com/drexc/prime-agent/discussions/categories/general), [bug reports](https://github.com/drexc/prime-agent/discussions/categories/bug-reports), and [feature requests](https://github.com/drexc/prime-agent/discussions/categories/feature-requests). Maintainers promote accepted work into Issues, and pull requests are reviewed from maintainers and vouched contributors.
 
 Read the [contribution guidelines](CONTRIBUTING.md) for the full process. Report security vulnerabilities privately by following the [security policy](SECURITY.md).
 
