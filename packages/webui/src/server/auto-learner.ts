@@ -31,9 +31,12 @@ export class AutoLearningEngine {
 	) {
 		this.cwd = cwd;
 		this.logCallback = logCallback;
-		this.configPath = path.join(os.homedir(), ".prime", "agent", "autolearn.json");
+		const andyDir = path.join(os.homedir(), ".andy", "agent");
+		const primeDir = path.join(os.homedir(), ".prime", "agent");
+		const agentDir = existsSync(andyDir) || !existsSync(primeDir) ? andyDir : primeDir;
+		this.configPath = path.join(agentDir, "autolearn.json");
 		this.projectMemoryPath = path.join(cwd, "MEMORY.md");
-		this.globalMemoryPath = path.join(os.homedir(), ".prime", "agent", "MEMORY.md");
+		this.globalMemoryPath = path.join(agentDir, "MEMORY.md");
 
 		this.config = this.loadConfig();
 	}

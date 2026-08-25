@@ -84,7 +84,7 @@ export class OpenAiBridgeServer {
 					JSON.stringify(
 						{
 							status: "ok",
-							name: "Prime Agent OpenAI Bridge",
+							name: "Andy Agent OpenAI Bridge",
 							version: "0.8.0",
 							totalAvailableModels: models.length,
 							defaultModel: this.options.defaultModel || "auto/best-coding",
@@ -216,7 +216,7 @@ export class OpenAiBridgeServer {
 				id: m.id,
 				object: "model",
 				created: Math.floor(Date.now() / 1000),
-				owned_by: m.provider || "prime-agent",
+				owned_by: m.provider || "andy-agent",
 				root: m.id,
 				parent: null,
 			})),
@@ -308,7 +308,7 @@ export class OpenAiBridgeServer {
 					if (event.type === "tool_execution_start") {
 						const toolName = event.toolName || "tool";
 						const toolArgs = event.args ? JSON.stringify(event.args, null, 2) : "";
-						const toolCallMsg = `\n\n> ⚙️ **[Prime Agent Executing: ${toolName}]**\n\`\`\`python\n${toolArgs}\n\`\`\`\n\n`;
+						const toolCallMsg = `\n\n> ⚙️ **[Andy Agent Executing: ${toolName}]**\n\`\`\`python\n${toolArgs}\n\`\`\`\n\n`;
 						res.write(formatSseChunk(createChunk(reqId, modelId, toolCallMsg, null)));
 					}
 

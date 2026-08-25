@@ -188,7 +188,12 @@ export class AndyWebUiServer {
 
 			// --- 4. MEMORY.MD API ---
 			const projectMemoryPath = path.join(this.pool.cwd, "MEMORY.md");
-			const globalMemoryPath = path.join(os.homedir(), ".prime", "agent", "MEMORY.md");
+			const globalMemoryDir = existsSync(path.join(os.homedir(), ".andy", "agent"))
+				? path.join(os.homedir(), ".andy", "agent")
+				: existsSync(path.join(os.homedir(), ".prime", "agent"))
+					? path.join(os.homedir(), ".prime", "agent")
+					: path.join(os.homedir(), ".andy", "agent");
+			const globalMemoryPath = path.join(globalMemoryDir, "MEMORY.md");
 
 			if (method === "GET" && url === "/api/memory") {
 				const scope = parsedUrl.searchParams.get("scope") || "project";
@@ -197,7 +202,7 @@ export class AndyWebUiServer {
 				if (existsSync(targetPath)) {
 					content = readFileSync(targetPath, "utf-8");
 				} else {
-					content = `# Memory (${scope === "global" ? "Global" : `Project: ${path.basename(this.pool.cwd)}`})\n\nGuarda aquí el contexto persistente, decisiones arquitectónicas y preferencias que Prime Agent debe recordar permanentemente.\n`;
+					content = `# Memory (${scope === "global" ? "Global" : `Project: ${path.basename(this.pool.cwd)}`})\n\nGuarda aquí el contexto persistente, decisiones arquitectónicas y preferencias que Andy Agent debe recordar permanentemente.\n`;
 				}
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ scope, path: targetPath, exists: existsSync(targetPath), content }));
@@ -223,7 +228,7 @@ export class AndyWebUiServer {
 
 			// --- 5. AGENTS.MD (INSTRUCTIONS / PERSONA) API ---
 			const projectAgentsMdPath = path.join(this.pool.cwd, "AGENTS.md");
-			const globalAgentsMdPath = path.join(os.homedir(), ".prime", "agent", "AGENTS.md");
+			const globalAgentsMdPath = path.join(globalMemoryDir, "AGENTS.md");
 
 			if (method === "GET" && url === "/api/instructions") {
 				const scope = parsedUrl.searchParams.get("scope") || "project";
@@ -232,7 +237,7 @@ export class AndyWebUiServer {
 				if (existsSync(targetPath)) {
 					content = readFileSync(targetPath, "utf-8");
 				} else {
-					content = `# Agent Instructions (AGENTS.md)\n\nDefine aquí las pautas de estilo, convenciones de código y comportamiento de Prime Agent.\n`;
+					content = `# Agent Instructions (AGENTS.md)\n\nDefine aquí las pautas de estilo, convenciones de código y comportamiento de Andy Agent.\n`;
 				}
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ scope, path: targetPath, exists: existsSync(targetPath), content }));
@@ -1289,6 +1294,9 @@ ${prompt || ""}`;
 			maxTokens: body.max_tokens || body.max_completion_tokens,
 		};
 
+		const isDirectMode =
+			req.headers["x-andy-mode"] === "direct" || req.headers["x-andy-rlm"] === "false" || body.rlm === false;
+
 		if (isStream) {
 			res.writeHead(200, {
 				"Content-Type": "text/event-stream; charset=utf-8",
@@ -1308,92 +1316,234 @@ ${prompt || ""}`;
 			res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
 
 			let accumulatedText = "";
-			try {
-				const eventStream = stream(targetModel, context, streamOptions);
-				for await (const event of eventStream) {
-					if (isAborted || res.writableEnded) break;
-					if (event.type === "text_delta") {
-						accumulatedText += event.delta;
-						const chunk = {
+			if (!isDirectMode) {
+				// RLM Agentic Execution (Python Kernel, REPL, Graft, Recursive Tools)
+				const unsubscribe = session.subscribe((event: any) => {
+					if (isAborted || res.writableEnded) return;
+					try {
+						if (event.type === "message_update") {
+							const ame = event.assistantMessageEvent;
+							if (ame && ame.type === "text_delta" && ame.delta) {
+								accumulatedText += ame.delta;
+								const chunk = {
+									id: reqId,
+									object: "chat.completion.chunk",
+									created: Math.floor(Date.now() / 1000),
+									model: modelId,
+									choices: [{ index: 0, delta: { content: ame.delta }, finish_reason: null }],
+								};
+								res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+							} else if (ame && ame.type === "thinking_delta" && ame.delta) {
+								const chunk = {
+									id: reqId,
+									object: "chat.completion.chunk",
+									created: Math.floor(Date.now() / 1000),
+									model: modelId,
+									choices: [
+										{ index: 0, delta: { content: "", reasoning_content: ame.delta }, finish_reason: null },
+									],
+								};
+								res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+							}
+						} else if (event.type === "tool_call") {
+							this.addLog("RLM", "OpenAI Bridge", `RLM Tool started: ${event.toolName}`, event.input);
+						} else if (event.type === "tool_result") {
+							this.addLog("RLM", "OpenAI Bridge", `RLM Tool finished: ${event.toolName}`);
+						}
+					} catch (_e) {}
+				});
+
+				try {
+					const lastUser = nonSystem[nonSystem.length - 1];
+					let promptText = lastUser
+						? typeof lastUser.content === "string"
+							? lastUser.content
+							: JSON.stringify(lastUser.content)
+						: "Continue";
+
+					if (systemPrompt) {
+						promptText = `[System Instructions]\n${systemPrompt}\n\n[User Request]\n${promptText}`;
+					}
+
+					if (session.isStreaming) {
+						await session.prompt(promptText, { streamingBehavior: "followUp" });
+					} else {
+						await session.prompt(promptText);
+					}
+				} catch (err: any) {
+					this.addLog("WARN", "OpenAI Bridge", `RLM prompt error, falling back to direct stream: ${err.message}`);
+					try {
+						const eventStream = stream(targetModel, context, streamOptions);
+						for await (const event of eventStream) {
+							if (isAborted || res.writableEnded) break;
+							if (event.type === "text_delta") {
+								accumulatedText += event.delta;
+								const chunk = {
+									id: reqId,
+									object: "chat.completion.chunk",
+									created: Math.floor(Date.now() / 1000),
+									model: modelId,
+									choices: [{ index: 0, delta: { content: event.delta }, finish_reason: null }],
+								};
+								res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+							}
+						}
+					} catch (fallbackErr: any) {
+						this.addLog("ERROR", "OpenAI Bridge", `Fallback error: ${fallbackErr.message}`);
+					}
+				} finally {
+					unsubscribe();
+					req.off("close", onClientClose);
+
+					const lastUser = nonSystem[nonSystem.length - 1];
+					const lastUserText = lastUser
+						? typeof lastUser.content === "string"
+							? lastUser.content
+							: JSON.stringify(lastUser.content)
+						: "";
+					this.autoLearner
+						.processTurn({
+							sessionId,
+							prompt: lastUserText,
+							assistantResponse: accumulatedText,
+							modelId,
+						})
+						.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
+
+					if (!res.writableEnded) {
+						const stopChunk = {
 							id: reqId,
 							object: "chat.completion.chunk",
 							created: Math.floor(Date.now() / 1000),
 							model: modelId,
-							choices: [{ index: 0, delta: { content: event.delta }, finish_reason: null }],
+							choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
 						};
-						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-					} else if (event.type === "thinking_delta") {
-						const chunk = {
+						res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
+						res.write("data: [DONE]\n\n");
+						res.end();
+					}
+				}
+			} else {
+				// Direct LLM Streaming
+				try {
+					const eventStream = stream(targetModel, context, streamOptions);
+					for await (const event of eventStream) {
+						if (isAborted || res.writableEnded) break;
+						if (event.type === "text_delta") {
+							accumulatedText += event.delta;
+							const chunk = {
+								id: reqId,
+								object: "chat.completion.chunk",
+								created: Math.floor(Date.now() / 1000),
+								model: modelId,
+								choices: [{ index: 0, delta: { content: event.delta }, finish_reason: null }],
+							};
+							res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+						} else if (event.type === "thinking_delta") {
+							const chunk = {
+								id: reqId,
+								object: "chat.completion.chunk",
+								created: Math.floor(Date.now() / 1000),
+								model: modelId,
+								choices: [
+									{ index: 0, delta: { content: "", reasoning_content: event.delta }, finish_reason: null },
+								],
+							};
+							res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+						}
+					}
+				} catch (err: any) {
+					this.addLog("ERROR", "OpenAI Bridge", `Error during stream: ${err.message || String(err)}`);
+					if (!isAborted && !res.writableEnded) {
+						const errChunk = {
 							id: reqId,
 							object: "chat.completion.chunk",
 							created: Math.floor(Date.now() / 1000),
 							model: modelId,
 							choices: [
-								{ index: 0, delta: { content: "", reasoning_content: event.delta }, finish_reason: null },
+								{
+									index: 0,
+									delta: { content: `\n\n⚠️ Error: ${err.message || String(err)}` },
+									finish_reason: null,
+								},
 							],
 						};
-						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+						res.write(`data: ${JSON.stringify(errChunk)}\n\n`);
 					}
-				}
-			} catch (err: any) {
-				this.addLog("ERROR", "OpenAI Bridge", `Error during stream: ${err.message || String(err)}`);
-				if (!isAborted && !res.writableEnded) {
-					const errChunk = {
-						id: reqId,
-						object: "chat.completion.chunk",
-						created: Math.floor(Date.now() / 1000),
-						model: modelId,
-						choices: [
-							{
-								index: 0,
-								delta: { content: `\n\n⚠️ Error: ${err.message || String(err)}` },
-								finish_reason: null,
-							},
-						],
-					};
-					res.write(`data: ${JSON.stringify(errChunk)}\n\n`);
-				}
-			} finally {
-				req.off("close", onClientClose);
+				} finally {
+					req.off("close", onClientClose);
 
-				// Trigger Auto-Learning in background
-				const lastUser = nonSystem[nonSystem.length - 1];
-				const lastUserText = lastUser
-					? typeof lastUser.content === "string"
-						? lastUser.content
-						: JSON.stringify(lastUser.content)
-					: "";
-				this.autoLearner
-					.processTurn({
-						sessionId,
-						prompt: lastUserText,
-						assistantResponse: accumulatedText,
-						modelId,
-					})
-					.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
+					const lastUser = nonSystem[nonSystem.length - 1];
+					const lastUserText = lastUser
+						? typeof lastUser.content === "string"
+							? lastUser.content
+							: JSON.stringify(lastUser.content)
+						: "";
+					this.autoLearner
+						.processTurn({
+							sessionId,
+							prompt: lastUserText,
+							assistantResponse: accumulatedText,
+							modelId,
+						})
+						.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
 
-				if (!res.writableEnded) {
-					const stopChunk = {
-						id: reqId,
-						object: "chat.completion.chunk",
-						created: Math.floor(Date.now() / 1000),
-						model: modelId,
-						choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
-					};
-					res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
-					res.write("data: [DONE]\n\n");
-					res.end();
+					if (!res.writableEnded) {
+						const stopChunk = {
+							id: reqId,
+							object: "chat.completion.chunk",
+							created: Math.floor(Date.now() / 1000),
+							model: modelId,
+							choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+						};
+						res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
+						res.write("data: [DONE]\n\n");
+						res.end();
+					}
 				}
 			}
 		} else {
 			// Non-streaming standard JSON response
 			try {
-				const result = await complete(targetModel, context, streamOptions);
-				const accumulatedText =
-					result.content
-						.filter((c: any) => c.type === "text")
-						.map((c: any) => c.text)
-						.join("\n") || "";
+				let accumulatedText = "";
+				if (!isDirectMode) {
+					// RLM execution
+					const unsubscribe = session.subscribe((event: any) => {
+						if (event.type === "message_update") {
+							const ame = event.assistantMessageEvent;
+							if (ame && ame.type === "text_delta" && ame.delta) {
+								accumulatedText += ame.delta;
+							}
+						}
+					});
+					try {
+						const lastUser = nonSystem[nonSystem.length - 1];
+						let promptText = lastUser
+							? typeof lastUser.content === "string"
+								? lastUser.content
+								: JSON.stringify(lastUser.content)
+							: "Continue";
+
+						if (systemPrompt) {
+							promptText = `[System Instructions]\n${systemPrompt}\n\n[User Request]\n${promptText}`;
+						}
+
+						if (session.isStreaming) {
+							await session.prompt(promptText, { streamingBehavior: "followUp" });
+						} else {
+							await session.prompt(promptText);
+						}
+					} finally {
+						unsubscribe();
+					}
+				} else {
+					const result = await complete(targetModel, context, streamOptions);
+					accumulatedText =
+						result.content
+							.filter((c: any) => c.type === "text")
+							.map((c: any) => c.text)
+							.join("\n") || "";
+				}
 
 				const lastUser = nonSystem[nonSystem.length - 1];
 				const lastUserText = lastUser
@@ -1428,9 +1578,9 @@ ${prompt || ""}`;
 							},
 						],
 						usage: {
-							prompt_tokens: result.usage?.input || 0,
-							completion_tokens: result.usage?.output || 0,
-							total_tokens: result.usage?.totalTokens || 0,
+							prompt_tokens: 0,
+							completion_tokens: 0,
+							total_tokens: 0,
 						},
 					}),
 				);

@@ -686,7 +686,7 @@ class McpRegistryTest(unittest.TestCase):
     def test_shutdown_hook_supports_synchronous_kernel_handler(self):
         class Kernel:
             def __init__(self):
-                self._prime_agent_mcp_shutdown = False
+                self._andy_agent_mcp_shutdown = False
 
             def do_shutdown(self, restart):
                 return {"status": "ok", "restart": restart}
@@ -705,7 +705,7 @@ class McpRegistryTest(unittest.TestCase):
 
     def test_shutdown_hook_runs_kernel_handler_when_mcp_close_fails(self):
         original = mock.AsyncMock(return_value={"status": "ok", "restart": False})
-        kernel = SimpleNamespace(_prime_agent_mcp_shutdown=False, do_shutdown=original)
+        kernel = SimpleNamespace(_andy_agent_mcp_shutdown=False, do_shutdown=original)
         shell = SimpleNamespace(kernel=kernel)
 
         async def scenario():

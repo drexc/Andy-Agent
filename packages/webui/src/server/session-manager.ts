@@ -47,7 +47,7 @@ export class WebUiSessionPool {
 		this.modelRegistry = ModelRegistry.create(this.authStorage);
 		this.settingsManager = SettingsManager.create(cwd);
 		this.graft = new GraftEngine(cwd);
-		this.storageDir = path.join(os.homedir(), ".prime", "agent", "webui_sessions");
+		this.storageDir = path.join(os.homedir(), ".andy", "agent", "webui_sessions");
 		if (!existsSync(this.storageDir)) {
 			mkdirSync(this.storageDir, { recursive: true });
 		}

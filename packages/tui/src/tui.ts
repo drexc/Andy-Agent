@@ -1670,9 +1670,13 @@ export class TUI extends Container {
 		const debugRedraw = process.env.PI_DEBUG_REDRAW === "1";
 		const logRedraw = (reason: string): void => {
 			if (!debugRedraw) return;
-			const logPath = path.join(os.homedir(), ".prime", "agent", "pi-debug.log");
+			const logDir = path.join(os.homedir(), ".andy", "agent");
+			const logPath = path.join(logDir, "pi-debug.log");
 			const msg = `[${new Date().toISOString()}] fullRender: ${reason} (prev=${this.previousLines.length}, new=${newLines.length}, height=${height})\n`;
-			fs.appendFileSync(logPath, msg);
+			try {
+				fs.mkdirSync(logDir, { recursive: true });
+				fs.appendFileSync(logPath, msg);
+			} catch {}
 		};
 
 		// First render - just output everything without clearing (assumes clean screen)
@@ -1852,7 +1856,7 @@ export class TUI extends Container {
 			const isImage = isImageLine(line);
 			if (!isImage && visibleWidth(line) > width) {
 				// Log all lines to crash file for debugging
-				const crashLogPath = path.join(os.homedir(), ".prime", "agent", "pi-crash.log");
+				const crashLogPath = path.join(os.homedir(), ".andy", "agent", "pi-crash.log");
 				const crashData = [
 					`Crash at ${new Date().toISOString()}`,
 					`Terminal width: ${width}`,

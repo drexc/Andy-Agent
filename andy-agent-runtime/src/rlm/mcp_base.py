@@ -44,7 +44,7 @@ class NotEnabled(RuntimeError):
         self.server = server
         super().__init__(
             f"The '{server}' integration is not enabled: no credentials found. "
-            f"Tell the user to run `/mcp login {server}` in Prime Agent to connect it. "
+            f"Tell the user to run `/mcp login {server}` in Andy Agent to connect it. "
             f"Do not ask them to set environment variables."
         )
 
@@ -54,11 +54,12 @@ class McpToolError(RuntimeError):
 
 
 def _agent_dir() -> Path:
-    """Resolve the Prime Agent config dir the same way the rest of the runtime does."""
+    """Resolve the Andy Agent config dir the same way the rest of the runtime does."""
     raw = (
-        os.environ.get("PRIME_AGENT_CODING_AGENT_DIR")
+        os.environ.get("ANDY_AGENT_CODING_AGENT_DIR")
+        or os.environ.get("PRIME_AGENT_CODING_AGENT_DIR")
         or os.environ.get("PI_CODING_AGENT_DIR")
-        or str(Path.home() / ".prime" / "agent")
+        or str(Path.home() / ".andy" / "agent")
     )
     # resolve() so a relative env override reads auth.json from the right place,
     # not relative to the kernel's cwd.
@@ -221,15 +222,15 @@ class McpIntegration:
         if "headers" in params:
             cm = transport(url, headers=auth_header)
         elif "http_client" in params:
-            # This SDK shape requires its companion httpx2 client (the transport calls client.sse()).
-            import httpx2  # noqa: PLC0415
+            # This SDK shape requires its companion httpx client (the transport calls client.sse()).
+            import httpx  # noqa: PLC0415
 
             # SDK-factory timeouts; a default client's 5s read cap drops idle SSE streams.
             # No redirects: a redirecting endpoint must not receive the bearer header.
             client = await stack.enter_async_context(
-                httpx2.AsyncClient(
+                httpx.AsyncClient(
                     headers=auth_header,
-                    timeout=httpx2.Timeout(30.0, read=300.0),
+                    timeout=httpx.Timeout(30.0, read=300.0),
                     follow_redirects=False,
                 )
             )

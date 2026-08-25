@@ -664,7 +664,7 @@ def install_shutdown_hook() -> None:
         kernel = get_ipython().kernel  # type: ignore[name-defined]
     except (AttributeError, NameError):
         return
-    if getattr(kernel, "_prime_agent_mcp_shutdown", False):
+    if getattr(kernel, "_andy_agent_mcp_shutdown", False) or getattr(kernel, "_prime_agent_mcp_shutdown", False):
         return
     _registry.bind_owner()
     original = kernel.do_shutdown
@@ -673,11 +673,11 @@ def install_shutdown_hook() -> None:
         try:
             await close()
         except BaseException as exc:
-            print(f"Prime Agent MCP shutdown failed: {type(exc).__name__}: {exc}", file=sys.stderr)
+            print(f"Andy Agent MCP shutdown failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         result = original(restart)
         if hasattr(result, "__await__"):
             return await result
         return result
 
     kernel.do_shutdown = do_shutdown
-    kernel._prime_agent_mcp_shutdown = True
+    kernel._andy_agent_mcp_shutdown = True

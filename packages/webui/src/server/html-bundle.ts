@@ -365,7 +365,7 @@ export function getWebUiHtml(): string {
             </div>
           </div>
         </div>
-        <p class="text-center text-[11px] text-slate-400 mt-2">Prime Agent RLM 0.8.0 • Graft Context Engine & Memory Activos</p>
+        <p class="text-center text-[11px] text-slate-400 mt-2">Andy Agent RLM 0.8.0 • Graft Context Engine & Memory Activos</p>
       </div>
     </div>
 
@@ -756,7 +756,7 @@ export function getWebUiHtml(): string {
               <label class="block text-slate-300 mb-1 font-medium">Destino de la Memoria</label>
               <select id="settingAutoLearnScope" class="w-full bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs">
                 <option value="project" selected>Memoria del Proyecto actual (./MEMORY.md)</option>
-                <option value="global">Memoria Global de Usuario (~/.prime/agent/MEMORY.md)</option>
+                <option value="global">Memoria Global de Usuario (~/.andy/agent/MEMORY.md)</option>
               </select>
             </div>
           </div>
@@ -1494,7 +1494,7 @@ export function getWebUiHtml(): string {
               <div>
                 <h2 class="text-xl font-bold text-white tracking-tight">¿En qué trabajamos hoy?</h2>
                 <p class="text-xs text-slate-400 mt-1 max-w-sm">
-                  Prime Agent RLM con kernel interactivo Python, motor estructural Graft, MEMORY.md, AGENTS.md y soporte multimodelo.
+                  Andy Agent RLM con kernel interactivo Python, motor estructural Graft, MEMORY.md, AGENTS.md y soporte multimodelo.
                 </p>
               </div>
             </div>

@@ -1156,7 +1156,8 @@ function detectCompat(model: Model<"openai-completions">): ResolvedOpenAIComplet
 	const isMoonshot = provider === "moonshotai" || provider === "moonshotai-cn" || baseUrl.includes("api.moonshot.");
 	const isCloudflareWorkersAI = provider === "cloudflare-workers-ai" || baseUrl.includes("api.cloudflare.com");
 	const isCloudflareAiGateway = provider === "cloudflare-ai-gateway" || baseUrl.includes("gateway.ai.cloudflare.com");
-	const isPrimeInference = provider === "prime-inference" || baseUrl.includes("api.pinference.ai");
+	const isPrimeInference =
+		provider === "prime-inference" || provider === "andy-inference" || baseUrl.includes("api.pinference.ai");
 
 	const isNonStandard =
 		provider === "cerebras" ||

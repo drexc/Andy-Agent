@@ -1,4 +1,4 @@
-"""Graft Context Engine for Prime Agent RLM.
+"""Graft Context Engine for Andy Agent RLM.
 
 Provides high-speed, zero-token structural codebase indexing, skeletons,
 dependency/callers graphs, architecture maps, and blast radius analysis.
@@ -25,6 +25,7 @@ DEFAULT_IGNORES = {
     "venv",
     ".venv",
     "kernel-venv",
+    ".andy",
     ".prime",
     ".gemini",
     "__pycache__",
