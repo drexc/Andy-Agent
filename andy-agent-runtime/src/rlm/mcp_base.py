@@ -57,7 +57,7 @@ def _agent_dir() -> Path:
     """Resolve the Andy Agent config dir the same way the rest of the runtime does."""
     raw = (
         os.environ.get("ANDY_AGENT_CODING_AGENT_DIR")
-        or os.environ.get("PRIME_AGENT_CODING_AGENT_DIR")
+        or os.environ.get("ANDY_AGENT_CODING_AGENT_DIR")
         or os.environ.get("PI_CODING_AGENT_DIR")
         or str(Path.home() / ".andy" / "agent")
     )

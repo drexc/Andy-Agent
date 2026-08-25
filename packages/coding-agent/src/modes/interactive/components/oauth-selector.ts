@@ -200,8 +200,10 @@ export class OAuthSelectorComponent extends Container implements Focusable {
 				return rankDelta;
 			}
 			if (this.mode === "login" && a.id !== b.id) {
-				if (a.id === PRIME_INFERENCE_PROVIDER_ID) return -1;
-				if (b.id === PRIME_INFERENCE_PROVIDER_ID) return 1;
+				const isAndyA = a.id === "andy-inference" || a.id === PRIME_INFERENCE_PROVIDER_ID;
+				const isAndyB = b.id === "andy-inference" || b.id === PRIME_INFERENCE_PROVIDER_ID;
+				if (isAndyA && !isAndyB) return -1;
+				if (isAndyB && !isAndyA) return 1;
 			}
 			return compareAuthSelectorProviders(a, b);
 		});
@@ -346,7 +348,7 @@ export class OAuthSelectorComponent extends Container implements Focusable {
 			case "environment":
 				return theme.fg("success", `env: ${status.label ?? "API key"}`);
 			case "prime_cli":
-				return theme.fg("success", status.label ?? "Prime CLI");
+				return theme.fg("success", status.label ?? "Andy CLI");
 			case "runtime":
 				return theme.fg("success", "runtime API key");
 			case "fallback":

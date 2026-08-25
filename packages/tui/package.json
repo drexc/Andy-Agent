@@ -28,7 +28,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/drexc/prime-agent.git",
+		"url": "git+https://github.com/drexc/andy-agent.git",
 		"directory": "packages/tui"
 	},
 	"engines": {

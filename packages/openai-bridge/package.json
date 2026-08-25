@@ -5,7 +5,7 @@
   "type": "module",
   "bin": {
     "andy-agent-bridge": "dist/cli.js",
-    "prime-agent-bridge": "dist/cli.js"
+    "andy-agent-bridge": "dist/cli.js"
   },
   "main": "dist/server.js",
   "types": "dist/server.d.ts",

@@ -3,7 +3,7 @@
 ## [0.8.0] - 2026-08-21
 
 - Added endpoint binding to MCP OAuth credentials: tokens record the URL they were issued for, and refreshes carry the original binding forward without ever inferring one for unbound legacy credentials.
-- Added Fast mode (service_tier `priority`) support for OpenAI API-key models GPT-5.4/GPT-5.5/GPT-5.6, and corrected the GPT-5.6 fast-pricing multiplier from 2.5x to 2x per OpenAI's pricing table ([#1595](https://github.com/drexc/prime-agent/discussions/1595)).
+- Added Fast mode (service_tier `priority`) support for OpenAI API-key models GPT-5.4/GPT-5.5/GPT-5.6, and corrected the GPT-5.6 fast-pricing multiplier from 2.5x to 2x per OpenAI's pricing table ([#1595](https://github.com/drexc/andy-agent/discussions/1595)).
 - Fixed path-scoped protected-resource discovery and resource-bound refresh for MCP OAuth servers.
 
 ## [0.7.4] - 2026-08-19
@@ -11,7 +11,7 @@
 ## [0.7.3] - 2026-08-17
 
 - Added provider-derived reasoning levels for OpenRouter and Prime Inference models, including sparse, mandatory, toggle-only, and explicit-off capabilities.
-- Added Qwen 3.8 Max to the featured Prime Inference catalog ([#1247](https://github.com/drexc/prime-agent/pull/1247) by [@eliebak](https://github.com/eliebak)).
+- Added Qwen 3.8 Max to the featured Prime Inference catalog ([#1247](https://github.com/drexc/andy-agent/pull/1247) by [@eliebak](https://github.com/eliebak)).
 - Refreshed generated provider catalogs, removed retired routes, and aligned provider defaults and cross-provider handoff fixtures with models currently served.
 
 ## [0.7.2] - 2026-08-11
@@ -52,7 +52,7 @@
 
 - Added provider service-tier forwarding to shared stream options.
 - Removed team-gated internal Prime Inference routes from the public model catalog so clients can discover them from authenticated team catalogs instead.
-- Fixed the generated Nemotron 3 Ultra output cap being dropped when OpenRouter omits max completion tokens ([#420](https://github.com/drexc/prime-agent/pull/420)).
+- Fixed the generated Nemotron 3 Ultra output cap being dropped when OpenRouter omits max completion tokens ([#420](https://github.com/drexc/andy-agent/pull/420)).
 
 ## [0.3.0] - 2026-07-13
 
@@ -75,24 +75,24 @@
 
 ## [0.2.5] - 2026-07-06
 
-- Added Claude Fable 5 to the Prime Inference model catalog and refreshed generated model metadata ([#317](https://github.com/drexc/prime-agent/pull/317)).
-- Changed provider stream failures to preserve classified causes, raw stop reasons, and request IDs instead of collapsing them into generic unknown errors ([#313](https://github.com/drexc/prime-agent/pull/313)).
+- Added Claude Fable 5 to the Prime Inference model catalog and refreshed generated model metadata ([#317](https://github.com/drexc/andy-agent/pull/317)).
+- Changed provider stream failures to preserve classified causes, raw stop reasons, and request IDs instead of collapsing them into generic unknown errors ([#313](https://github.com/drexc/andy-agent/pull/313)).
 
 ## [0.2.4] - 2026-07-01
 
-- Added Claude Fable 5 support on the Anthropic and Bedrock providers, handling its always-on adaptive thinking by never sending an explicit `thinking: disabled` or sampling params (which Fable rejects with a 400) ([#302](https://github.com/drexc/prime-agent/issues/302)).
-- Fixed the `openai-completions` and `openai-responses` providers serializing empty tool results as a literal "(see attached image)" placeholder; the placeholder is now gated on the result actually having images, matching the google-shared and mistral providers ([#290](https://github.com/drexc/prime-agent/issues/290)).
+- Added Claude Fable 5 support on the Anthropic and Bedrock providers, handling its always-on adaptive thinking by never sending an explicit `thinking: disabled` or sampling params (which Fable rejects with a 400) ([#302](https://github.com/drexc/andy-agent/issues/302)).
+- Fixed the `openai-completions` and `openai-responses` providers serializing empty tool results as a literal "(see attached image)" placeholder; the placeholder is now gated on the result actually having images, matching the google-shared and mistral providers ([#290](https://github.com/drexc/andy-agent/issues/290)).
 
 ## [0.2.3] - 2026-06-30
 
-- Added a `./mcp` entry point with a built-in MCP server catalog (Linear, Notion) and generic OAuth 2.1 (PKCE + dynamic client registration) providers stored as `mcp:<server>` in `auth.json`; the local OAuth callback server tries a range of ports so a stale or concurrent login can't block sign-in ([#280](https://github.com/drexc/prime-agent/issues/280)).
-- Added the `qwen/qwen3-30b-a3b-instruct-2507` model to the Prime Inference catalog ([#284](https://github.com/drexc/prime-agent/issues/284)).
+- Added a `./mcp` entry point with a built-in MCP server catalog (Linear, Notion) and generic OAuth 2.1 (PKCE + dynamic client registration) providers stored as `mcp:<server>` in `auth.json`; the local OAuth callback server tries a range of ports so a stale or concurrent login can't block sign-in ([#280](https://github.com/drexc/andy-agent/issues/280)).
+- Added the `qwen/qwen3-30b-a3b-instruct-2507` model to the Prime Inference catalog ([#284](https://github.com/drexc/andy-agent/issues/284)).
 
 ## [0.2.2] - 2026-06-25
 
-- Added a curated `vision` flag on Prime Inference model metadata so vision-capable models advertise `["text", "image"]` input, since the Prime Inference models API reports no modality data ([#261](https://github.com/drexc/prime-agent/issues/261)).
-- Changed Prime Inference model names to drop the redundant ` (Prime Inference)` suffix at the generator source ([#252](https://github.com/drexc/prime-agent/issues/252)).
-- Fixed the declared context window for Prime Inference Claude Opus 4.6/4.7/4.8 and Sonnet 4.6 to 200k (the route lacks the long-context beta), and added `calculatePromptTokens` so context budgeting counts prompt tokens only ([#246](https://github.com/drexc/prime-agent/issues/246)).
+- Added a curated `vision` flag on Prime Inference model metadata so vision-capable models advertise `["text", "image"]` input, since the Prime Inference models API reports no modality data ([#261](https://github.com/drexc/andy-agent/issues/261)).
+- Changed Prime Inference model names to drop the redundant ` (Prime Inference)` suffix at the generator source ([#252](https://github.com/drexc/andy-agent/issues/252)).
+- Fixed the declared context window for Prime Inference Claude Opus 4.6/4.7/4.8 and Sonnet 4.6 to 200k (the route lacks the long-context beta), and added `calculatePromptTokens` so context budgeting counts prompt tokens only ([#246](https://github.com/drexc/andy-agent/issues/246)).
 
 ## [0.2.1] - 2026-06-23
 

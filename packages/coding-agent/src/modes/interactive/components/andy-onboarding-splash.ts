@@ -1,15 +1,17 @@
 import { type Component, getKeybindings, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
-import { PRIME_BUTTERFLY_LOGO } from "../../../themes/andy-logo.js";
+import { ANDY_BUTTERFLY_LOGO } from "../../../themes/andy-logo.js";
 import { type ThemeColor, theme } from "../theme/theme.js";
 
-interface PrimeOnboardingSplashOptions {
+export interface AndyOnboardingSplashOptions {
 	getRows?: () => number;
 	requestRender?: () => void;
 	animationIntervalMs?: number;
 	continueActionLabel?: string;
 }
 
-const LOGO_LINES = PRIME_BUTTERFLY_LOGO.split("\n");
+export type PrimeOnboardingSplashOptions = AndyOnboardingSplashOptions;
+
+const LOGO_LINES = ANDY_BUTTERFLY_LOGO.split("\n");
 const LOGO_WIDTH = LOGO_LINES.reduce((max, line) => Math.max(max, visibleWidth(line)), 0);
 const ANIMATION_INTERVAL_MS = 120;
 const LAB_FIELD_HEIGHT = 14;
@@ -48,7 +50,7 @@ interface QuietZone {
 	bottom: number;
 }
 
-export class PrimeOnboardingSplashComponent implements Component {
+export class AndyOnboardingSplashComponent implements Component {
 	private frame = 0;
 	private animationInterval?: ReturnType<typeof setInterval>;
 	private progressMessage?: string;
@@ -56,7 +58,7 @@ export class PrimeOnboardingSplashComponent implements Component {
 	constructor(
 		private readonly onSelect: () => void,
 		private readonly onCancel: () => void,
-		private readonly options: PrimeOnboardingSplashOptions = {},
+		private readonly options: AndyOnboardingSplashOptions = {},
 	) {
 		if (options.requestRender) {
 			this.animationInterval = setInterval(() => {
@@ -115,7 +117,7 @@ export class PrimeOnboardingSplashComponent implements Component {
 		if (this.progressMessage) {
 			return [{ text: this.progressMessage, tone: "muted" }];
 		}
-		const actionLabel = this.options.continueActionLabel ?? "login with Prime Intellect";
+		const actionLabel = this.options.continueActionLabel ?? "login with Andy";
 		return [
 			{ text: "Press ", tone: "muted" },
 			{ text: "Enter", tone: "accent", bold: true },
@@ -126,7 +128,7 @@ export class PrimeOnboardingSplashComponent implements Component {
 	private formatBrandLine(): PanelTextLine {
 		return [
 			{ text: "Welcome to ", tone: "text" },
-			{ text: "PRIME", tone: "text", bold: true },
+			{ text: "ANDY", tone: "text", bold: true },
 			{ text: " Agent", tone: "text", italic: true },
 		];
 	}
@@ -373,3 +375,6 @@ export class PrimeOnboardingSplashComponent implements Component {
 		return contentLineCount;
 	}
 }
+
+export const PrimeOnboardingSplashComponent = AndyOnboardingSplashComponent;
+export type PrimeOnboardingSplashComponent = AndyOnboardingSplashComponent;

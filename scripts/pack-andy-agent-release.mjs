@@ -17,15 +17,15 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const defaultOutputDir = join(root, "packages", "coding-agent", "release");
-const defaultBaseUrl = process.env.PRIME_AGENT_DOWNLOAD_BASE_URL;
-const publicPackageName = process.env.PRIME_AGENT_PACKAGE_NAME || "prime-agent";
-const publicCommandName = process.env.PRIME_AGENT_CMD || "prime-agent";
+const defaultBaseUrl = process.env.ANDY_AGENT_DOWNLOAD_BASE_URL;
+const publicPackageName = process.env.ANDY_AGENT_PACKAGE_NAME || "andy-agent";
+const publicCommandName = process.env.ANDY_AGENT_CMD || "andy-agent";
 const releaseChannels = new Set(["stable", "beta"]);
 
 const releasePackages = [
-	{ packageDir: "ai", publicName: undefined, artifactName: "prime-agent-ai" },
-	{ packageDir: "tui", publicName: undefined, artifactName: "prime-agent-tui" },
-	{ packageDir: "agent", publicName: undefined, artifactName: "prime-agent-core" },
+	{ packageDir: "ai", publicName: undefined, artifactName: "andy-agent-ai" },
+	{ packageDir: "tui", publicName: undefined, artifactName: "andy-agent-tui" },
+	{ packageDir: "agent", publicName: undefined, artifactName: "andy-agent-core" },
 	{ packageDir: "coding-agent", publicName: publicPackageName, artifactName: publicPackageName },
 ];
 
@@ -81,7 +81,7 @@ function parseArgs(args) {
 	}
 
 	if (!parsed.baseUrl) {
-		throw new Error("--base-url or PRIME_AGENT_DOWNLOAD_BASE_URL is required");
+		throw new Error("--base-url or ANDY_AGENT_DOWNLOAD_BASE_URL is required");
 	}
 
 	parsed.baseUrl = parsed.baseUrl.replace(/\/+$/, "");
@@ -89,14 +89,14 @@ function parseArgs(args) {
 }
 
 function printHelp() {
-	console.log(`Usage: node scripts/pack-prime-agent-release.mjs --base-url url [--channel stable|beta] [--version x.y.z] [--out-dir path]
+	console.log(`Usage: node scripts/pack-andy-agent-release.mjs --base-url url [--channel stable|beta] [--version x.y.z] [--out-dir path]
 
 Creates private npm tarballs for R2 distribution:
 
-  <out-dir>/artifacts/prime-agent-<version>.tgz
-  <out-dir>/artifacts/prime-agent-ai-<version>.tgz
-  <out-dir>/artifacts/prime-agent-core-<version>.tgz
-  <out-dir>/artifacts/prime-agent-tui-<version>.tgz
+  <out-dir>/artifacts/andy-agent-<version>.tgz
+  <out-dir>/artifacts/andy-agent-ai-<version>.tgz
+  <out-dir>/artifacts/andy-agent-core-<version>.tgz
+  <out-dir>/artifacts/andy-agent-tui-<version>.tgz
   <out-dir>/artifacts/SHA256SUMS
   <out-dir>/artifacts/<channel>
   <out-dir>/artifacts/latest.json (stable) or beta.json (beta)
@@ -193,7 +193,7 @@ function createReleasePackageJson(sourcePackage, packageName, releaseVersion, in
 		packageJson.piConfig = {
 			...(packageJson.piConfig || {}),
 			name: publicCommandName,
-			configDir: ".prime/agent",
+			configDir: ".andy/agent",
 		};
 	}
 
@@ -241,7 +241,7 @@ function main() {
 		]),
 	);
 	const cliPackage = sourcePackages.get("coding-agent");
-	const releaseVersion = args.version || normalizeVersion(process.env.PRIME_AGENT_VERSION || cliPackage.version);
+	const releaseVersion = args.version || normalizeVersion(process.env.ANDY_AGENT_VERSION || cliPackage.version);
 
 	for (const releasePackage of releasePackages) {
 		requireBuiltPackage(releasePackage.packageDir);

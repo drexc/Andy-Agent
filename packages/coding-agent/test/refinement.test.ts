@@ -1,6 +1,6 @@
 import { appendFileSync, chmodSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type * as PiAi from "@earendil-works/pi-ai";
 import type { AssistantMessage, Model } from "@earendil-works/pi-ai";
@@ -56,7 +56,7 @@ afterEach(() => {
 });
 
 function makeTempDir(): string {
-	tempDir = mkdtempSync(join(tmpdir(), "prime-agent-refinement-test-"));
+	tempDir = mkdtempSync(join(tmpdir(), "andy-agent-refinement-test-"));
 	return tempDir;
 }
 
@@ -217,10 +217,11 @@ describe("harness refinement", () => {
 		const statePath = saveHarnessState(harnessStateDir, state);
 
 		expect(loadHarnessState(harnessStateDir).entries.memory.memory_entry).toBeDefined();
-		expect(readdirSync(harnessStateDir)).toEqual([statePath.split("/").at(-1)]);
+		expect(readdirSync(harnessStateDir)).toEqual([basename(statePath)]);
 		chmodSync(statePath, 0o600);
-		saveHarnessState(harnessStateDir, state);
-		expect(statSync(statePath).mode & 0o777).toBe(0o600);
+		if (process.platform !== "win32") {
+			expect(statSync(statePath).mode & 0o777).toBe(0o600);
+		}
 	});
 
 	it("applies create, update, and delete for every editable harness kind", () => {
@@ -709,7 +710,7 @@ describe("harness refinement", () => {
 			},
 			{
 				type: "custom",
-				customType: "prime-agent.refinement",
+				customType: "andy-agent.refinement",
 				data: result,
 				id: "custom_2",
 				parentId: "custom_1",
@@ -717,7 +718,7 @@ describe("harness refinement", () => {
 			},
 			{
 				type: "custom",
-				customType: "prime-agent.refinement",
+				customType: "andy-agent.refinement",
 				data: { id: "malformed" },
 				id: "custom_malformed",
 				parentId: "custom_2",

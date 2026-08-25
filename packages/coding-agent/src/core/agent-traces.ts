@@ -632,44 +632,50 @@ export async function uploadAllAgentTraces(options: AgentTraceUploadAllOptions):
 	};
 }
 
-export async function getPrimeAgentTraceCredential(
+export async function getAndyAgentTraceCredential(
 	authStorage: AuthStorage,
 	options: { reloadAuth?: boolean; configPath?: string } = {},
 ): Promise<AgentTraceCredential | undefined> {
-	const traceEnvKey = stringEnv("PRIME_AGENT_TRACES_API_KEY");
+	const traceEnvKey = stringEnv("ANDY_AGENT_TRACES_API_KEY") || stringEnv("PRIME_AGENT_TRACES_API_KEY");
 	if (traceEnvKey) {
-		return { apiKey: traceEnvKey, source: "environment", label: "PRIME_AGENT_TRACES_API_KEY" };
+		return { apiKey: traceEnvKey, source: "environment", label: "ANDY_AGENT_TRACES_API_KEY" };
 	}
 
 	if (options.reloadAuth !== false) {
 		authStorage.reload();
 	}
 
-	const traceKey = await authStorage.getApiKey(PRIME_AGENT_TRACES_PROVIDER_ID, { includeFallback: false });
+	const traceKey =
+		(await authStorage.getApiKey("andy-agent-traces", { includeFallback: false })) ||
+		(await authStorage.getApiKey(PRIME_AGENT_TRACES_PROVIDER_ID, { includeFallback: false }));
 	if (traceKey) {
-		return { apiKey: traceKey, source: "stored", label: "Prime Agent Traces credential" };
+		return { apiKey: traceKey, source: "stored", label: "Andy Agent Traces credential" };
 	}
 
-	const primeEnvKey = stringEnv("PRIME_API_KEY");
-	if (primeEnvKey) {
-		return { apiKey: primeEnvKey, source: "environment", label: "PRIME_API_KEY" };
+	const andyEnvKey = stringEnv("ANDY_API_KEY") || stringEnv("PRIME_API_KEY");
+	if (andyEnvKey) {
+		return { apiKey: andyEnvKey, source: "environment", label: "ANDY_API_KEY" };
 	}
 
-	const primeCredential = authStorage.get(PRIME_INFERENCE_PROVIDER_ID);
-	if (primeCredential) {
-		const primeKey = await authStorage.getApiKey(PRIME_INFERENCE_PROVIDER_ID, { includeFallback: false });
-		if (primeKey) {
-			return { apiKey: primeKey, source: "prime-inference", label: "Prime Inference credential" };
+	const andyCredential = authStorage.get("andy-inference") || authStorage.get(PRIME_INFERENCE_PROVIDER_ID);
+	if (andyCredential) {
+		const andyKey =
+			(await authStorage.getApiKey("andy-inference", { includeFallback: false })) ||
+			(await authStorage.getApiKey(PRIME_INFERENCE_PROVIDER_ID, { includeFallback: false }));
+		if (andyKey) {
+			return { apiKey: andyKey, source: "prime-inference", label: "Andy Inference credential" };
 		}
 	}
 
-	const primeCliKey = loadPrimeCliConfig(options.configPath).apiKey;
-	if (primeCliKey) {
-		return { apiKey: primeCliKey, source: "prime-cli", label: "Prime CLI credential" };
+	const cliKey = loadPrimeCliConfig(options.configPath).apiKey;
+	if (cliKey) {
+		return { apiKey: cliKey, source: "prime-cli", label: "Andy CLI credential" };
 	}
 
 	return undefined;
 }
+
+export const getPrimeAgentTraceCredential = getAndyAgentTraceCredential;
 
 async function getAgentTracesEnabled(
 	options: Pick<AgentTraceUploadOptions, "reloadConfig" | "settingsManager">,

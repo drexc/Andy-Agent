@@ -5,7 +5,7 @@
   "type": "module",
   "bin": {
     "andy-agent-webui": "dist/server/cli.js",
-    "prime-agent-webui": "dist/server/cli.js"
+    "andy-agent-webui": "dist/server/cli.js"
   },
   "main": "dist/server/index.js",
   "types": "dist/server/index.d.ts",

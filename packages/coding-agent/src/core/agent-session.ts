@@ -1351,18 +1351,18 @@ export class AgentSession {
 			const manager = this._ipythonKernelProvisioner?.manager;
 			if (!manager?.isRunning) return;
 			const code = [
-				"import importlib as _prime_importlib",
-				'_prime_mcp = _prime_importlib.import_module("rlm.mcp")',
-				`_prime_mcp_names = ${JSON.stringify(names)}`,
-				"_prime_mcp_errors = []",
-				"for _prime_mcp_name in _prime_mcp_names:",
+				"import importlib as _andy_importlib",
+				'_andy_mcp = _andy_importlib.import_module("rlm.mcp")',
+				`_andy_mcp_names = ${JSON.stringify(names)}`,
+				"_andy_mcp_errors = []",
+				"for _andy_mcp_name in _andy_mcp_names:",
 				"    try:",
-				"        await _prime_mcp.reload(_prime_mcp_name)",
-				"    except BaseException as _prime_mcp_error:",
-				"        _prime_mcp_errors.append(_prime_mcp_error)",
-				"if _prime_mcp_errors:",
-				"    raise _prime_mcp_errors[0]",
-				"del _prime_mcp, _prime_importlib, _prime_mcp_names, _prime_mcp_errors, _prime_mcp_name",
+				"        await _andy_mcp.reload(_andy_mcp_name)",
+				"    except BaseException as _andy_mcp_error:",
+				"        _andy_mcp_errors.append(_andy_mcp_error)",
+				"if _andy_mcp_errors:",
+				"    raise _andy_mcp_errors[0]",
+				"del _andy_mcp, _andy_importlib, _andy_mcp_names, _andy_mcp_errors, _andy_mcp_name",
 			].join("\n");
 			const result = await manager.execute(code);
 			if (result.status !== "ok") {
@@ -6984,7 +6984,7 @@ export class AgentSession {
 			throw new Error(`No API key for ${model.provider}/${model.id}`);
 		}
 		if (!(await this._modelRegistry.canUseModel(model))) {
-			throw new Error(`Model "${model.provider}/${model.id}" is not available for the current Prime team.`);
+			throw new Error(`Model "${model.provider}/${model.id}" is not available for the current Andy team.`);
 		}
 
 		const previousModel = this.model;
@@ -8224,7 +8224,7 @@ export class AgentSession {
 			}
 			let refinementAuditAppendError: { error: unknown } | undefined;
 			try {
-				this.sessionManager.appendCustomEntry("prime-agent.refinement", result);
+				this.sessionManager.appendCustomEntry("andy-agent.refinement", result);
 			} catch (error) {
 				refinementAuditAppendError = { error };
 			}
@@ -9229,6 +9229,7 @@ export class AgentSession {
 
 	private _addWebsearchKeyEnv(env: Record<string, string>): void {
 		if (this._agentDir) {
+			env.ANDY_AGENT_CODING_AGENT_DIR = this._agentDir;
 			env.PRIME_AGENT_CODING_AGENT_DIR = this._agentDir;
 		}
 
@@ -9287,7 +9288,7 @@ export class AgentSession {
 	}
 
 	private _createEphemeralRlmSessionDir(): string {
-		this._rlmSessionDir = mkdtempSync(join(tmpdir(), "prime-agent-rlm-"));
+		this._rlmSessionDir = mkdtempSync(join(tmpdir(), "andy-agent-rlm-"));
 		return this._rlmSessionDir;
 	}
 

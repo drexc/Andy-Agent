@@ -1197,12 +1197,43 @@ ${prompt || ""}`;
 		const systemMsgs = messages.filter((m: any) => m.role === "system" || m.role === "developer");
 		const nonSystem = messages.filter((m: any) => m.role !== "system" && m.role !== "developer");
 
-		const systemPrompt =
+		const rawSystemPrompt =
 			systemMsgs.length > 0
 				? systemMsgs
 						.map((m: any) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
 						.join("\n\n")
-				: undefined;
+				: "";
+
+		// Enriquecer automáticamente con el contexto, memoria y reglas de Andy Agent
+		const projectMemoryPath = path.join(this.pool.cwd, "MEMORY.md");
+		const globalMemoryPath = path.join(os.homedir(), ".andy", "agent", "MEMORY.md");
+		const projectAgentsPath = path.join(this.pool.cwd, "AGENTS.md");
+
+		let memoryContext = "";
+		if (existsSync(projectMemoryPath)) {
+			try {
+				const mem = readFileSync(projectMemoryPath, "utf-8").trim();
+				if (mem) memoryContext += `\n\n### Project Memory (MEMORY.md):\n${mem}`;
+			} catch {}
+		}
+		if (existsSync(globalMemoryPath)) {
+			try {
+				const gmem = readFileSync(globalMemoryPath, "utf-8").trim();
+				if (gmem) memoryContext += `\n\n### Global Memory:\n${gmem}`;
+			} catch {}
+		}
+		if (existsSync(projectAgentsPath)) {
+			try {
+				const agents = readFileSync(projectAgentsPath, "utf-8").trim();
+				if (agents) memoryContext += `\n\n### Project Guidelines (AGENTS.md):\n${agents}`;
+			} catch {}
+		}
+
+		const systemPrompt = memoryContext
+			? rawSystemPrompt
+				? `${rawSystemPrompt}\n\n## Andy Agent Persistent Memory & Guidelines:${memoryContext}`
+				: `## Andy Agent Persistent Memory & Guidelines:${memoryContext}`
+			: rawSystemPrompt || undefined;
 
 		const modelId = body.model || "auto/best-coding";
 		this.addLog(
@@ -1294,9 +1325,6 @@ ${prompt || ""}`;
 			maxTokens: body.max_tokens || body.max_completion_tokens,
 		};
 
-		const isDirectMode =
-			req.headers["x-andy-mode"] === "direct" || req.headers["x-andy-rlm"] === "false" || body.rlm === false;
-
 		if (isStream) {
 			res.writeHead(200, {
 				"Content-Type": "text/event-stream; charset=utf-8",
@@ -1316,234 +1344,91 @@ ${prompt || ""}`;
 			res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
 
 			let accumulatedText = "";
-			if (!isDirectMode) {
-				// RLM Agentic Execution (Python Kernel, REPL, Graft, Recursive Tools)
-				const unsubscribe = session.subscribe((event: any) => {
-					if (isAborted || res.writableEnded) return;
-					try {
-						if (event.type === "message_update") {
-							const ame = event.assistantMessageEvent;
-							if (ame && ame.type === "text_delta" && ame.delta) {
-								accumulatedText += ame.delta;
-								const chunk = {
-									id: reqId,
-									object: "chat.completion.chunk",
-									created: Math.floor(Date.now() / 1000),
-									model: modelId,
-									choices: [{ index: 0, delta: { content: ame.delta }, finish_reason: null }],
-								};
-								res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-							} else if (ame && ame.type === "thinking_delta" && ame.delta) {
-								const chunk = {
-									id: reqId,
-									object: "chat.completion.chunk",
-									created: Math.floor(Date.now() / 1000),
-									model: modelId,
-									choices: [
-										{ index: 0, delta: { content: "", reasoning_content: ame.delta }, finish_reason: null },
-									],
-								};
-								res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-							}
-						} else if (event.type === "tool_call") {
-							this.addLog("RLM", "OpenAI Bridge", `RLM Tool started: ${event.toolName}`, event.input);
-						} else if (event.type === "tool_result") {
-							this.addLog("RLM", "OpenAI Bridge", `RLM Tool finished: ${event.toolName}`);
-						}
-					} catch (_e) {}
-				});
-
-				try {
-					const lastUser = nonSystem[nonSystem.length - 1];
-					let promptText = lastUser
-						? typeof lastUser.content === "string"
-							? lastUser.content
-							: JSON.stringify(lastUser.content)
-						: "Continue";
-
-					if (systemPrompt) {
-						promptText = `[System Instructions]\n${systemPrompt}\n\n[User Request]\n${promptText}`;
-					}
-
-					if (session.isStreaming) {
-						await session.prompt(promptText, { streamingBehavior: "followUp" });
-					} else {
-						await session.prompt(promptText);
-					}
-				} catch (err: any) {
-					this.addLog("WARN", "OpenAI Bridge", `RLM prompt error, falling back to direct stream: ${err.message}`);
-					try {
-						const eventStream = stream(targetModel, context, streamOptions);
-						for await (const event of eventStream) {
-							if (isAborted || res.writableEnded) break;
-							if (event.type === "text_delta") {
-								accumulatedText += event.delta;
-								const chunk = {
-									id: reqId,
-									object: "chat.completion.chunk",
-									created: Math.floor(Date.now() / 1000),
-									model: modelId,
-									choices: [{ index: 0, delta: { content: event.delta }, finish_reason: null }],
-								};
-								res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-							}
-						}
-					} catch (fallbackErr: any) {
-						this.addLog("ERROR", "OpenAI Bridge", `Fallback error: ${fallbackErr.message}`);
-					}
-				} finally {
-					unsubscribe();
-					req.off("close", onClientClose);
-
-					const lastUser = nonSystem[nonSystem.length - 1];
-					const lastUserText = lastUser
-						? typeof lastUser.content === "string"
-							? lastUser.content
-							: JSON.stringify(lastUser.content)
-						: "";
-					this.autoLearner
-						.processTurn({
-							sessionId,
-							prompt: lastUserText,
-							assistantResponse: accumulatedText,
-							modelId,
-						})
-						.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
-
-					if (!res.writableEnded) {
-						const stopChunk = {
+			try {
+				const eventStream = stream(targetModel, context, streamOptions);
+				for await (const event of eventStream) {
+					if (isAborted || res.writableEnded) break;
+					if (event.type === "text_delta") {
+						accumulatedText += event.delta;
+						const chunk = {
 							id: reqId,
 							object: "chat.completion.chunk",
 							created: Math.floor(Date.now() / 1000),
 							model: modelId,
-							choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+							choices: [{ index: 0, delta: { content: event.delta }, finish_reason: null }],
 						};
-						res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
-						res.write("data: [DONE]\n\n");
-						res.end();
-					}
-				}
-			} else {
-				// Direct LLM Streaming
-				try {
-					const eventStream = stream(targetModel, context, streamOptions);
-					for await (const event of eventStream) {
-						if (isAborted || res.writableEnded) break;
-						if (event.type === "text_delta") {
-							accumulatedText += event.delta;
-							const chunk = {
-								id: reqId,
-								object: "chat.completion.chunk",
-								created: Math.floor(Date.now() / 1000),
-								model: modelId,
-								choices: [{ index: 0, delta: { content: event.delta }, finish_reason: null }],
-							};
-							res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-						} else if (event.type === "thinking_delta") {
-							const chunk = {
-								id: reqId,
-								object: "chat.completion.chunk",
-								created: Math.floor(Date.now() / 1000),
-								model: modelId,
-								choices: [
-									{ index: 0, delta: { content: "", reasoning_content: event.delta }, finish_reason: null },
-								],
-							};
-							res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-						}
-					}
-				} catch (err: any) {
-					this.addLog("ERROR", "OpenAI Bridge", `Error during stream: ${err.message || String(err)}`);
-					if (!isAborted && !res.writableEnded) {
-						const errChunk = {
+						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+					} else if (event.type === "thinking_delta") {
+						const chunk = {
 							id: reqId,
 							object: "chat.completion.chunk",
 							created: Math.floor(Date.now() / 1000),
 							model: modelId,
 							choices: [
-								{
-									index: 0,
-									delta: { content: `\n\n⚠️ Error: ${err.message || String(err)}` },
-									finish_reason: null,
-								},
+								{ index: 0, delta: { content: "", reasoning_content: event.delta }, finish_reason: null },
 							],
 						};
-						res.write(`data: ${JSON.stringify(errChunk)}\n\n`);
+						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
 					}
-				} finally {
-					req.off("close", onClientClose);
+				}
+			} catch (err: any) {
+				this.addLog("ERROR", "OpenAI Bridge", `Error during stream: ${err.message || String(err)}`);
+				if (!isAborted && !res.writableEnded) {
+					const errChunk = {
+						id: reqId,
+						object: "chat.completion.chunk",
+						created: Math.floor(Date.now() / 1000),
+						model: modelId,
+						choices: [
+							{
+								index: 0,
+								delta: { content: `\n\n⚠️ Error: ${err.message || String(err)}` },
+								finish_reason: null,
+							},
+						],
+					};
+					res.write(`data: ${JSON.stringify(errChunk)}\n\n`);
+				}
+			} finally {
+				req.off("close", onClientClose);
 
-					const lastUser = nonSystem[nonSystem.length - 1];
-					const lastUserText = lastUser
-						? typeof lastUser.content === "string"
-							? lastUser.content
-							: JSON.stringify(lastUser.content)
-						: "";
-					this.autoLearner
-						.processTurn({
-							sessionId,
-							prompt: lastUserText,
-							assistantResponse: accumulatedText,
-							modelId,
-						})
-						.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
+				const lastUser = nonSystem[nonSystem.length - 1];
+				const lastUserText = lastUser
+					? typeof lastUser.content === "string"
+						? lastUser.content
+						: JSON.stringify(lastUser.content)
+					: "";
+				this.autoLearner
+					.processTurn({
+						sessionId,
+						prompt: lastUserText,
+						assistantResponse: accumulatedText,
+						modelId,
+					})
+					.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
 
-					if (!res.writableEnded) {
-						const stopChunk = {
-							id: reqId,
-							object: "chat.completion.chunk",
-							created: Math.floor(Date.now() / 1000),
-							model: modelId,
-							choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
-						};
-						res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
-						res.write("data: [DONE]\n\n");
-						res.end();
-					}
+				if (!res.writableEnded) {
+					const stopChunk = {
+						id: reqId,
+						object: "chat.completion.chunk",
+						created: Math.floor(Date.now() / 1000),
+						model: modelId,
+						choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+					};
+					res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
+					res.write("data: [DONE]\n\n");
+					res.end();
 				}
 			}
 		} else {
 			// Non-streaming standard JSON response
 			try {
-				let accumulatedText = "";
-				if (!isDirectMode) {
-					// RLM execution
-					const unsubscribe = session.subscribe((event: any) => {
-						if (event.type === "message_update") {
-							const ame = event.assistantMessageEvent;
-							if (ame && ame.type === "text_delta" && ame.delta) {
-								accumulatedText += ame.delta;
-							}
-						}
-					});
-					try {
-						const lastUser = nonSystem[nonSystem.length - 1];
-						let promptText = lastUser
-							? typeof lastUser.content === "string"
-								? lastUser.content
-								: JSON.stringify(lastUser.content)
-							: "Continue";
-
-						if (systemPrompt) {
-							promptText = `[System Instructions]\n${systemPrompt}\n\n[User Request]\n${promptText}`;
-						}
-
-						if (session.isStreaming) {
-							await session.prompt(promptText, { streamingBehavior: "followUp" });
-						} else {
-							await session.prompt(promptText);
-						}
-					} finally {
-						unsubscribe();
-					}
-				} else {
-					const result = await complete(targetModel, context, streamOptions);
-					accumulatedText =
-						result.content
-							.filter((c: any) => c.type === "text")
-							.map((c: any) => c.text)
-							.join("\n") || "";
-				}
+				const result = await complete(targetModel, context, streamOptions);
+				const accumulatedText =
+					result.content
+						.filter((c: any) => c.type === "text")
+						.map((c: any) => c.text)
+						.join("\n") || "";
 
 				const lastUser = nonSystem[nonSystem.length - 1];
 				const lastUserText = lastUser
@@ -1578,9 +1463,9 @@ ${prompt || ""}`;
 							},
 						],
 						usage: {
-							prompt_tokens: 0,
-							completion_tokens: 0,
-							total_tokens: 0,
+							prompt_tokens: result.usage?.input || 0,
+							completion_tokens: result.usage?.output || 0,
+							total_tokens: result.usage?.totalTokens || 0,
 						},
 					}),
 				);

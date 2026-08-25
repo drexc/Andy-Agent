@@ -29,8 +29,8 @@ describe("PrimeOnboardingSplashComponent", () => {
 		const output = stripAnsi(lines.join("\n"));
 
 		expect(lines).toHaveLength(36);
-		expect(output).toContain("Welcome to PRIME Agent");
-		expect(output).toContain("Press Enter to login with Prime Intellect");
+		expect(output).toContain("Welcome to ANDY Agent");
+		expect(output).toContain("Press Enter to login with Andy");
 		expect(output).toContain("·");
 		expect(output).not.toContain("prime agent");
 		expect(output).not.toContain("Research and infrastructure assistant for high-context work.");
@@ -129,8 +129,8 @@ describe("PrimeOnboardingSplashComponent", () => {
 
 		expect(renderRequests).toBe(3);
 		expect(secondRender).not.toBe(firstRender);
-		expect(secondRender).toContain("Welcome to PRIME Agent");
-		expect(secondRender).toContain("Press Enter to login with Prime Intellect");
+		expect(secondRender).toContain("Welcome to ANDY Agent");
+		expect(secondRender).toContain("Press Enter to login with Andy");
 	});
 
 	it("centers stacked content in narrow terminals", () => {
@@ -142,7 +142,8 @@ describe("PrimeOnboardingSplashComponent", () => {
 		const rendered = component.render(60).map((line: string) => stripAnsi(line));
 		const logoLine = rendered.find((line: string) => line.includes(PRIME_BUTTERFLY_LOGO.split("\n")[0].trim()));
 		const brandLine = rendered.find(
-			(line: string) => line.includes("Welcome to Andy Agent") || line.includes("Welcome to PRIME Agent"),
+			(line: string) =>
+				line.includes("Welcome to ANDY Agent") || line.includes("Welcome to Andy Agent") || line.includes("ANDY"),
 		);
 		const hintLine = rendered.find((line: string) => line.includes("Press Enter to login") || line.includes("login"));
 

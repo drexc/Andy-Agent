@@ -1,13 +1,13 @@
-# Prime Agent - OpenAI-Compatible API Bridge
+# Andy Agent - OpenAI-Compatible API Bridge
 
-The **Prime Agent OpenAI Bridge** allows any IDE (VS Code, Cursor, Windsurf, JetBrains) or CLI tool (Cline, Continue.dev, Roo Code, Aider, OpenCode) to interact directly with **Prime Agent's Recursive Language Model (RLM)** and persistent IPython kernel using the standard OpenAI `/v1/chat/completions` and `/v1/models` protocol.
+The **Andy Agent OpenAI Bridge** allows any IDE (VS Code, Cursor, Windsurf, JetBrains) or CLI tool (Cline, Continue.dev, Roo Code, Aider, OpenCode) to interact directly with **Andy Agent's Recursive Language Model (RLM)** and persistent IPython kernel using the standard OpenAI `/v1/chat/completions` and `/v1/models` protocol.
 
 ---
 
 ## Features
 
 - **Standard OpenAI Endpoints**:
-  - `GET /v1/models`: Lists all models registered in Prime Agent (Omniroute, Anthropic, Gemini, OpenAI, etc.).
+  - `GET /v1/models`: Lists all models registered in Andy Agent (Omniroute, Anthropic, Gemini, OpenAI, etc.).
   - `POST /v1/chat/completions`: Full support for Server-Sent Events (SSE) streaming (`stream: true`) and standard JSON responses.
   - `POST /v1/sessions/reset`: Reset conversation state for a session.
 - **RLM Code Execution Visibility**: Displays Python kernel code executions and output in the chat stream.
@@ -38,7 +38,7 @@ Add the following to your `~/.continue/config.json` (or click *Add Model* -> *Cu
 {
   "models": [
     {
-      "title": "Prime Agent (RLM)",
+      "title": "Andy Agent (RLM)",
       "provider": "openai",
       "model": "auto/best-coding",
       "apiBase": "http://localhost:3000/v1",

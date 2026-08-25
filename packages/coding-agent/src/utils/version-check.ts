@@ -1,6 +1,7 @@
 import { getPiUserAgent } from "./pi-user-agent.js";
 
-const DEFAULT_PRIME_AGENT_DOWNLOAD_BASE_URL = "https://pub-728493de92a943e2a9b2d17b4719f318.r2.dev";
+export const DEFAULT_ANDY_AGENT_DOWNLOAD_BASE_URL = "https://pub-728493de92a943e2a9b2d17b4719f318.r2.dev";
+export const DEFAULT_PRIME_AGENT_DOWNLOAD_BASE_URL = DEFAULT_ANDY_AGENT_DOWNLOAD_BASE_URL;
 const STABLE_VERSION_MANIFEST_PATH = "latest.json";
 const BETA_VERSION_MANIFEST_PATH = "beta.json";
 const DEFAULT_VERSION_CHECK_TIMEOUT_MS = 10000;
@@ -42,17 +43,18 @@ function comparePrereleaseIdentifiers(leftPrerelease: string, rightPrerelease: s
 		}
 		if (leftIsNumeric) return -1;
 		if (rightIsNumeric) return 1;
-		return left.localeCompare(right);
+		const comparison = left.localeCompare(right);
+		if (comparison !== 0) return comparison;
 	}
 
 	return 0;
 }
 
-function parsePackageVersion(version: string): ParsedVersion | undefined {
-	const match = version.trim().match(/^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+.*)?$/);
-	if (!match) {
-		return undefined;
-	}
+export function parsePackageVersion(version: string): ParsedVersion | undefined {
+	const trimmed = normalizeReleaseVersion(version);
+	const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/.exec(trimmed);
+	if (!match) return undefined;
+
 	return {
 		major: Number.parseInt(match[1], 10),
 		minor: Number.parseInt(match[2], 10),
@@ -64,16 +66,16 @@ function parsePackageVersion(version: string): ParsedVersion | undefined {
 export function comparePackageVersions(leftVersion: string, rightVersion: string): number | undefined {
 	const left = parsePackageVersion(leftVersion);
 	const right = parsePackageVersion(rightVersion);
-	if (!left || !right) {
-		return undefined;
-	}
+	if (!left || !right) return undefined;
 
 	if (left.major !== right.major) return left.major - right.major;
 	if (left.minor !== right.minor) return left.minor - right.minor;
 	if (left.patch !== right.patch) return left.patch - right.patch;
-	if (left.prerelease === right.prerelease) return 0;
-	if (!left.prerelease) return 1;
-	if (!right.prerelease) return -1;
+
+	if (left.prerelease === undefined && right.prerelease === undefined) return 0;
+	if (left.prerelease === undefined) return 1;
+	if (right.prerelease === undefined) return -1;
+
 	return comparePrereleaseIdentifiers(left.prerelease, right.prerelease);
 }
 
@@ -85,12 +87,15 @@ export function isNewerPackageVersion(candidateVersion: string, currentVersion: 
 	return candidateVersion.trim() !== currentVersion.trim();
 }
 
-function getPrimeAgentDownloadBaseUrl(): string {
-	return (process.env.PRIME_AGENT_DOWNLOAD_BASE_URL?.trim() || DEFAULT_PRIME_AGENT_DOWNLOAD_BASE_URL).replace(
-		/\/+$/,
-		"",
-	);
+function getAndyAgentDownloadBaseUrl(): string {
+	return (
+		process.env.ANDY_AGENT_DOWNLOAD_BASE_URL?.trim() ||
+		process.env.PRIME_AGENT_DOWNLOAD_BASE_URL?.trim() ||
+		DEFAULT_ANDY_AGENT_DOWNLOAD_BASE_URL
+	).replace(/\/+$/, "");
 }
+
+const getPrimeAgentDownloadBaseUrl = getAndyAgentDownloadBaseUrl;
 
 function normalizeReleaseVersion(version: string): string {
 	return version.trim().replace(/^v/, "");

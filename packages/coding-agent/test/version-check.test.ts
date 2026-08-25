@@ -45,7 +45,7 @@ describe("version checks", () => {
 		await expect(checkForNewPiVersion("1.2.2")).resolves.toBe("1.2.3");
 	});
 
-	it("uses the Prime Agent release manifest with a Prime Agent user agent", async () => {
+	it("uses the Andy Agent release manifest with an Andy Agent user agent", async () => {
 		const fetchMock = vi.fn(async () => Response.json({ version: "v1.2.4" }));
 		vi.stubGlobal("fetch", fetchMock);
 
@@ -54,7 +54,7 @@ describe("version checks", () => {
 			`${defaultPrimeAgentDownloadBaseUrl}/latest.json`,
 			expect.objectContaining({
 				headers: expect.objectContaining({
-					"User-Agent": expect.stringMatching(/^prime-agent\/1\.2\.3 /),
+					"User-Agent": expect.stringMatching(/^andy-agent\/1\.2\.3 /),
 					accept: "application/json",
 				}),
 			}),

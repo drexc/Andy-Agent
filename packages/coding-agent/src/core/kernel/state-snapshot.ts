@@ -16,7 +16,8 @@ export const DEFAULT_SNAPSHOT_MAX_VARIABLE_BYTES = 16 * 1024 * 1024;
 const KERNEL_STATE_BASENAME = "kernel-state";
 
 /** Marker the Python helpers print so the host can recover the JSON result line. */
-const RESULT_MARKER = "__PRIME_AGENT_KERNEL_STATE__";
+const RESULT_MARKER = "__ANDY_AGENT_KERNEL_STATE__";
+const _LEGACY_RESULT_MARKER = "__PRIME_AGENT_KERNEL_STATE__";
 
 export interface SnapshotResult {
 	/** Top-level names successfully serialized into the payload. */
@@ -67,7 +68,7 @@ export function buildSnapshotCode(
 	// All builtins are sourced via the locally-imported _b alias so the helper keeps
 	// working even when the user namespace shadows names like list/open/print/len.
 	return `
-def _prime_agent_snapshot_state():
+def _andy_agent_snapshot_state():
     import builtins as _b, io, json, os, sys, datetime
     try:
         import dill
@@ -189,9 +190,9 @@ def _prime_agent_snapshot_state():
 
 
 try:
-    _prime_agent_snapshot_state()
+    _andy_agent_snapshot_state()
 finally:
-    del _prime_agent_snapshot_state
+    del _andy_agent_snapshot_state
 `.trim();
 }
 
@@ -204,7 +205,7 @@ export function buildRestoreCode(inPath: string): string {
 	// Builtins via the local _b alias so a shadowed name in the user namespace
 	// (list/open/print/…) can't break the restore path.
 	return `
-def _prime_agent_restore_state():
+def _andy_agent_restore_state():
     import builtins as _b, json, os, sys
     if not os.path.exists(${pyStr(inPath)}):
         _b.print(${pyStr(RESULT_MARKER)} + json.dumps({"restored": [], "failed": []}))
@@ -244,16 +245,16 @@ def _prime_agent_restore_state():
 
 
 try:
-    _prime_agent_restore_state()
+    _andy_agent_restore_state()
 finally:
-    del _prime_agent_restore_state
+    del _andy_agent_restore_state
 `.trim();
 }
 
 /** Marker-line list of live user-defined names, filtered like the snapshot. Never raises. */
 export function buildListNamesCode(): string {
 	return `
-def _prime_agent_list_state_names():
+def _andy_agent_list_state_names():
     import builtins as _b, json
     ip = None
     try:
@@ -272,9 +273,9 @@ def _prime_agent_list_state_names():
 
 
 try:
-    _prime_agent_list_state_names()
+    _andy_agent_list_state_names()
 finally:
-    del _prime_agent_list_state_names
+    del _andy_agent_list_state_names
 `.trim();
 }
 
@@ -314,9 +315,14 @@ function asReasonArray(value: unknown): { name: string; reason: string }[] {
 
 /** Pull the marker line out of cell stdout and parse it, or null if absent/invalid. */
 function parseMarkerLine<T>(stdout: string): T | null {
-	const index = stdout.lastIndexOf(RESULT_MARKER);
+	let index = stdout.lastIndexOf(RESULT_MARKER);
+	let markerLength = RESULT_MARKER.length;
+	if (index === -1) {
+		index = stdout.lastIndexOf(_LEGACY_RESULT_MARKER);
+		markerLength = _LEGACY_RESULT_MARKER.length;
+	}
 	if (index === -1) return null;
-	const rest = stdout.slice(index + RESULT_MARKER.length);
+	const rest = stdout.slice(index + markerLength);
 	const line = rest.split("\n", 1)[0]?.trim();
 	if (!line) return null;
 	try {

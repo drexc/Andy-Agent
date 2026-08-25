@@ -1,6 +1,6 @@
 # Termux (Android) Setup
 
-Prime Agent runs on Android via [Termux](https://termux.dev/), a terminal emulator and Linux environment for Android.
+Andy Agent runs on Android via [Termux](https://termux.dev/), a terminal emulator and Linux environment for Android.
 
 ## Prerequisites
 
@@ -16,13 +16,13 @@ pkg update && pkg upgrade
 # Install dependencies
 pkg install nodejs termux-api git ripgrep
 
-# Clone and install Prime Agent from source
-git clone https://github.com/drexc/prime-agent.git
-cd prime-agent
+# Clone and install Andy Agent from source
+git clone https://github.com/drexc/andy-agent.git
+cd andy-agent
 npm ci
 
-# Run Prime Agent
-./prime-agent.sh
+# Run Andy Agent
+./andy-agent.sh
 ```
 
 ## Clipboard Support
@@ -33,7 +33,7 @@ Image clipboard is not supported on Termux (the `ctrl+v` image paste feature wil
 
 ## Example AGENTS.md for Termux
 
-Create `~/.prime/agent/AGENTS.md` to help the agent understand the Termux environment:
+Create `~/.andy/agent/AGENTS.md` to help the agent understand the Termux environment:
 
 ```markdown
 # Agent Environment: Termux on Android

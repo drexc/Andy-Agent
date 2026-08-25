@@ -10,20 +10,22 @@ import {
 	type MenuViewportProvider,
 } from "./menu-panel.js";
 
-type PrimeTeamOption = {
+export type AndyTeamOption = {
 	type: "personal" | "team";
 	team: PrimeTeam | null;
 };
+
+export type PrimeTeamOption = AndyTeamOption;
 
 const PREFERRED_VISIBLE_TEAMS = 8;
 const TEAM_LIST_RESERVED_ROWS = 7;
 const TEAM_SCROLL_INDICATOR_ROWS = 1;
 
-export class PrimeTeamSelectorComponent extends Container implements Focusable {
+export class AndyTeamSelectorComponent extends Container implements Focusable {
 	private readonly searchInput: MenuSearchInput;
 	private readonly listContainer: Container;
-	private readonly allOptions: PrimeTeamOption[];
-	private filteredOptions: PrimeTeamOption[];
+	private readonly allOptions: AndyTeamOption[];
+	private filteredOptions: AndyTeamOption[];
 	private selectedIndex = 0;
 	private searchQuery = "";
 	private _focused = false;
@@ -47,8 +49,8 @@ export class PrimeTeamSelectorComponent extends Container implements Focusable {
 		this.filteredOptions = this.allOptions;
 
 		const panel = new MenuPanel({
-			title: "Prime Team",
-			subtitle: "Choose which account pays for Prime Inference usage.",
+			title: "Andy Team",
+			subtitle: "Choose which account pays for inference usage.",
 		});
 		this.addChild(panel);
 
@@ -201,3 +203,5 @@ export class PrimeTeamSelectorComponent extends Container implements Focusable {
 		});
 	}
 }
+
+export const PrimeTeamSelectorComponent = AndyTeamSelectorComponent;

@@ -2,9 +2,13 @@
 
 export { AgentMessageComponent } from "./agent-message.js";
 export {
+	AndyOnboardingSplashComponent,
 	PrimeOnboardingSplashComponent,
-	PrimeOnboardingSplashComponent as AndyOnboardingSplashComponent,
 } from "./andy-onboarding-splash.js";
+export {
+	AndyTeamSelectorComponent,
+	PrimeTeamSelectorComponent,
+} from "./andy-team-selector.js";
 export { ArminComponent } from "./armin.js";
 export { AssistantMessageComponent } from "./assistant-message.js";
 export { BashExecutionComponent } from "./bash-execution.js";
