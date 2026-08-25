@@ -15447,13 +15447,13 @@ export const MODELS = {
 			thinkingLevelMap: {"minimal":null,"low":"low","medium":null,"high":"high","xhigh":null,"max":"max"},
 			input: ["text", "image"],
 			cost: {
-				input: 2.8,
-				output: 14,
+				input: 2.6,
+				output: 13,
 				cacheRead: 0.29,
 				cacheWrite: 0,
 			},
 			contextWindow: 1048576,
-			maxTokens: 943718,
+			maxTokens: 877357,
 		} satisfies Model<"openai-completions">,
 		"~openai/gpt-latest": {
 			id: "~openai/gpt-latest",

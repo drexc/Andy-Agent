@@ -3,6 +3,15 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import os from "node:os";
 import path from "node:path";
+import {
+	type AssistantMessage,
+	type Context,
+	complete,
+	type Message,
+	stream,
+	type ToolResultMessage,
+	type UserMessage,
+} from "@earendil-works/pi-ai";
 import { AutoLearningEngine } from "./auto-learner.js";
 import { getWebUiHtml } from "./html-bundle.js";
 import { WebUiSessionPool } from "./session-manager.js";
@@ -1183,37 +1192,12 @@ ${prompt || ""}`;
 		const systemMsgs = messages.filter((m: any) => m.role === "system" || m.role === "developer");
 		const nonSystem = messages.filter((m: any) => m.role !== "system" && m.role !== "developer");
 
-		const lastMsg = nonSystem.length > 0 ? nonSystem[nonSystem.length - 1] : messages[messages.length - 1];
-		let promptText = "";
-		if (lastMsg) {
-			if (typeof lastMsg.content === "string") {
-				promptText = lastMsg.content;
-			} else if (Array.isArray(lastMsg.content)) {
-				promptText = lastMsg.content.map((p: any) => (p.type === "text" ? p.text || "" : p.text || "")).join(" ");
-			}
-		}
-
-		if (nonSystem.length > 1) {
-			const history = nonSystem.slice(0, -1);
-			const formattedHistory = history
-				.map((m: any) => {
-					const role = m.role === "user" ? "User" : m.role === "assistant" ? "Assistant" : "Tool";
-					const text = typeof m.content === "string" ? m.content : JSON.stringify(m.content);
-					return `[${role}]: ${text}`;
-				})
-				.join("\n\n");
-
-			if (formattedHistory.length > 0) {
-				promptText = `Previous conversation context:\n${formattedHistory}\n\nCurrent user request:\n${promptText}`;
-			}
-		}
-
-		if (systemMsgs.length > 0) {
-			const systemText = systemMsgs
-				.map((m: any) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
-				.join("\n\n");
-			promptText = `System Instructions:\n${systemText}\n\n${promptText}`;
-		}
+		const systemPrompt =
+			systemMsgs.length > 0
+				? systemMsgs
+						.map((m: any) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
+						.join("\n\n")
+				: undefined;
 
 		const modelId = body.model || "auto/best-coding";
 		this.addLog(
@@ -1224,6 +1208,86 @@ ${prompt || ""}`;
 
 		const sessionItem = await this.pool.getOrCreateSession(sessionId, modelId);
 		const session = sessionItem.session;
+		const targetModel = session.model;
+		if (!targetModel) {
+			res.writeHead(400, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ error: { message: `Model "${modelId}" could not be resolved.` } }));
+			return;
+		}
+
+		const contextMessages: Message[] = nonSystem.map((m: any) => {
+			if (m.role === "assistant") {
+				const textContent =
+					typeof m.content === "string"
+						? m.content
+						: Array.isArray(m.content)
+							? m.content.map((c: any) => c.text || JSON.stringify(c)).join("\n")
+							: JSON.stringify(m.content || "");
+				return {
+					role: "assistant",
+					content: [{ type: "text", text: textContent }],
+					api: targetModel.api,
+					provider: targetModel.provider,
+					model: targetModel.id,
+					usage: {
+						input: 0,
+						output: 0,
+						cacheRead: 0,
+						cacheWrite: 0,
+						totalTokens: 0,
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+					},
+					stopReason: "stop",
+					timestamp: Date.now(),
+				} as AssistantMessage;
+			}
+			if (m.role === "tool" || m.role === "toolResult") {
+				const textContent = typeof m.content === "string" ? m.content : JSON.stringify(m.content || "");
+				return {
+					role: "toolResult",
+					toolCallId: m.tool_call_id || m.toolCallId || "call_1",
+					toolName: m.name || m.toolName || "tool",
+					content: [{ type: "text", text: textContent }],
+					isError: false,
+					timestamp: Date.now(),
+				} as ToolResultMessage;
+			}
+			const textContent =
+				typeof m.content === "string"
+					? m.content
+					: Array.isArray(m.content)
+						? m.content.map((c: any) => (c.type === "text" ? c.text || "" : "")).join(" ")
+						: JSON.stringify(m.content || "");
+			return {
+				role: "user",
+				content: textContent || "(empty)",
+				timestamp: Date.now(),
+			} as UserMessage;
+		});
+
+		const context: Context = {
+			systemPrompt,
+			messages:
+				contextMessages.length > 0 ? contextMessages : [{ role: "user", content: "Hello", timestamp: Date.now() }],
+		};
+
+		const auth = await sessionItem.session.modelRegistry.getApiKeyAndHeaders(targetModel);
+		const apiKey = auth.ok ? auth.apiKey : undefined;
+		const abortCtrl = new AbortController();
+		let isAborted = false;
+
+		const onClientClose = () => {
+			isAborted = true;
+			abortCtrl.abort();
+		};
+		req.on("close", onClientClose);
+
+		const streamOptions: any = {
+			apiKey,
+			signal: abortCtrl.signal,
+			temperature: body.temperature,
+			maxTokens: body.max_tokens || body.max_completion_tokens,
+		};
 
 		if (isStream) {
 			res.writeHead(200, {
@@ -1239,55 +1303,40 @@ ${prompt || ""}`;
 				object: "chat.completion.chunk",
 				created: Math.floor(Date.now() / 1000),
 				model: modelId,
-				choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }],
+				choices: [{ index: 0, delta: { role: "assistant", content: "" }, finish_reason: null }],
 			};
 			res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
 
-			let isAborted = false;
-			const onClientClose = () => {
-				isAborted = true;
-				session.abort().catch(() => {});
-			};
-			req.on("close", onClientClose);
-
-			const unsubscribe = session.subscribe((event: any) => {
-				if (isAborted || res.writableEnded) return;
-				try {
-					if (event.type === "message_update") {
-						const ame = event.assistantMessageEvent;
-						if (ame && ame.type === "text_delta" && ame.delta) {
-							const chunk = {
-								id: reqId,
-								object: "chat.completion.chunk",
-								created: Math.floor(Date.now() / 1000),
-								model: modelId,
-								choices: [{ index: 0, delta: { content: ame.delta }, finish_reason: null }],
-							};
-							res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-						} else if (ame && ame.type === "thinking_delta" && ame.delta) {
-							const chunk = {
-								id: reqId,
-								object: "chat.completion.chunk",
-								created: Math.floor(Date.now() / 1000),
-								model: modelId,
-								choices: [{ index: 0, delta: { reasoning_content: ame.delta }, finish_reason: null }],
-							};
-							res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-						}
-					} else if (event.type === "tool_call") {
-						this.addLog("TOOL", "OpenAI Bridge", `Executing tool for KiloCode: ${event.toolName}`);
-					}
-				} catch (_e) {}
-			});
-
+			let accumulatedText = "";
 			try {
-				if (session.isStreaming) {
-					await session.prompt(promptText, { streamingBehavior: "followUp" });
-				} else {
-					await session.prompt(promptText);
+				const eventStream = stream(targetModel, context, streamOptions);
+				for await (const event of eventStream) {
+					if (isAborted || res.writableEnded) break;
+					if (event.type === "text_delta") {
+						accumulatedText += event.delta;
+						const chunk = {
+							id: reqId,
+							object: "chat.completion.chunk",
+							created: Math.floor(Date.now() / 1000),
+							model: modelId,
+							choices: [{ index: 0, delta: { content: event.delta }, finish_reason: null }],
+						};
+						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+					} else if (event.type === "thinking_delta") {
+						const chunk = {
+							id: reqId,
+							object: "chat.completion.chunk",
+							created: Math.floor(Date.now() / 1000),
+							model: modelId,
+							choices: [
+								{ index: 0, delta: { content: "", reasoning_content: event.delta }, finish_reason: null },
+							],
+						};
+						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+					}
 				}
 			} catch (err: any) {
-				this.addLog("ERROR", "OpenAI Bridge", `Error during stream prompt: ${err.message || String(err)}`);
+				this.addLog("ERROR", "OpenAI Bridge", `Error during stream: ${err.message || String(err)}`);
 				if (!isAborted && !res.writableEnded) {
 					const errChunk = {
 						id: reqId,
@@ -1305,26 +1354,20 @@ ${prompt || ""}`;
 					res.write(`data: ${JSON.stringify(errChunk)}\n\n`);
 				}
 			} finally {
-				unsubscribe();
 				req.off("close", onClientClose);
 
 				// Trigger Auto-Learning in background
-				const lastAss: any = [...session.state.messages].reverse().find((m: any) => m.role === "assistant");
-				const textForLearning = lastAss
-					? Array.isArray(lastAss.content)
-						? lastAss.content
-								.filter((c: any) => c.type === "text")
-								.map((c: any) => c.text)
-								.join("\n")
-						: typeof lastAss.content === "string"
-							? lastAss.content
-							: ""
+				const lastUser = nonSystem[nonSystem.length - 1];
+				const lastUserText = lastUser
+					? typeof lastUser.content === "string"
+						? lastUser.content
+						: JSON.stringify(lastUser.content)
 					: "";
 				this.autoLearner
 					.processTurn({
 						sessionId,
-						prompt: promptText,
-						assistantResponse: textForLearning,
+						prompt: lastUserText,
+						assistantResponse: accumulatedText,
 						modelId,
 					})
 					.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
@@ -1344,58 +1387,24 @@ ${prompt || ""}`;
 			}
 		} else {
 			// Non-streaming standard JSON response
-			let accumulatedText = "";
-			const unsubscribe = session.subscribe((event: any) => {
-				if (event.type === "message_update") {
-					const ame = event.assistantMessageEvent;
-					if (ame && ame.type === "text_delta" && ame.delta) {
-						accumulatedText += ame.delta;
-					}
-				}
-			});
-
 			try {
-				if (session.isStreaming) {
-					await session.prompt(promptText, { streamingBehavior: "followUp" });
-				} else {
-					await session.prompt(promptText);
-				}
+				const result = await complete(targetModel, context, streamOptions);
+				const accumulatedText =
+					result.content
+						.filter((c: any) => c.type === "text")
+						.map((c: any) => c.text)
+						.join("\n") || "";
 
-				// Fallback message extraction if streaming deltas were not captured
-				if (!accumulatedText) {
-					const lastAss: any = [...session.state.messages].reverse().find((m: any) => m.role === "assistant");
-					if (lastAss) {
-						if (typeof lastAss.content === "string") {
-							accumulatedText = lastAss.content;
-						} else if (Array.isArray(lastAss.content)) {
-							accumulatedText = lastAss.content
-								.filter((c: any) => c.type === "text")
-								.map((c: any) => c.text)
-								.join("\n");
-						}
-					}
-				}
-
-				// Smart auto-title from prompt
-				if (
-					promptText &&
-					(sessionItem.title.startsWith("Chat ") ||
-						sessionItem.title.startsWith("session-") ||
-						sessionItem.title.startsWith("kilocode-"))
-				) {
-					const clean = promptText
-						.trim()
-						.replace(/^[/#\s]+/, "")
-						.slice(0, 32);
-					if (clean) sessionItem.title = clean;
-				}
-				this.pool.persistSession(sessionItem);
-
-				// Trigger Auto-Learning in background
+				const lastUser = nonSystem[nonSystem.length - 1];
+				const lastUserText = lastUser
+					? typeof lastUser.content === "string"
+						? lastUser.content
+						: JSON.stringify(lastUser.content)
+					: "";
 				this.autoLearner
 					.processTurn({
 						sessionId,
-						prompt: promptText,
+						prompt: lastUserText,
 						assistantResponse: accumulatedText,
 						modelId,
 					})
@@ -1403,47 +1412,32 @@ ${prompt || ""}`;
 
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(
-					JSON.stringify(
-						{
-							id: reqId,
-							object: "chat.completion",
-							created: Math.floor(Date.now() / 1000),
-							model: modelId,
-							choices: [
-								{
-									index: 0,
-									message: {
-										role: "assistant",
-										content: accumulatedText || "(Completado exitosamente)",
-									},
-									finish_reason: "stop",
-								},
-							],
-							usage: {
-								prompt_tokens: 0,
-								completion_tokens: 0,
-								total_tokens: 0,
-							},
-						},
-						null,
-						2,
-					),
-				);
-			} catch (err: any) {
-				this.addLog("ERROR", "OpenAI Bridge", `Error during non-stream prompt: ${err.message || String(err)}`);
-				res.writeHead(500, { "Content-Type": "application/json" });
-				res.end(
 					JSON.stringify({
-						error: {
-							message: err.message || String(err),
-							type: "invalid_request_error",
-							param: null,
-							code: "internal_error",
+						id: reqId,
+						object: "chat.completion",
+						created: Math.floor(Date.now() / 1000),
+						model: modelId,
+						choices: [
+							{
+								index: 0,
+								message: {
+									role: "assistant",
+									content: accumulatedText || "(Completado exitosamente)",
+								},
+								finish_reason: "stop",
+							},
+						],
+						usage: {
+							prompt_tokens: result.usage?.input || 0,
+							completion_tokens: result.usage?.output || 0,
+							total_tokens: result.usage?.totalTokens || 0,
 						},
 					}),
 				);
-			} finally {
-				unsubscribe();
+			} catch (err: any) {
+				this.addLog("ERROR", "OpenAI Bridge", `Error during complete: ${err.message || String(err)}`);
+				res.writeHead(500, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ error: { message: err.message || String(err) } }));
 			}
 		}
 	}
