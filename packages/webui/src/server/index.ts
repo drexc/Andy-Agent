@@ -1204,29 +1204,42 @@ ${prompt || ""}`;
 						.join("\n\n")
 				: "";
 
-		// Enriquecer automáticamente con el contexto, memoria y reglas de Andy Agent
-		const projectMemoryPath = path.join(this.pool.cwd, "MEMORY.md");
-		const globalMemoryPath = path.join(os.homedir(), ".andy", "agent", "MEMORY.md");
-		const projectAgentsPath = path.join(this.pool.cwd, "AGENTS.md");
+		const isConsolidationRequest = messages.some((m: any) => {
+			const txt = (typeof m.content === "string" ? m.content : JSON.stringify(m.content || "")).toLowerCase();
+			return (
+				txt.includes("consolidate") ||
+				txt.includes("condense") ||
+				txt.includes("task_history_summary") ||
+				txt.includes("summary of the conversation") ||
+				txt.includes("summarize the conversation")
+			);
+		});
 
+		// Enriquecer con memoria de Andy Agent excepto en peticiones internas de consolidación de KiloCode
 		let memoryContext = "";
-		if (existsSync(projectMemoryPath)) {
-			try {
-				const mem = readFileSync(projectMemoryPath, "utf-8").trim();
-				if (mem) memoryContext += `\n\n### Project Memory (MEMORY.md):\n${mem}`;
-			} catch {}
-		}
-		if (existsSync(globalMemoryPath)) {
-			try {
-				const gmem = readFileSync(globalMemoryPath, "utf-8").trim();
-				if (gmem) memoryContext += `\n\n### Global Memory:\n${gmem}`;
-			} catch {}
-		}
-		if (existsSync(projectAgentsPath)) {
-			try {
-				const agents = readFileSync(projectAgentsPath, "utf-8").trim();
-				if (agents) memoryContext += `\n\n### Project Guidelines (AGENTS.md):\n${agents}`;
-			} catch {}
+		if (!isConsolidationRequest) {
+			const projectMemoryPath = path.join(this.pool.cwd, "MEMORY.md");
+			const globalMemoryPath = path.join(os.homedir(), ".andy", "agent", "MEMORY.md");
+			const projectAgentsPath = path.join(this.pool.cwd, "AGENTS.md");
+
+			if (existsSync(projectMemoryPath)) {
+				try {
+					const mem = readFileSync(projectMemoryPath, "utf-8").trim();
+					if (mem) memoryContext += `\n\n### Project Memory (MEMORY.md):\n${mem}`;
+				} catch {}
+			}
+			if (existsSync(globalMemoryPath)) {
+				try {
+					const gmem = readFileSync(globalMemoryPath, "utf-8").trim();
+					if (gmem) memoryContext += `\n\n### Global Memory:\n${gmem}`;
+				} catch {}
+			}
+			if (existsSync(projectAgentsPath)) {
+				try {
+					const agents = readFileSync(projectAgentsPath, "utf-8").trim();
+					if (agents) memoryContext += `\n\n### Project Guidelines (AGENTS.md):\n${agents}`;
+				} catch {}
+			}
 		}
 
 		const systemPrompt = memoryContext
@@ -1321,7 +1334,7 @@ ${prompt || ""}`;
 		const streamOptions: any = {
 			apiKey,
 			signal: abortCtrl.signal,
-			temperature: body.temperature,
+			temperature: isConsolidationRequest ? 0 : body.temperature,
 			maxTokens: body.max_tokens || body.max_completion_tokens,
 		};
 
@@ -1424,11 +1437,15 @@ ${prompt || ""}`;
 			// Non-streaming standard JSON response
 			try {
 				const result = await complete(targetModel, context, streamOptions);
-				const accumulatedText =
-					result.content
+				let accumulatedText = "";
+				if (Array.isArray(result.content)) {
+					accumulatedText = result.content
 						.filter((c: any) => c.type === "text")
-						.map((c: any) => c.text)
-						.join("\n") || "";
+						.map((c: any) => c.text || "")
+						.join("\n");
+				} else if (typeof (result as any).content === "string") {
+					accumulatedText = (result as any).content;
+				}
 
 				const lastUser = nonSystem[nonSystem.length - 1];
 				const lastUserText = lastUser
