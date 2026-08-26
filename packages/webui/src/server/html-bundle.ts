@@ -1621,7 +1621,7 @@ export function getWebUiHtml(): string {
             <div class="space-y-2.5 pt-3 text-xs">
               <div>
                 <label class="block text-slate-400 text-[10px] mb-0.5 font-medium">Base URL</label>
-                <input id="pUrl_\${p.id}" type="text" value="\${p.defaultBaseUrl}" onchange="fetchProviderModels('\${p.id}')" class="w-full bg-surface-800 border border-surface-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-brand-500">
+                <input id="pUrl_\${p.id}" type="text" value="\${p.baseUrl || p.defaultBaseUrl}" onchange="fetchProviderModels('\${p.id}')" class="w-full bg-surface-800 border border-surface-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-brand-500">
               </div>
 
               <div>
@@ -1823,7 +1823,7 @@ export function getWebUiHtml(): string {
         });
         const data = await res.json();
         if (data.success) {
-          alert(\`Proveedor \${providerId} activado con el modelo \${defaultModel}.\`);
+          alert(\`✓ Proveedor \${providerId} guardado con Base URL: \${baseUrl || 'por defecto'} y modelo \${defaultModel}.\`);
           await fetchModelCatalogs();
           await fetchProviders();
         }
@@ -2708,6 +2708,10 @@ export function getWebUiHtml(): string {
         populateSettingsModelSelect(defProvider, defModel);
 
         if (settingsRes.defaults) {
+          const settingBaseUrl = document.getElementById('settingBaseUrl');
+          if (settingBaseUrl) {
+            settingBaseUrl.value = settingsRes.defaults.customBaseUrl || 'http://ia.v2nethost.cl:20128/v1';
+          }
           document.getElementById('settingRlmMaxDepth').value = settingsRes.defaults.rlmMaxDepth ?? 2;
           if (settingsRes.defaults.compaction) {
             document.getElementById('settingCompactionEnabled').checked = settingsRes.defaults.compaction.enabled !== false;
@@ -2768,6 +2772,11 @@ export function getWebUiHtml(): string {
       const rlmMaxDepth = document.getElementById('settingRlmMaxDepth').value;
       const compactionEnabled = document.getElementById('settingCompactionEnabled').checked;
 
+      const baseUrlInput = document.getElementById('settingBaseUrl');
+      const apiKeyInput = document.getElementById('settingApiKey');
+      const customBaseUrl = baseUrlInput ? baseUrlInput.value.trim() : '';
+      const customApiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+
       const autoLearnEnabled = document.getElementById('settingAutoLearnEnabled').checked;
       const autoUpdateMemory = document.getElementById('settingAutoUpdateMemory').checked;
       const autoCreateSkills = document.getElementById('settingAutoCreateSkills').checked;
@@ -2776,6 +2785,9 @@ export function getWebUiHtml(): string {
       const payload = {
         defaultModel,
         defaultProvider,
+        customBaseUrl,
+        customApiKey,
+        customProvider: defaultProvider,
         rlmMaxDepth: Number(rlmMaxDepth),
         compaction: { enabled: compactionEnabled },
       };
@@ -2790,7 +2802,12 @@ export function getWebUiHtml(): string {
           fetch('/api/providers', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ provider: defaultProvider, defaultModel })
+            body: JSON.stringify({
+              provider: defaultProvider,
+              baseUrl: customBaseUrl,
+              apiKey: customApiKey,
+              defaultModel
+            })
           }),
           fetch('/api/autolearn', {
             method: 'POST',

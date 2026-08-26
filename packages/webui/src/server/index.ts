@@ -430,6 +430,19 @@ ${prompt || ""}`;
 
 			if (method === "GET" && url === "/api/settings") {
 				const authStorage = this.pool.getAuthStorage();
+				const modelsJsonPath = existsSync(path.join(os.homedir(), ".andy", "agent", "models.json"))
+					? path.join(os.homedir(), ".andy", "agent", "models.json")
+					: existsSync(path.join(os.homedir(), ".prime", "agent", "models.json"))
+						? path.join(os.homedir(), ".prime", "agent", "models.json")
+						: path.join(os.homedir(), ".andy", "agent", "models.json");
+
+				let modelsConfig: any = { providers: {} };
+				if (existsSync(modelsJsonPath)) {
+					try {
+						modelsConfig = JSON.parse(readFileSync(modelsJsonPath, "utf-8"));
+					} catch {}
+				}
+
 				const defaults = {
 					defaultProvider: settingsMgr.getDefaultProvider() || "auto",
 					defaultModel: settingsMgr.getDefaultModel() || "auto/best-coding",
@@ -442,6 +455,10 @@ ${prompt || ""}`;
 					steeringMode: settingsMgr.getSteeringMode(),
 					followUpMode: settingsMgr.getFollowUpMode(),
 					mcpServers: settingsMgr.getGlobalMcpServers() || {},
+					customBaseUrl:
+						modelsConfig?.providers?.omniroute?.baseUrl ||
+						modelsConfig?.providers?.custom?.baseUrl ||
+						"http://ia.v2nethost.cl:20128/v1",
 				};
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(
@@ -469,6 +486,61 @@ ${prompt || ""}`;
 				if (body?.steeringMode) settingsMgr.setSteeringMode(body.steeringMode);
 				if (body?.followUpMode) settingsMgr.setFollowUpMode(body.followUpMode);
 
+				const modelsJsonPath = existsSync(path.join(os.homedir(), ".andy", "agent", "models.json"))
+					? path.join(os.homedir(), ".andy", "agent", "models.json")
+					: existsSync(path.join(os.homedir(), ".prime", "agent", "models.json"))
+						? path.join(os.homedir(), ".prime", "agent", "models.json")
+						: path.join(os.homedir(), ".andy", "agent", "models.json");
+
+				// Custom Base URL save
+				if (body?.customBaseUrl || body?.baseUrl) {
+					const targetBaseUrl = (body.customBaseUrl || body.baseUrl || "").trim();
+					const targetProvider = body.customProvider || body.defaultProvider || "omniroute";
+					if (targetBaseUrl) {
+						let modelsConfig: any = { providers: {} };
+						if (existsSync(modelsJsonPath)) {
+							try {
+								modelsConfig = JSON.parse(readFileSync(modelsJsonPath, "utf-8"));
+							} catch {}
+						}
+						if (!modelsConfig.providers) modelsConfig.providers = {};
+						if (!modelsConfig.providers[targetProvider]) modelsConfig.providers[targetProvider] = {};
+						modelsConfig.providers[targetProvider].baseUrl = targetBaseUrl;
+						if (targetProvider === "omniroute" || targetProvider === "custom") {
+							modelsConfig.providers[targetProvider].api = "openai-completions";
+							modelsConfig.providers[targetProvider].apiKey =
+								body.customApiKey ||
+								modelsConfig.providers[targetProvider].apiKey ||
+								"sk-7fd5586a69f723fb-71d90e-838d8616";
+							if (!Array.isArray(modelsConfig.providers[targetProvider].models)) {
+								modelsConfig.providers[targetProvider].models = [];
+							}
+							const targetModelId = body.defaultModel || "auto/best-coding";
+							const existing = modelsConfig.providers[targetProvider].models.find(
+								(m: any) => m.id === targetModelId,
+							);
+							if (!existing) {
+								modelsConfig.providers[targetProvider].models.push({
+									id: targetModelId,
+									name: `${targetProvider === "omniroute" ? "Omniroute" : "Custom"} (${targetModelId})`,
+									api: "openai-completions",
+									baseUrl: targetBaseUrl,
+									reasoning: true,
+									input: ["text", "image"],
+								});
+							}
+							for (const m of modelsConfig.providers[targetProvider].models) {
+								m.baseUrl = targetBaseUrl;
+							}
+						}
+						const dir = path.dirname(modelsJsonPath);
+						if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+						writeFileSync(modelsJsonPath, JSON.stringify(modelsConfig, null, 2), "utf-8");
+						this.pool.getModelRegistry().refresh();
+						this.addLog("INFO", "Settings", `Saved baseUrl for ${targetProvider}: ${targetBaseUrl}`);
+					}
+				}
+
 				// Custom API auth save
 				if (body?.customApiKey && body?.customProvider) {
 					const authStorage = this.pool.getAuthStorage();
@@ -491,7 +563,20 @@ ${prompt || ""}`;
 				const savedList = authStorage.list();
 				const defaultProvider = settingsMgr.getDefaultProvider() || "auto";
 
-				const providers = [
+				const modelsJsonPath = existsSync(path.join(os.homedir(), ".andy", "agent", "models.json"))
+					? path.join(os.homedir(), ".andy", "agent", "models.json")
+					: existsSync(path.join(os.homedir(), ".prime", "agent", "models.json"))
+						? path.join(os.homedir(), ".prime", "agent", "models.json")
+						: path.join(os.homedir(), ".andy", "agent", "models.json");
+
+				let modelsConfig: any = { providers: {} };
+				if (existsSync(modelsJsonPath)) {
+					try {
+						modelsConfig = JSON.parse(readFileSync(modelsJsonPath, "utf-8"));
+					} catch {}
+				}
+
+				const baseProviders = [
 					{
 						id: "omniroute",
 						name: "Omniroute / v2nethost",
@@ -499,8 +584,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "http://ia.v2nethost.cl:20128/v1",
 						defaultModel: "auto/best-coding",
 						description: "Router multi-modelo con proxy inteligente de alta disponibilidad.",
-						isConfigured: savedList.includes("omniroute") || savedList.includes("openai-codex"),
-						isActive: defaultProvider === "omniroute",
 					},
 					{
 						id: "openrouter",
@@ -509,8 +592,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "https://openrouter.ai/api/v1",
 						defaultModel: "anthropic/claude-3.5-sonnet",
 						description: "Agregador global con acceso unificado a cientos de modelos de IA.",
-						isConfigured: savedList.includes("openrouter") || !!process.env.OPENROUTER_API_KEY,
-						isActive: defaultProvider === "openrouter",
 					},
 					{
 						id: "openai",
@@ -519,8 +600,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "https://api.openai.com/v1",
 						defaultModel: "gpt-4o",
 						description: "Modelos GPT-4o, GPT-4o-mini y series o1/o3 de OpenAI.",
-						isConfigured: savedList.includes("openai") || !!process.env.OPENAI_API_KEY,
-						isActive: defaultProvider === "openai",
 					},
 					{
 						id: "anthropic",
@@ -529,8 +608,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "https://api.anthropic.com/v1",
 						defaultModel: "claude-3-5-sonnet-20241022",
 						description: "Familia Claude 3.5 Sonnet, Haiku y Opus para codificación avanzada.",
-						isConfigured: savedList.includes("anthropic") || !!process.env.ANTHROPIC_API_KEY,
-						isActive: defaultProvider === "anthropic",
 					},
 					{
 						id: "google",
@@ -539,8 +616,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "https://generativelanguage.googleapis.com/v1beta",
 						defaultModel: "gemini-2.0-flash",
 						description: "Modelos multimodales de Google con ventanas de contexto masivas.",
-						isConfigured: savedList.includes("google") || !!process.env.GEMINI_API_KEY,
-						isActive: defaultProvider === "google",
 					},
 					{
 						id: "deepseek",
@@ -549,8 +624,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "https://api.deepseek.com/v1",
 						defaultModel: "deepseek-chat",
 						description: "Modelos DeepSeek V3 y DeepSeek R1 de alto rendimiento y bajo costo.",
-						isConfigured: savedList.includes("deepseek") || !!process.env.DEEPSEEK_API_KEY,
-						isActive: defaultProvider === "deepseek",
 					},
 					{
 						id: "groq",
@@ -559,8 +632,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "https://api.groq.com/openai/v1",
 						defaultModel: "llama-3.3-70b-versatile",
 						description: "Inferencia ultra-rápida en chips LPU con latencias mínimas.",
-						isConfigured: savedList.includes("groq") || !!process.env.GROQ_API_KEY,
-						isActive: defaultProvider === "groq",
 					},
 					{
 						id: "mistral",
@@ -569,8 +640,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "https://api.mistral.ai/v1",
 						defaultModel: "codestral-latest",
 						description: "Modelos Codestral, Mistral Large y Pixtral para desarrollo.",
-						isConfigured: savedList.includes("mistral") || !!process.env.MISTRAL_API_KEY,
-						isActive: defaultProvider === "mistral",
 					},
 					{
 						id: "xai",
@@ -579,8 +648,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "https://api.x.ai/v1",
 						defaultModel: "grok-2-latest",
 						description: "Modelos Grok 2 y Grok Beta de xAI.",
-						isConfigured: savedList.includes("xai") || !!process.env.XAI_API_KEY,
-						isActive: defaultProvider === "xai",
 					},
 					{
 						id: "together",
@@ -589,8 +656,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "https://api.together.xyz/v1",
 						defaultModel: "meta-llama/Llama-3.3-70B-Instruct-Turbo",
 						description: "Infraestructura de inferencia en la nube para modelos de código abierto.",
-						isConfigured: savedList.includes("together") || !!process.env.TOGETHER_API_KEY,
-						isActive: defaultProvider === "together",
 					},
 					{
 						id: "fireworks",
@@ -599,8 +664,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "https://api.fireworks.ai/inference/v1",
 						defaultModel: "accounts/fireworks/models/qwen2p5-coder-32b-instruct",
 						description: "Plataforma de inferencia rápida con Qwen 2.5 Coder y Llama.",
-						isConfigured: savedList.includes("fireworks") || !!process.env.FIREWORKS_API_KEY,
-						isActive: defaultProvider === "fireworks",
 					},
 					{
 						id: "ollama",
@@ -609,8 +672,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "http://localhost:11434/v1",
 						defaultModel: "qwen2.5-coder:latest",
 						description: "Ejecución 100% privada y local sin requerir conexión a internet.",
-						isConfigured: true,
-						isActive: defaultProvider === "ollama",
 					},
 					{
 						id: "lmstudio",
@@ -619,8 +680,6 @@ ${prompt || ""}`;
 						defaultBaseUrl: "http://localhost:1234/v1",
 						defaultModel: "local-model",
 						description: "Servidor local de inferencia compatible con OpenAI en tu equipo.",
-						isConfigured: true,
-						isActive: defaultProvider === "lmstudio",
 					},
 					{
 						id: "custom",
@@ -629,10 +688,26 @@ ${prompt || ""}`;
 						defaultBaseUrl: "http://localhost:8000/v1",
 						defaultModel: "custom-model",
 						description: "Cualquier servidor vLLM, LocalAI, TGI o proxy corporativo compatible.",
-						isConfigured: savedList.includes("custom"),
-						isActive: defaultProvider === "custom",
 					},
 				];
+
+				const providers = baseProviders.map((p) => {
+					const savedBaseUrl = modelsConfig?.providers?.[p.id]?.baseUrl;
+					const isConfigured =
+						savedList.includes(p.id) ||
+						!!savedBaseUrl ||
+						(p.id === "omniroute" && (savedList.includes("omniroute") || savedList.includes("openai-codex"))) ||
+						p.id === "ollama" ||
+						p.id === "lmstudio";
+
+					return {
+						...p,
+						baseUrl: savedBaseUrl || p.defaultBaseUrl,
+						savedBaseUrl: savedBaseUrl || null,
+						isConfigured,
+						isActive: defaultProvider === p.id,
+					};
+				});
 
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ providers, defaultProvider, savedAuth: savedList }, null, 2));
@@ -641,11 +716,62 @@ ${prompt || ""}`;
 
 			if (method === "POST" && url === "/api/providers") {
 				const body = await this.readJsonBody<any>(req);
-				const { provider, apiKey, defaultModel } = body;
+				const { provider, baseUrl, apiKey, defaultModel } = body;
 				if (!provider) {
 					res.writeHead(400, { "Content-Type": "application/json" });
 					res.end(JSON.stringify({ error: "Provider ID required" }));
 					return;
+				}
+
+				const modelsJsonPath = existsSync(path.join(os.homedir(), ".andy", "agent", "models.json"))
+					? path.join(os.homedir(), ".andy", "agent", "models.json")
+					: existsSync(path.join(os.homedir(), ".prime", "agent", "models.json"))
+						? path.join(os.homedir(), ".prime", "agent", "models.json")
+						: path.join(os.homedir(), ".andy", "agent", "models.json");
+
+				let modelsConfig: any = { providers: {} };
+				if (existsSync(modelsJsonPath)) {
+					try {
+						modelsConfig = JSON.parse(readFileSync(modelsJsonPath, "utf-8"));
+					} catch {}
+				}
+
+				// Persist baseUrl in models.json
+				if (baseUrl && typeof baseUrl === "string" && baseUrl.trim()) {
+					const cleanBaseUrl = baseUrl.trim();
+					if (!modelsConfig.providers) modelsConfig.providers = {};
+					if (!modelsConfig.providers[provider]) modelsConfig.providers[provider] = {};
+					modelsConfig.providers[provider].baseUrl = cleanBaseUrl;
+
+					if (provider === "omniroute" || provider === "custom") {
+						modelsConfig.providers[provider].api = "openai-completions";
+						modelsConfig.providers[provider].apiKey =
+							apiKey || modelsConfig.providers[provider].apiKey || "sk-7fd5586a69f723fb-71d90e-838d8616";
+						if (!Array.isArray(modelsConfig.providers[provider].models)) {
+							modelsConfig.providers[provider].models = [];
+						}
+						const targetModelId = defaultModel || "auto/best-coding";
+						const existing = modelsConfig.providers[provider].models.find((m: any) => m.id === targetModelId);
+						if (!existing) {
+							modelsConfig.providers[provider].models.push({
+								id: targetModelId,
+								name: `${provider === "omniroute" ? "Omniroute" : "Custom"} (${targetModelId})`,
+								api: "openai-completions",
+								baseUrl: cleanBaseUrl,
+								reasoning: true,
+								input: ["text", "image"],
+							});
+						}
+						for (const m of modelsConfig.providers[provider].models) {
+							m.baseUrl = cleanBaseUrl;
+						}
+					}
+
+					const dir = path.dirname(modelsJsonPath);
+					if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+					writeFileSync(modelsJsonPath, JSON.stringify(modelsConfig, null, 2), "utf-8");
+					this.pool.getModelRegistry().refresh();
+					this.addLog("INFO", "Providers", `Persisted baseUrl for provider "${provider}": ${cleanBaseUrl}`);
 				}
 
 				const authStorage = this.pool.getAuthStorage();
@@ -664,10 +790,10 @@ ${prompt || ""}`;
 				this.addLog(
 					"INFO",
 					"Providers",
-					`Configured active provider: ${provider} (Model: ${defaultModel || "auto"})`,
+					`Configured active provider: ${provider} (BaseUrl: ${baseUrl || "default"}, Model: ${defaultModel || "auto"})`,
 				);
 				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ success: true, provider, defaultModel }));
+				res.end(JSON.stringify({ success: true, provider, baseUrl, defaultModel }));
 				return;
 			}
 
