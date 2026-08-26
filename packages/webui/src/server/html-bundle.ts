@@ -3,7 +3,10 @@ export function getWebUiHtml(): string {
 <html lang="es" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Andy Agent WebUI - RLM, Graft Studio, Memory & Multi-Provider Hub</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -46,12 +49,36 @@ export function getWebUiHtml(): string {
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
-    body { font-family: 'Inter', sans-serif; }
+    html, body {
+      font-family: 'Inter', sans-serif;
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+    }
     pre, code, .font-mono { font-family: 'JetBrains Mono', monospace; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    
+    /* Smooth touch scrolling */
+    .overflow-y-auto, .overflow-x-auto, #chatMessages, #sessionsList, #logsConsole, #providersGridContainer, #treeContainer {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #252b3b; border-radius: 9999px; }
     ::-webkit-scrollbar-thumb:hover { background: #333b50; }
+    
+    /* Hide scrollbars for clean horizontal tab scroll */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Safe areas for mobile devices */
+    .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+    .safe-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)); }
+    .safe-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
     
     /* Prose Custom Styling for Clean Chat Messages */
     .prose-custom { font-size: 0.8125rem; line-height: 1.65; color: #f1f5f9; }
@@ -84,12 +111,15 @@ export function getWebUiHtml(): string {
     .code-copy-btn:hover { color: #fff; background: #252b3b; }
   </style>
 </head>
-<body class="bg-surface-900 text-slate-100 h-screen flex overflow-hidden antialiased select-none">
+<body class="bg-surface-900 text-slate-100 min-h-[100dvh] h-[100dvh] max-h-[100dvh] h-screen w-full flex overflow-hidden antialiased">
+
+  <!-- Mobile Backdrop Overlay for Sidebar Drawer -->
+  <div id="sidebarBackdrop" onclick="toggleSidebar(false)" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"></div>
 
   <!-- ========================================================================= -->
-  <!-- SIDEBAR -->
+  <!-- SIDEBAR (DRAWER ON MOBILE) -->
   <!-- ========================================================================= -->
-  <aside id="sidebar" class="w-64 bg-surface-850 border-r border-surface-750 flex flex-col justify-between transition-all duration-300 z-30 shrink-0">
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 md:relative md:flex transition-transform duration-300 ease-in-out w-72 max-w-[85vw] bg-surface-850 border-r border-surface-750 flex flex-col justify-between shrink-0 shadow-2xl md:shadow-none h-full overflow-hidden">
     <div class="p-4 border-b border-surface-750 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/20 font-bold text-white tracking-wider">
@@ -176,45 +206,45 @@ export function getWebUiHtml(): string {
   <main class="flex-1 flex flex-col h-full overflow-hidden bg-surface-900 relative">
     
     <!-- Header Navigation -->
-    <header class="h-14 border-b border-surface-750 bg-surface-850/80 backdrop-blur px-4 flex items-center justify-between z-20 shrink-0">
-      <div class="flex items-center gap-3">
-        <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-750 transition-colors">
+    <header class="h-14 border-b border-surface-750 bg-surface-850/90 backdrop-blur px-2.5 sm:px-4 flex items-center justify-between z-20 shrink-0">
+      <div class="flex items-center gap-2 sm:gap-3 overflow-hidden">
+        <button onclick="toggleSidebar()" aria-label="Menu" class="text-slate-300 hover:text-white p-2 rounded-lg hover:bg-surface-750 transition-colors shrink-0">
           <i data-lucide="panel-left" class="w-5 h-5"></i>
         </button>
 
-        <div class="h-5 w-px bg-surface-700"></div>
+        <div class="h-5 w-px bg-surface-700 hidden sm:block shrink-0"></div>
 
-        <!-- Navigation Tabs -->
-        <nav class="flex items-center gap-1 bg-surface-800 p-1 rounded-lg border border-surface-700/60 text-xs">
-          <button id="tabChatBtn" onclick="switchView('chat')" class="px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all">
+        <!-- Navigation Tabs (Horizontally scrollable on mobile) -->
+        <nav class="flex items-center gap-1 bg-surface-800/90 p-1 rounded-lg border border-surface-700/60 text-xs overflow-x-auto no-scrollbar max-w-[calc(100vw-180px)] sm:max-w-none flex-nowrap scroll-smooth">
+          <button id="tabChatBtn" onclick="switchView('chat')" class="px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
             Chat & RLM
           </button>
-          <button id="tabProvidersBtn" onclick="switchView('providers')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all">
+          <button id="tabProvidersBtn" onclick="switchView('providers')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
-            Proveedores de IA
+            Proveedores
           </button>
-          <button id="tabGraftBtn" onclick="switchView('graft')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all">
+          <button id="tabGraftBtn" onclick="switchView('graft')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="git-fork" class="w-3.5 h-3.5 text-cyan-400"></i>
             Graft Studio
           </button>
-          <button id="tabMemoryBtn" onclick="switchView('memory')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all">
+          <button id="tabMemoryBtn" onclick="switchView('memory')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="brain" class="w-3.5 h-3.5 text-purple-400"></i>
-            Memoria & Reglas
+            Memoria
           </button>
-          <button id="tabSkillsBtn" onclick="switchView('skills')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all">
+          <button id="tabSkillsBtn" onclick="switchView('skills')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i>
-            Skills & Prompts
+            Skills
           </button>
-          <button id="tabTreeBtn" onclick="switchView('tree')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all">
+          <button id="tabTreeBtn" onclick="switchView('tree')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="git-branch" class="w-3.5 h-3.5 text-rose-400"></i>
-            Árbol de Ramas
+            Ramas
           </button>
-          <button id="tabLogsBtn" onclick="switchView('logs')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all">
+          <button id="tabLogsBtn" onclick="switchView('logs')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="scroll-text" class="w-3.5 h-3.5 text-emerald-400"></i>
-            Logs & Trazas
+            Logs
           </button>
-          <button id="tabFilesBtn" onclick="switchView('files')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all">
+          <button id="tabFilesBtn" onclick="switchView('files')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="folder-tree" class="w-3.5 h-3.5 text-amber-400"></i>
             Archivos
           </button>
@@ -222,17 +252,17 @@ export function getWebUiHtml(): string {
       </div>
 
       <!-- Controls -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <!-- Model Selector Dropdown with Provider Categorization -->
         <div class="relative">
-          <button onclick="toggleModelDropdown()" id="modelSelectorBtn" class="flex items-center gap-2 bg-surface-800 hover:bg-surface-750 border border-surface-700 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 transition-colors shadow-sm">
-            <span id="selectedProviderDot" class="w-2 h-2 rounded-full bg-brand-500"></span>
-            <span id="selectedModelLabel">Omniroute: auto/best-coding</span>
-            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+          <button onclick="toggleModelDropdown()" id="modelSelectorBtn" class="flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 transition-colors shadow-sm max-w-[125px] sm:max-w-[200px] md:max-w-none truncate">
+            <span id="selectedProviderDot" class="w-2 h-2 rounded-full bg-brand-500 shrink-0"></span>
+            <span id="selectedModelLabel" class="truncate text-[11px] sm:text-xs">auto/best-coding</span>
+            <i data-lucide="chevron-down" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 shrink-0"></i>
           </button>
           
-          <!-- Rich Categorized Dropdown Popover -->
-          <div id="modelDropdownMenu" class="hidden absolute right-0 mt-1.5 w-80 md:w-96 bg-surface-850 border border-surface-700 rounded-xl shadow-2xl z-50 text-xs overflow-hidden flex flex-col max-h-[28rem]">
+          <!-- Rich Categorized Dropdown Popover (Centered modal on smartphone) -->
+          <div id="modelDropdownMenu" class="hidden fixed inset-x-3 top-16 md:absolute md:inset-auto md:right-0 md:top-auto md:mt-1.5 md:w-96 max-w-[calc(100vw-1.5rem)] bg-surface-850 border border-surface-700 rounded-xl shadow-2xl z-50 text-xs overflow-hidden flex flex-col max-h-[75vh] md:max-h-[28rem]">
             <!-- Search bar -->
             <div class="p-2.5 border-b border-surface-750 bg-surface-800/80">
               <div class="relative">
@@ -242,7 +272,7 @@ export function getWebUiHtml(): string {
             </div>
 
             <!-- Provider Selection Tabs -->
-            <div id="dropdownProviderTabs" class="flex items-center gap-1 p-1.5 border-b border-surface-750 bg-surface-800 overflow-x-auto text-[10px]"></div>
+            <div id="dropdownProviderTabs" class="flex items-center gap-1 p-1.5 border-b border-surface-750 bg-surface-800 overflow-x-auto no-scrollbar text-[10px]"></div>
 
             <!-- Dynamic Model List -->
             <div id="modelsDropdownList" class="flex-1 overflow-y-auto p-1.5 space-y-0.5 max-h-64 select-none"></div>
@@ -258,15 +288,14 @@ export function getWebUiHtml(): string {
           </div>
         </div>
 
-        <select id="thinkingLevelSelect" onchange="setThinkingLevel(this.value)" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 focus:outline-none focus:border-brand-500 cursor-pointer">
+        <select id="thinkingLevelSelect" onchange="setThinkingLevel(this.value)" class="hidden sm:block bg-surface-800 hover:bg-surface-750 border border-surface-700 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-300 focus:outline-none focus:border-brand-500 cursor-pointer">
           <option value="off">Thinking: Off</option>
           <option value="low">Thinking: Low</option>
-          <option value="medium" selected>Thinking: Medium</option>
+          <option value="medium" selected>Thinking: Med</option>
           <option value="high">Thinking: High</option>
-          <option value="max">Thinking: Max</option>
         </select>
 
-        <button onclick="clearCurrentChat()" title="Limpiar chat" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-surface-750 transition-colors">
+        <button onclick="clearCurrentChat()" title="Limpiar chat" class="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-lg hover:bg-surface-750 transition-colors">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
       </div>
@@ -275,20 +304,20 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: CHAT & RLM -->
     <!-- ======================================================================= -->
-    <div id="viewChat" class="flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden relative">
-      <div id="chatMessages" class="flex-1 overflow-y-auto p-4 md:px-8 space-y-6 max-w-5xl w-full mx-auto select-text">
-        <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-12 space-y-6">
-          <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-400 flex items-center justify-center shadow-xl shadow-brand-500/25">
-            <i data-lucide="sparkles" class="w-7 h-7 text-white"></i>
+    <div id="viewChat" class="flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-14 md:pb-0 overflow-hidden relative">
+      <div id="chatMessages" class="flex-1 overflow-y-auto p-3 sm:p-4 md:px-8 space-y-4 sm:space-y-6 max-w-5xl w-full mx-auto select-text">
+        <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-8 sm:py-12 space-y-4 sm:space-y-6">
+          <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-400 flex items-center justify-center shadow-xl shadow-brand-500/25">
+            <i data-lucide="sparkles" class="w-6 h-6 sm:w-7 sm:h-7 text-white"></i>
           </div>
           <div>
-            <h2 class="text-xl font-bold text-white tracking-tight">¿En qué trabajamos hoy?</h2>
-            <p class="text-xs text-slate-400 mt-1 max-w-sm">
+            <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">¿En qué trabajamos hoy?</h2>
+            <p class="text-[11px] sm:text-xs text-slate-400 mt-1 max-w-sm">
               Andy Agent RLM con kernel interactivo Python, motor estructural Graft, MEMORY.md, AGENTS.md y soporte multimodelo.
             </p>
           </div>
 
-          <div class="grid grid-cols-2 gap-2.5 w-full text-left">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 w-full text-left">
             <button onclick="sendQuickPrompt('Mapea la arquitectura del proyecto actual usando Graft')" class="p-3 bg-surface-800/80 hover:bg-surface-750 border border-surface-700/70 rounded-xl transition-all hover:border-brand-500/50 group flex flex-col gap-1">
               <span class="text-xs font-semibold text-slate-200 group-hover:text-brand-300 flex items-center gap-1.5">
                 <i data-lucide="git-fork" class="w-3.5 h-3.5 text-cyan-400"></i>
@@ -324,55 +353,55 @@ export function getWebUiHtml(): string {
         </div>
       </div>
 
-      <div id="liveExecutionIndicator" class="hidden max-w-4xl mx-auto w-full px-4 mb-2">
+      <div id="liveExecutionIndicator" class="hidden max-w-4xl mx-auto w-full px-3 sm:px-4 mb-2">
         <div class="bg-surface-800/90 border border-brand-500/30 rounded-lg p-2.5 flex items-center justify-between text-xs backdrop-blur shadow-lg shadow-brand-500/10">
           <div class="flex items-center gap-2.5">
             <span class="relative flex h-2.5 w-2.5">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-500"></span>
             </span>
-            <span id="liveExecutionText" class="font-medium text-slate-200">Ejecutando en el kernel...</span>
+            <span id="liveExecutionText" class="font-medium text-slate-200 text-xs truncate">Ejecutando...</span>
           </div>
-          <button onclick="abortCurrentExecution()" class="text-xs text-rose-400 hover:text-rose-300 font-medium px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 transition-colors">
+          <button onclick="abortCurrentExecution()" class="text-xs text-rose-400 hover:text-rose-300 font-medium px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 transition-colors shrink-0">
             Cancelar
           </button>
         </div>
       </div>
 
-      <div class="p-4 bg-surface-900/95 border-t border-surface-750/80 shrink-0">
+      <div class="p-2 sm:p-4 bg-surface-900/95 border-t border-surface-750/80 shrink-0 safe-bottom">
         <div class="max-w-4xl mx-auto relative bg-surface-800 border border-surface-700 rounded-xl shadow-xl focus-within:border-brand-500 transition-all duration-200">
           <textarea
             id="promptInput"
             rows="1"
-            placeholder="Envía un mensaje a Andy Agent o usa / para comandos..."
+            placeholder="Envía un mensaje a Andy Agent o usa /..."
             oninput="autoExpandTextarea(this)"
             onkeydown="handleInputKeyDown(event)"
-            class="w-full bg-transparent text-sm text-slate-100 placeholder-slate-400 px-4 py-3 resize-none focus:outline-none max-h-48 overflow-y-auto leading-relaxed"
+            class="w-full bg-transparent text-sm text-slate-100 placeholder-slate-400 px-3 py-2.5 sm:px-4 sm:py-3 resize-none focus:outline-none max-h-36 sm:max-h-48 overflow-y-auto leading-relaxed"
           ></textarea>
 
-          <div class="flex items-center justify-between px-3 pb-2.5 pt-1 text-xs">
-            <div class="flex items-center gap-1.5 text-slate-400">
-              <button onclick="insertPromptPrefix('/graft:map')" class="px-2.5 py-0.5 rounded bg-surface-700 hover:bg-surface-600 text-slate-300 text-[11px] transition-colors">/map</button>
-              <button onclick="insertPromptPrefix('/graft:skeleton ')" class="px-2.5 py-0.5 rounded bg-surface-700 hover:bg-surface-600 text-slate-300 text-[11px] transition-colors">/skeleton</button>
-              <button onclick="insertPromptPrefix('/graft:callers ')" class="px-2.5 py-0.5 rounded bg-surface-700 hover:bg-surface-600 text-slate-300 text-[11px] transition-colors">/callers</button>
-              <button onclick="insertPromptPrefix('/graft:blast ')" class="px-2.5 py-0.5 rounded bg-surface-700 hover:bg-surface-600 text-slate-300 text-[11px] transition-colors">/blast</button>
+          <div class="flex items-center justify-between px-2.5 pb-2 pt-1 text-xs">
+            <div class="flex items-center gap-1 text-slate-400 overflow-x-auto no-scrollbar flex-nowrap pr-2">
+              <button onclick="insertPromptPrefix('/graft:map')" class="px-2 py-0.5 rounded bg-surface-700 hover:bg-surface-600 text-slate-300 text-[10px] sm:text-[11px] whitespace-nowrap shrink-0 transition-colors">/map</button>
+              <button onclick="insertPromptPrefix('/graft:skeleton ')" class="px-2 py-0.5 rounded bg-surface-700 hover:bg-surface-600 text-slate-300 text-[10px] sm:text-[11px] whitespace-nowrap shrink-0 transition-colors">/skeleton</button>
+              <button onclick="insertPromptPrefix('/graft:callers ')" class="px-2 py-0.5 rounded bg-surface-700 hover:bg-surface-600 text-slate-300 text-[10px] sm:text-[11px] whitespace-nowrap shrink-0 transition-colors">/callers</button>
+              <button onclick="insertPromptPrefix('/graft:blast ')" class="px-2 py-0.5 rounded bg-surface-700 hover:bg-surface-600 text-slate-300 text-[10px] sm:text-[11px] whitespace-nowrap shrink-0 transition-colors">/blast</button>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 shrink-0">
               <button id="sendPromptBtn" onclick="submitPrompt()" class="bg-brand-600 hover:bg-brand-500 text-white font-medium p-2 rounded-lg transition-all duration-150 shadow-md shadow-brand-600/30 flex items-center justify-center">
                 <i data-lucide="arrow-up" class="w-4 h-4"></i>
               </button>
             </div>
           </div>
         </div>
-        <p class="text-center text-[11px] text-slate-400 mt-2">Andy Agent RLM 0.8.0 • Graft Context Engine & Memory Activos</p>
+        <p class="text-center text-[10px] sm:text-[11px] text-slate-400 mt-1 sm:mt-2">Andy Agent RLM • Context Engine & Memory Activos</p>
       </div>
     </div>
 
     <!-- ======================================================================= -->
     <!-- VIEW: MULTI-PROVIDER HUB (AUTO-FETCH MODELS DROPDOWNS) -->
     <!-- ======================================================================= -->
-    <div id="viewProviders" class="hidden flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-y-auto p-6 max-w-7xl w-full mx-auto space-y-6">
+    <div id="viewProviders" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-6">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -400,75 +429,75 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: MEMORY & AGENT RULES (MEMORY.MD & AGENTS.MD) -->
     <!-- ======================================================================= -->
-    <div id="viewMemory" class="hidden flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden p-6 max-w-6xl w-full mx-auto space-y-4">
-      <div class="flex items-center justify-between">
+    <div id="viewMemory" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <i data-lucide="brain" class="w-5 h-5 text-purple-400"></i>
-            Memoria Persistente & Reglas del Agente
+            Memoria Persistente & Reglas
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Gestiona MEMORY.md (conocimiento acumulado) y AGENTS.md (directivas de comportamiento).</p>
+          <p class="text-xs text-slate-400 mt-0.5">MEMORY.md y AGENTS.md.</p>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <div class="bg-surface-800 p-1 rounded-lg border border-surface-700 flex items-center text-xs">
-            <button id="docTypeMemoryBtn" onclick="switchDocType('memory')" class="px-3 py-1 rounded font-medium bg-purple-600 text-white">MEMORY.md</button>
-            <button id="docTypeAgentsBtn" onclick="switchDocType('agents')" class="px-3 py-1 rounded font-medium text-slate-400 hover:text-white">AGENTS.md</button>
+            <button id="docTypeMemoryBtn" onclick="switchDocType('memory')" class="px-2.5 py-1 rounded font-medium bg-purple-600 text-white">MEMORY.md</button>
+            <button id="docTypeAgentsBtn" onclick="switchDocType('agents')" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white">AGENTS.md</button>
           </div>
 
           <div class="bg-surface-800 p-1 rounded-lg border border-surface-700 flex items-center text-xs">
-            <button id="memoryScopeProjectBtn" onclick="switchMemoryScope('project')" class="px-3 py-1 rounded font-medium bg-brand-600 text-white">Proyecto</button>
-            <button id="memoryScopeGlobalBtn" onclick="switchMemoryScope('global')" class="px-3 py-1 rounded font-medium text-slate-400 hover:text-white">Global (~/.andy/)</button>
+            <button id="memoryScopeProjectBtn" onclick="switchMemoryScope('project')" class="px-2.5 py-1 rounded font-medium bg-brand-600 text-white">Proyecto</button>
+            <button id="memoryScopeGlobalBtn" onclick="switchMemoryScope('global')" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white">Global</button>
           </div>
 
-          <button onclick="downloadMemoryBackup()" title="Descargar respaldo .md a tu PC" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 text-slate-200 transition-colors">
+          <button onclick="downloadMemoryBackup()" title="Descargar respaldo" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 text-xs font-medium p-2 sm:px-3 sm:py-2 rounded-lg flex items-center gap-1.5 text-slate-200 transition-colors">
             <i data-lucide="download" class="w-4 h-4 text-cyan-400"></i>
-            Descargar Respaldo
+            <span class="hidden sm:inline">Descargar</span>
           </button>
 
-          <label title="Subir y restaurar un archivo de respaldo .md" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 text-slate-200 transition-colors cursor-pointer">
+          <label title="Restaurar respaldo" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 text-xs font-medium p-2 sm:px-3 sm:py-2 rounded-lg flex items-center gap-1.5 text-slate-200 transition-colors cursor-pointer">
             <i data-lucide="upload" class="w-4 h-4 text-amber-400"></i>
-            Restaurar
+            <span class="hidden sm:inline">Restaurar</span>
             <input type="file" accept=".md,.txt" onchange="restoreMemoryBackup(event)" class="hidden">
           </label>
 
-          <button onclick="saveActiveDoc()" class="bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium px-4 py-2 rounded-lg flex items-center gap-1.5 shadow-md shadow-brand-600/20 transition-all">
+          <button onclick="saveActiveDoc()" class="bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-md shadow-brand-600/20 transition-all">
             <i data-lucide="save" class="w-4 h-4"></i>
             Guardar
           </button>
         </div>
       </div>
 
-      <div class="flex-1 bg-surface-850 border border-surface-750 rounded-xl overflow-hidden flex flex-col">
+      <div class="flex-1 min-h-[300px] bg-surface-850 border border-surface-750 rounded-xl overflow-hidden flex flex-col">
         <div class="p-3 bg-surface-800 border-b border-surface-750 flex items-center justify-between text-xs text-slate-300 font-mono">
-          <span id="memoryFilePathLabel">Cargando archivo...</span>
-          <span id="memorySaveStatus" class="text-[11px] text-emerald-400 font-sans font-medium"></span>
+          <span id="memoryFilePathLabel" class="truncate">Cargando archivo...</span>
+          <span id="memorySaveStatus" class="text-[11px] text-emerald-400 font-sans font-medium shrink-0 ml-2"></span>
         </div>
-        <textarea id="memoryEditorText" class="flex-1 p-4 bg-surface-900/80 font-mono text-xs text-slate-200 leading-relaxed focus:outline-none resize-none"></textarea>
+        <textarea id="memoryEditorText" class="flex-1 p-3 sm:p-4 bg-surface-900/80 font-mono text-xs text-slate-200 leading-relaxed focus:outline-none resize-none min-h-[250px]"></textarea>
       </div>
     </div>
 
     <!-- ======================================================================= -->
     <!-- VIEW: SKILLS & PROMPTS STUDIO -->
     <!-- ======================================================================= -->
-    <div id="viewSkills" class="hidden flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden p-6 max-w-6xl w-full mx-auto space-y-4">
+    <div id="viewSkills" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400"></i>
-            Skills & Prompt Templates Studio
+            Skills & Prompts Studio
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Explora, crea y administra las habilidades activas y plantillas de prompts de Andy Agent.</p>
+          <p class="text-xs text-slate-400 mt-0.5">Habilidades activas y plantillas de prompts.</p>
         </div>
 
         <button onclick="openCreateSkillModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
           <i data-lucide="plus" class="w-4 h-4"></i>
-          Nueva Habilidad (SKILL.md)
+          Nueva Habilidad
         </button>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 overflow-hidden">
-        <div class="bg-surface-850 border border-surface-750 rounded-xl p-4 flex flex-col overflow-hidden space-y-3">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+        <div class="bg-surface-850 border border-surface-750 rounded-xl p-4 flex flex-col space-y-3 min-h-[250px]">
           <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
             <i data-lucide="zap" class="w-4 h-4 text-indigo-400"></i>
             Habilidades Registradas (.andy/skills)
@@ -478,13 +507,13 @@ export function getWebUiHtml(): string {
           </div>
         </div>
 
-        <div class="bg-surface-850 border border-surface-750 rounded-xl p-4 flex flex-col overflow-hidden space-y-3">
+        <div class="bg-surface-850 border border-surface-750 rounded-xl p-4 flex flex-col space-y-3 min-h-[250px]">
           <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
             <i data-lucide="file-text" class="w-4 h-4 text-amber-400"></i>
             Plantillas de Prompts (.andy/prompts)
           </h3>
           <div id="promptsListContainer" class="flex-1 overflow-y-auto space-y-2 text-xs">
-            <div class="text-slate-400 p-4 text-center">Cargando plantillas de prompts...</div>
+            <div class="text-slate-400 p-4 text-center">Cargando plantillas...</div>
           </div>
         </div>
       </div>
@@ -493,23 +522,23 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: BRANCH TREE (TIME TRAVEL DAG) -->
     <!-- ======================================================================= -->
-    <div id="viewTree" class="hidden flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden p-6 max-w-6xl w-full mx-auto space-y-4">
+    <div id="viewTree" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <i data-lucide="git-branch" class="w-5 h-5 text-rose-400"></i>
-            Árbol de Ramas & Checkpoints (Time Travel)
+            Árbol de Ramas (Time Travel)
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Visualiza todos los puntos de decisión de la sesión actual y retrocede o bifurca ramas.</p>
+          <p class="text-xs text-slate-400 mt-0.5">Puntos de decisión de la sesión actual.</p>
         </div>
 
         <button onclick="refreshBranchTree()" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 text-slate-200">
           <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          Refrescar Árbol
+          Refrescar
         </button>
       </div>
 
-      <div class="flex-1 bg-surface-850 border border-surface-750 rounded-xl p-6 overflow-y-auto space-y-4">
+      <div class="flex-1 bg-surface-850 border border-surface-750 rounded-xl p-4 sm:p-6 overflow-y-auto space-y-4">
         <div id="treeContainer" class="space-y-3"></div>
       </div>
     </div>
@@ -517,17 +546,17 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: LOGS & TRAZAS -->
     <!-- ======================================================================= -->
-    <div id="viewLogs" class="hidden flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden p-6 max-w-6xl w-full mx-auto space-y-4">
-      <div class="flex items-center justify-between">
+    <div id="viewLogs" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <i data-lucide="scroll-text" class="w-5 h-5 text-emerald-400"></i>
-            Consola de Logs y Trazas en Vivo
+            Consola de Logs en Vivo
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Stream en tiempo real de peticiones API, llamadas a herramientas y eventos del kernel.</p>
+          <p class="text-xs text-slate-400 mt-0.5">Stream de peticiones API y eventos del kernel.</p>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
           <div class="flex items-center gap-1 text-xs">
             <button onclick="filterLogs('ALL')" class="px-2.5 py-1 rounded bg-surface-750 hover:bg-surface-700 text-white font-medium log-filter-btn" data-filter="ALL">Todos</button>
             <button onclick="filterLogs('RLM')" class="px-2.5 py-1 rounded bg-surface-800 hover:bg-surface-700 text-purple-400 font-medium log-filter-btn" data-filter="RLM">RLM</button>
@@ -535,26 +564,26 @@ export function getWebUiHtml(): string {
             <button onclick="filterLogs('INFO')" class="px-2.5 py-1 rounded bg-surface-800 hover:bg-surface-700 text-emerald-400 font-medium log-filter-btn" data-filter="INFO">Info</button>
             <button onclick="filterLogs('ERROR')" class="px-2.5 py-1 rounded bg-surface-800 hover:bg-surface-700 text-rose-400 font-medium log-filter-btn" data-filter="ERROR">Error</button>
           </div>
-          <button onclick="clearLogsConsole()" class="p-2 text-slate-400 hover:text-white bg-surface-800 border border-surface-700 rounded-lg">
+          <button onclick="clearLogsConsole()" class="p-2 text-slate-400 hover:text-white bg-surface-800 border border-surface-700 rounded-lg shrink-0">
             <i data-lucide="trash-2" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
 
-      <div id="logsConsole" class="flex-1 bg-surface-950 border border-surface-750 rounded-xl p-4 overflow-y-auto font-mono text-xs space-y-2 select-text"></div>
+      <div id="logsConsole" class="flex-1 bg-surface-950 border border-surface-750 rounded-xl p-3 sm:p-4 overflow-y-auto font-mono text-xs space-y-2 select-text min-h-[300px]"></div>
     </div>
 
     <!-- ======================================================================= -->
     <!-- VIEW: GRAFT STUDIO -->
     <!-- ======================================================================= -->
-    <div id="viewGraft" class="hidden flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden p-6 max-w-6xl w-full mx-auto space-y-6">
+    <div id="viewGraft" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4 sm:space-y-6">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <i data-lucide="git-fork" class="w-5 h-5 text-cyan-400"></i>
-            Graft Codebase Context Studio
+            Graft Context Studio
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Exploración estructural y análisis de dependencias sin coste de tokens.</p>
+          <p class="text-xs text-slate-400 mt-0.5">Exploración estructural sin coste de tokens.</p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -565,45 +594,45 @@ export function getWebUiHtml(): string {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-surface-800 border border-surface-700 rounded-xl p-4 space-y-3">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+        <div class="bg-surface-800 border border-surface-700 rounded-xl p-3.5 space-y-2.5">
           <div class="flex items-center gap-2 text-xs font-semibold text-slate-200">
             <i data-lucide="file-code" class="w-4 h-4 text-brand-400"></i>
             Esqueleto de Archivo
           </div>
-          <p class="text-[11px] text-slate-400">Extraer firmas, tipos e interfaces omitiendo los cuerpos.</p>
+          <p class="text-[11px] text-slate-400">Extraer firmas y tipos.</p>
           <div class="flex gap-1.5">
-            <input id="graftSkeletonInput" type="text" placeholder="Ej: packages/openai-bridge/src/server.ts" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
+            <input id="graftSkeletonInput" type="text" placeholder="packages/openai-bridge/src/server.ts" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
             <button onclick="fetchGraftSkeleton()" class="bg-brand-600 hover:bg-brand-500 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors">Ver</button>
           </div>
         </div>
 
-        <div class="bg-surface-800 border border-surface-700 rounded-xl p-4 space-y-3">
+        <div class="bg-surface-800 border border-surface-700 rounded-xl p-3.5 space-y-2.5">
           <div class="flex items-center gap-2 text-xs font-semibold text-slate-200">
             <i data-lucide="phone-call" class="w-4 h-4 text-emerald-400"></i>
             Búsqueda de Callers
           </div>
-          <p class="text-[11px] text-slate-400">Rastrear qué módulos llaman a una función o clase.</p>
+          <p class="text-[11px] text-slate-400">Módulos que llaman a una función.</p>
           <div class="flex gap-1.5">
-            <input id="graftCallersInput" type="text" placeholder="Ej: createAgentSession" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+            <input id="graftCallersInput" type="text" placeholder="createAgentSession" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
             <button onclick="fetchGraftCallers()" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors">Buscar</button>
           </div>
         </div>
 
-        <div class="bg-surface-800 border border-surface-700 rounded-xl p-4 space-y-3">
+        <div class="bg-surface-800 border border-surface-700 rounded-xl p-3.5 space-y-2.5">
           <div class="flex items-center gap-2 text-xs font-semibold text-slate-200">
             <i data-lucide="target" class="w-4 h-4 text-amber-400"></i>
             Radio de Impacto (Blast)
           </div>
-          <p class="text-[11px] text-slate-400">Evaluar impacto en cascada antes de refactorizar.</p>
+          <p class="text-[11px] text-slate-400">Impacto en cascada.</p>
           <div class="flex gap-1.5">
-            <input id="graftBlastInput" type="text" placeholder="Ej: packages/openai-bridge/src/types.ts" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
+            <input id="graftBlastInput" type="text" placeholder="packages/openai-bridge/src/types.ts" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
             <button onclick="fetchGraftBlast()" class="bg-amber-600 hover:bg-amber-500 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors">Evaluar</button>
           </div>
         </div>
       </div>
 
-      <div class="flex-1 bg-surface-850 border border-surface-750 rounded-xl overflow-hidden flex flex-col">
+      <div class="flex-1 min-h-[250px] bg-surface-850 border border-surface-750 rounded-xl overflow-hidden flex flex-col">
         <div class="p-3 bg-surface-800 border-b border-surface-750 flex items-center justify-between text-xs text-slate-300 font-medium">
           <span id="graftResultsTitle" class="flex items-center gap-1.5">
             <i data-lucide="terminal" class="w-4 h-4 text-cyan-400"></i>
@@ -614,76 +643,99 @@ export function getWebUiHtml(): string {
             Copiar
           </button>
         </div>
-        <pre id="graftResultContent" class="flex-1 p-4 overflow-auto text-xs font-mono text-slate-200 leading-relaxed bg-surface-900/60 select-text"></pre>
+        <pre id="graftResultContent" class="flex-1 p-3 sm:p-4 overflow-auto text-xs font-mono text-slate-200 leading-relaxed bg-surface-900/60 select-text min-h-[200px]"></pre>
       </div>
     </div>
 
     <!-- ======================================================================= -->
     <!-- VIEW: WORKSPACE FILES -->
     <!-- ======================================================================= -->
-    <div id="viewFiles" class="hidden flex-1 flex flex-col h-[calc(100vh-3.5rem)] overflow-hidden p-6 max-w-6xl w-full mx-auto space-y-4">
+    <div id="viewFiles" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
       <div class="flex items-center justify-between">
         <div>
-          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <i data-lucide="folder-tree" class="w-5 h-5 text-amber-400"></i>
-            Explorador de Archivos & Editor
+            Explorador de Archivos
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Espacio de trabajo local del proyecto.</p>
+          <p class="text-xs text-slate-400 mt-0.5">Espacio de trabajo local.</p>
         </div>
         <div class="flex items-center gap-2">
           <button onclick="saveActiveWorkspaceFile()" class="bg-brand-600 hover:bg-brand-500 text-xs font-medium px-3 py-2 rounded-lg text-white flex items-center gap-1.5 shadow-sm">
             <i data-lucide="save" class="w-3.5 h-3.5"></i>
-            Guardar Archivo
+            Guardar
           </button>
           <button onclick="refreshWorkspaceFiles()" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 text-slate-200">
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-            Refrescar
           </button>
         </div>
       </div>
 
-      <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden">
-        <div id="fileListContainer" class="bg-surface-850 border border-surface-750 rounded-xl overflow-y-auto p-2 space-y-1 text-xs font-mono text-slate-300"></div>
+      <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[350px]">
+        <div id="fileListContainer" class="bg-surface-850 border border-surface-750 rounded-xl overflow-y-auto p-2 space-y-1 text-xs font-mono text-slate-300 max-h-60 md:max-h-none"></div>
 
-        <div class="md:col-span-2 bg-surface-850 border border-surface-750 rounded-xl overflow-hidden flex flex-col">
+        <div class="md:col-span-2 bg-surface-850 border border-surface-750 rounded-xl overflow-hidden flex flex-col min-h-[250px]">
           <div class="p-3 bg-surface-800 border-b border-surface-750 flex items-center justify-between text-xs text-slate-300">
-            <span id="previewFileName" class="font-mono text-brand-300">Selecciona un archivo</span>
-            <span id="fileSaveStatus" class="text-[11px] text-emerald-400"></span>
+            <span id="previewFileName" class="font-mono text-brand-300 truncate">Selecciona un archivo</span>
+            <span id="fileSaveStatus" class="text-[11px] text-emerald-400 shrink-0 ml-2"></span>
           </div>
-          <textarea id="filePreviewEditor" class="flex-1 p-4 overflow-auto text-xs font-mono text-slate-200 leading-relaxed bg-surface-900/80 focus:outline-none resize-none"></textarea>
+          <textarea id="filePreviewEditor" class="flex-1 p-3 sm:p-4 overflow-auto text-xs font-mono text-slate-200 leading-relaxed bg-surface-900/80 focus:outline-none resize-none min-h-[200px]"></textarea>
         </div>
       </div>
     </div>
+
+    <!-- Mobile Bottom Navigation Bar (< md) -->
+    <nav id="mobileBottomNav" class="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface-850/95 backdrop-blur-md border-t border-surface-750 flex items-center justify-around z-40 px-1 safe-pb">
+      <button onclick="switchView('chat')" id="mobTabChat" class="flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors">
+        <i data-lucide="message-square" class="w-5 h-5"></i>
+        <span class="mt-0.5">Chat</span>
+      </button>
+      <button onclick="switchView('providers')" id="mobTabProviders" class="flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors">
+        <i data-lucide="zap" class="w-5 h-5"></i>
+        <span class="mt-0.5">Modelos</span>
+      </button>
+      <button onclick="switchView('graft')" id="mobTabGraft" class="flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors">
+        <i data-lucide="git-fork" class="w-5 h-5"></i>
+        <span class="mt-0.5">Graft</span>
+      </button>
+      <button onclick="switchView('memory')" id="mobTabMemory" class="flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors">
+        <i data-lucide="brain" class="w-5 h-5"></i>
+        <span class="mt-0.5">Memoria</span>
+      </button>
+      <button onclick="switchView('logs')" id="mobTabLogs" class="flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors">
+        <i data-lucide="scroll-text" class="w-5 h-5"></i>
+        <span class="mt-0.5">Logs</span>
+      </button>
+    </nav>
   </main>
 
   <!-- ========================================================================= -->
   <!-- SETTINGS MODAL -->
   <!-- ========================================================================= -->
   <div id="settingsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-      <div class="p-4 border-b border-surface-750 flex items-center justify-between">
-        <h3 class="font-bold text-base text-white flex items-center gap-2">
+    <div class="bg-surface-850 border border-surface-700 rounded-t-2xl sm:rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+      <div class="p-3 sm:p-4 border-b border-surface-750 flex items-center justify-between">
+        <h3 class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
           <i data-lucide="settings" class="w-5 h-5 text-brand-400"></i>
-          Centro de Configuración Total de Andy Agent
+          Centro de Configuración de Andy Agent
         </h3>
-        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-surface-750">
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-750">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <div class="px-4 pt-2 border-b border-surface-750 flex flex-wrap gap-1 bg-surface-800/60 text-xs">
-        <button onclick="switchSettingsTab('models')" id="setTabModelsBtn" class="px-3 py-2 font-medium border-b-2 border-brand-500 text-brand-300">Modelos & Omniroute</button>
-        <button onclick="switchSettingsTab('autolearn')" id="setTabAutoLearnBtn" class="px-3 py-2 font-medium text-purple-300 hover:text-white flex items-center gap-1">🧠 Autoaprendizaje</button>
-        <button onclick="switchSettingsTab('thinking')" id="setTabThinkingBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white">Thinking Budgets</button>
-        <button onclick="switchSettingsTab('rlm')" id="setTabRlmBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white">RLM & Subagentes</button>
-        <button onclick="switchSettingsTab('compaction')" id="setTabCompactionBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white">Compactación</button>
-        <button onclick="switchSettingsTab('mcp')" id="setTabMcpBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white">Servidores MCP</button>
-        <button onclick="switchSettingsTab('shell')" id="setTabShellBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white">Terminal & Reintentos</button>
-        <button onclick="switchSettingsTab('media')" id="setTabMediaBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white">Medios & Imágenes</button>
-        <button onclick="switchSettingsTab('appearance')" id="setTabAppearanceBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white">Apariencia & Rutas</button>
+      <div class="px-2 sm:px-4 pt-2 border-b border-surface-750 flex overflow-x-auto no-scrollbar flex-nowrap gap-1 bg-surface-800/60 text-xs">
+        <button onclick="switchSettingsTab('models')" id="setTabModelsBtn" class="px-3 py-2 font-medium border-b-2 border-brand-500 text-brand-300 whitespace-nowrap shrink-0">Modelos & Omniroute</button>
+        <button onclick="switchSettingsTab('autolearn')" id="setTabAutoLearnBtn" class="px-3 py-2 font-medium text-purple-300 hover:text-white flex items-center gap-1 whitespace-nowrap shrink-0">🧠 Autoaprendizaje</button>
+        <button onclick="switchSettingsTab('thinking')" id="setTabThinkingBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Thinking Budgets</button>
+        <button onclick="switchSettingsTab('rlm')" id="setTabRlmBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">RLM & Subagentes</button>
+        <button onclick="switchSettingsTab('compaction')" id="setTabCompactionBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Compactación</button>
+        <button onclick="switchSettingsTab('mcp')" id="setTabMcpBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Servidores MCP</button>
+        <button onclick="switchSettingsTab('shell')" id="setTabShellBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Terminal & Reintentos</button>
+        <button onclick="switchSettingsTab('media')" id="setTabMediaBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Medios & Imágenes</button>
+        <button onclick="switchSettingsTab('appearance')" id="setTabAppearanceBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Apariencia & Rutas</button>
       </div>
 
-      <div class="p-6 overflow-y-auto space-y-6 text-xs flex-1">
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 text-xs flex-1">
         <div id="setTabModels" class="space-y-4">
           <div class="bg-surface-800 p-4 rounded-xl border border-surface-700 space-y-3">
             <h4 class="font-semibold text-sm text-slate-200 flex items-center gap-2">
@@ -917,48 +969,96 @@ export function getWebUiHtml(): string {
 
       ['tabChatBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn'].forEach(t => {
         const el = document.getElementById(t);
-        if (el) el.className = 'px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all';
+        if (el) el.className = 'px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+      });
+
+      // Reset mobile bottom nav buttons
+      ['mobTabChat', 'mobTabProviders', 'mobTabGraft', 'mobTabMemory', 'mobTabLogs'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.className = 'flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors';
       });
 
       if (view === 'chat') {
         document.getElementById('viewChat').classList.remove('hidden');
-        document.getElementById('tabChatBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all';
+        document.getElementById('tabChatBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+        const mob = document.getElementById('mobTabChat');
+        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
       } else if (view === 'providers') {
         document.getElementById('viewProviders').classList.remove('hidden');
-        document.getElementById('tabProvidersBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all';
+        document.getElementById('tabProvidersBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+        const mob = document.getElementById('mobTabProviders');
+        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchProviders();
       } else if (view === 'graft') {
         document.getElementById('viewGraft').classList.remove('hidden');
-        document.getElementById('tabGraftBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all';
+        document.getElementById('tabGraftBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+        const mob = document.getElementById('mobTabGraft');
+        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchGraftMap();
       } else if (view === 'memory') {
         document.getElementById('viewMemory').classList.remove('hidden');
-        document.getElementById('tabMemoryBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all';
+        document.getElementById('tabMemoryBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+        const mob = document.getElementById('mobTabMemory');
+        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchActiveDoc();
       } else if (view === 'skills') {
         document.getElementById('viewSkills').classList.remove('hidden');
-        document.getElementById('tabSkillsBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all';
+        document.getElementById('tabSkillsBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         fetchSkillsAndPrompts();
       } else if (view === 'tree') {
         document.getElementById('viewTree').classList.remove('hidden');
-        document.getElementById('tabTreeBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all';
+        document.getElementById('tabTreeBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         refreshBranchTree();
       } else if (view === 'logs') {
         document.getElementById('viewLogs').classList.remove('hidden');
-        document.getElementById('tabLogsBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all';
+        document.getElementById('tabLogsBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+        const mob = document.getElementById('mobTabLogs');
+        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         renderLogs();
       } else if (view === 'files') {
         document.getElementById('viewFiles').classList.remove('hidden');
-        document.getElementById('tabFilesBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all';
+        document.getElementById('tabFilesBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         refreshWorkspaceFiles();
+      }
+      
+      // Auto close sidebar on mobile if open
+      if (window.innerWidth < 768) {
+        toggleSidebar(false);
       }
       lucide.createIcons();
     }
 
-    function toggleSidebar() {
+    function toggleSidebar(forceState) {
       const sidebar = document.getElementById('sidebar');
-      sidebar.classList.toggle('-translate-x-full');
-      sidebar.classList.toggle('hidden');
+      const backdrop = document.getElementById('sidebarBackdrop');
+      if (!sidebar) return;
+      const isMobile = window.innerWidth < 768;
+      
+      if (isMobile) {
+        let shouldOpen;
+        if (typeof forceState === 'boolean') {
+          shouldOpen = forceState;
+        } else {
+          shouldOpen = sidebar.classList.contains('-translate-x-full');
+        }
+        
+        if (shouldOpen) {
+          sidebar.classList.remove('-translate-x-full');
+          sidebar.classList.add('translate-x-0');
+          if (backdrop) backdrop.classList.remove('hidden');
+        } else {
+          sidebar.classList.add('-translate-x-full');
+          sidebar.classList.remove('translate-x-0');
+          if (backdrop) backdrop.classList.add('hidden');
+        }
+      } else {
+        if (typeof forceState === 'boolean') {
+          if (forceState) sidebar.classList.remove('hidden');
+          else sidebar.classList.add('hidden');
+        } else {
+          sidebar.classList.toggle('hidden');
+        }
+      }
     }
 
     // --- MODEL CATALOGS & PROVIDER-GROUPED DROPDOWN ---
@@ -1469,12 +1569,14 @@ export function getWebUiHtml(): string {
     async function createNewSession() {
       const newId = 'session-' + Math.random().toString(36).substring(2, 9);
       currentSessionId = newId;
+      if (window.innerWidth < 768) toggleSidebar(false);
       await loadSession(newId);
       await fetchSessions();
     }
 
     async function loadSession(sessionId) {
       currentSessionId = sessionId;
+      if (window.innerWidth < 768) toggleSidebar(false);
       const chatMessages = document.getElementById('chatMessages');
       chatMessages.innerHTML = '';
       
@@ -1487,13 +1589,13 @@ export function getWebUiHtml(): string {
           data.messages.forEach(msg => renderMessage(msg));
         } else {
           chatMessages.innerHTML = \`
-            <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-12 space-y-6">
-              <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-400 flex items-center justify-center shadow-xl shadow-brand-500/25">
-                <i data-lucide="sparkles" class="w-7 h-7 text-white"></i>
+            <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-8 sm:py-12 space-y-4 sm:space-y-6">
+              <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-400 flex items-center justify-center shadow-xl shadow-brand-500/25">
+                <i data-lucide="sparkles" class="w-6 h-6 sm:w-7 sm:h-7 text-white"></i>
               </div>
               <div>
-                <h2 class="text-xl font-bold text-white tracking-tight">¿En qué trabajamos hoy?</h2>
-                <p class="text-xs text-slate-400 mt-1 max-w-sm">
+                <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight">¿En qué trabajamos hoy?</h2>
+                <p class="text-[11px] sm:text-xs text-slate-400 mt-1 max-w-sm">
                   Andy Agent RLM con kernel interactivo Python, motor estructural Graft, MEMORY.md, AGENTS.md y soporte multimodelo.
                 </p>
               </div>
