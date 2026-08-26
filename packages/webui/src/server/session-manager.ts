@@ -12,8 +12,20 @@ import {
 } from "@earendil-works/pi-coding-agent";
 import { GraftEngine } from "../../../coding-agent/src/core/graft/index.js";
 
+export interface ProjectItem {
+	id: string;
+	name: string;
+	path: string;
+	description?: string;
+	createdAt: number;
+	lastActive: number;
+	defaultModel?: string;
+	defaultProvider?: string;
+}
+
 export interface WebUiSessionItem {
 	id: string;
+	projectId: string;
 	session: AgentSession;
 	lastActive: number;
 	modelId: string;
@@ -24,6 +36,7 @@ export interface WebUiSessionItem {
 
 interface StoredSessionData {
 	id: string;
+	projectId?: string;
 	title: string;
 	modelId: string;
 	provider: string;
@@ -32,29 +45,278 @@ interface StoredSessionData {
 	messages: any[];
 }
 
+interface StoredProjectsFile {
+	activeProjectId: string;
+	projects: ProjectItem[];
+}
+
 export class WebUiSessionPool {
 	private sessions = new Map<string, WebUiSessionItem>();
+	private projects = new Map<string, ProjectItem>();
+	private activeProjectId = "default";
 	private authStorage: AuthStorage;
 	private modelRegistry: ModelRegistry;
 	private settingsManager: SettingsManager;
-	private graft: GraftEngine;
+	private graftEngines = new Map<string, GraftEngine>();
 	public cwd: string;
 	public storageDir: string;
+	public projectsFilePath: string;
 
 	constructor(cwd = process.cwd()) {
 		this.cwd = cwd;
 		this.authStorage = AuthStorage.create();
 		this.modelRegistry = ModelRegistry.create(this.authStorage);
 		this.settingsManager = SettingsManager.create(cwd);
-		this.graft = new GraftEngine(cwd);
 		this.storageDir = path.join(os.homedir(), ".andy", "agent", "webui_sessions");
+		this.projectsFilePath = path.join(os.homedir(), ".andy", "agent", "projects.json");
+
 		if (!existsSync(this.storageDir)) {
 			mkdirSync(this.storageDir, { recursive: true });
 		}
+
+		// Initialize Projects
+		this.loadProjects(cwd);
 	}
 
-	public getGraftEngine(): GraftEngine {
-		return this.graft;
+	private loadProjects(initialCwd: string): void {
+		let loadedFromFile = false;
+		if (existsSync(this.projectsFilePath)) {
+			try {
+				const content = readFileSync(this.projectsFilePath, "utf-8");
+				const parsed = JSON.parse(content) as StoredProjectsFile;
+				if (Array.isArray(parsed.projects) && parsed.projects.length > 0) {
+					for (const p of parsed.projects) {
+						this.projects.set(p.id, p);
+					}
+					if (parsed.activeProjectId && this.projects.has(parsed.activeProjectId)) {
+						this.activeProjectId = parsed.activeProjectId;
+					} else {
+						this.activeProjectId = parsed.projects[0].id;
+					}
+					loadedFromFile = true;
+				}
+			} catch (e) {
+				console.warn("[WebUI] Warning reading projects.json:", e);
+			}
+		}
+
+		if (!loadedFromFile || this.projects.size === 0) {
+			const initialProject: ProjectItem = {
+				id: "default",
+				name: path.basename(initialCwd) || "Proyecto Principal",
+				path: path.resolve(initialCwd),
+				description: "Proyecto predeterminado del espacio de trabajo",
+				createdAt: Date.now(),
+				lastActive: Date.now(),
+			};
+			this.projects.set(initialProject.id, initialProject);
+			this.activeProjectId = initialProject.id;
+			this.saveProjects();
+		}
+
+		const active = this.getActiveProject();
+		this.cwd = active.path;
+		this.getOrCreateGraftEngine(active.id, active.path);
+	}
+
+	private saveProjects(): void {
+		try {
+			const dir = path.dirname(this.projectsFilePath);
+			if (!existsSync(dir)) {
+				mkdirSync(dir, { recursive: true });
+			}
+			const data: StoredProjectsFile = {
+				activeProjectId: this.activeProjectId,
+				projects: Array.from(this.projects.values()),
+			};
+			writeFileSync(this.projectsFilePath, JSON.stringify(data, null, 2), "utf-8");
+		} catch (err) {
+			console.error("[WebUI] Failed to persist projects.json:", err);
+		}
+	}
+
+	public getActiveProject(): ProjectItem {
+		const found = this.projects.get(this.activeProjectId);
+		if (found) return found;
+		const first = Array.from(this.projects.values())[0];
+		if (first) {
+			this.activeProjectId = first.id;
+			return first;
+		}
+		const fallback: ProjectItem = {
+			id: "default",
+			name: "Proyecto Principal",
+			path: this.cwd,
+			createdAt: Date.now(),
+			lastActive: Date.now(),
+		};
+		this.projects.set(fallback.id, fallback);
+		this.activeProjectId = fallback.id;
+		return fallback;
+	}
+
+	public getProject(projectId: string): ProjectItem | undefined {
+		return this.projects.get(projectId);
+	}
+
+	public listProjects(): {
+		projects: Array<ProjectItem & { sessionCount: number }>;
+		activeProjectId: string;
+		activeProject: ProjectItem;
+	} {
+		const allSessions = this.listSessionsUnfiltered();
+		const result = Array.from(this.projects.values()).map((p) => {
+			const count = allSessions.filter((s) => s.projectId === p.id || (!s.projectId && p.id === "default")).length;
+			return {
+				...p,
+				sessionCount: count,
+			};
+		});
+
+		result.sort((a, b) => b.lastActive - a.lastActive);
+		return {
+			projects: result,
+			activeProjectId: this.activeProjectId,
+			activeProject: this.getActiveProject(),
+		};
+	}
+
+	public createProject(data: {
+		name: string;
+		path: string;
+		description?: string;
+		defaultModel?: string;
+		defaultProvider?: string;
+	}): ProjectItem {
+		const name = data.name?.trim();
+		const rawPath = data.path?.trim();
+		if (!name) throw new Error("Project name is required");
+		if (!rawPath) throw new Error("Project folder path is required");
+
+		const resolvedPath = path.resolve(rawPath);
+		if (!existsSync(resolvedPath)) {
+			mkdirSync(resolvedPath, { recursive: true });
+		}
+
+		const id = `proj-${Math.random().toString(36).substring(2, 9)}`;
+		const project: ProjectItem = {
+			id,
+			name,
+			path: resolvedPath,
+			description: data.description?.trim() || "",
+			createdAt: Date.now(),
+			lastActive: Date.now(),
+			defaultModel: data.defaultModel,
+			defaultProvider: data.defaultProvider,
+		};
+
+		this.projects.set(id, project);
+		this.getOrCreateGraftEngine(id, resolvedPath);
+		this.saveProjects();
+		return project;
+	}
+
+	public switchProject(projectId: string): ProjectItem {
+		const project = this.projects.get(projectId);
+		if (!project) {
+			throw new Error(`Project with ID "${projectId}" not found`);
+		}
+
+		this.activeProjectId = project.id;
+		project.lastActive = Date.now();
+		this.cwd = project.path;
+
+		// Recreate or point settings manager to project path
+		this.settingsManager = SettingsManager.create(project.path);
+
+		// Ensure Graft instance exists and is initialized for this project
+		this.getOrCreateGraftEngine(project.id, project.path);
+
+		this.saveProjects();
+		return project;
+	}
+
+	public updateProject(
+		projectId: string,
+		data: {
+			name?: string;
+			path?: string;
+			description?: string;
+			defaultModel?: string;
+			defaultProvider?: string;
+		},
+	): ProjectItem {
+		const project = this.projects.get(projectId);
+		if (!project) {
+			throw new Error(`Project with ID "${projectId}" not found`);
+		}
+
+		if (data.name !== undefined) project.name = data.name.trim() || project.name;
+		if (data.description !== undefined) project.description = data.description.trim();
+		if (data.defaultModel !== undefined) project.defaultModel = data.defaultModel;
+		if (data.defaultProvider !== undefined) project.defaultProvider = data.defaultProvider;
+
+		if (data.path && data.path.trim() && data.path.trim() !== project.path) {
+			const newPath = path.resolve(data.path.trim());
+			if (!existsSync(newPath)) {
+				mkdirSync(newPath, { recursive: true });
+			}
+			project.path = newPath;
+			this.graftEngines.delete(projectId);
+			this.getOrCreateGraftEngine(projectId, newPath);
+			if (this.activeProjectId === projectId) {
+				this.cwd = newPath;
+				this.settingsManager = SettingsManager.create(newPath);
+			}
+		}
+
+		this.saveProjects();
+		return project;
+	}
+
+	public deleteProject(projectId: string): boolean {
+		if (this.projects.size <= 1) {
+			throw new Error("Cannot delete the only remaining project.");
+		}
+
+		const deleted = this.projects.delete(projectId);
+		if (deleted) {
+			this.graftEngines.delete(projectId);
+
+			// Delete associated sessions from memory and disk
+			for (const [sId, s] of this.sessions.entries()) {
+				if (s.projectId === projectId) {
+					this.deleteSession(sId);
+				}
+			}
+
+			// If active project was deleted, switch to the first remaining
+			if (this.activeProjectId === projectId) {
+				const nextProj = Array.from(this.projects.values())[0];
+				if (nextProj) {
+					this.switchProject(nextProj.id);
+				}
+			} else {
+				this.saveProjects();
+			}
+		}
+		return deleted;
+	}
+
+	public getOrCreateGraftEngine(projectId?: string, customPath?: string): GraftEngine {
+		const pId = projectId || this.activeProjectId;
+		let engine = this.graftEngines.get(pId);
+		if (!engine) {
+			const project = this.projects.get(pId);
+			const targetPath = customPath || project?.path || this.cwd;
+			engine = new GraftEngine(targetPath);
+			this.graftEngines.set(pId, engine);
+		}
+		return engine;
+	}
+
+	public getGraftEngine(projectId?: string): GraftEngine {
+		return this.getOrCreateGraftEngine(projectId);
 	}
 
 	public getAvailableModels(): Model<any>[] {
@@ -73,23 +335,32 @@ export class WebUiSessionPool {
 		return this.settingsManager;
 	}
 
-	public listSessions(): Array<{
+	private listSessionsUnfiltered(): Array<{
 		id: string;
+		projectId: string;
 		title: string;
 		modelId: string;
 		provider: string;
 		lastActive: number;
 		messageCount: number;
 	}> {
-		// First, read from memory
 		const list = new Map<
 			string,
-			{ id: string; title: string; modelId: string; provider: string; lastActive: number; messageCount: number }
+			{
+				id: string;
+				projectId: string;
+				title: string;
+				modelId: string;
+				provider: string;
+				lastActive: number;
+				messageCount: number;
+			}
 		>();
 
 		for (const s of this.sessions.values()) {
 			list.set(s.id, {
 				id: s.id,
+				projectId: s.projectId || "default",
 				title: s.title,
 				modelId: s.modelId,
 				provider: s.provider,
@@ -98,7 +369,6 @@ export class WebUiSessionPool {
 			});
 		}
 
-		// Also check disk storage for persisted sessions
 		try {
 			if (existsSync(this.storageDir)) {
 				const files = readdirSync(this.storageDir).filter((f) => f.endsWith(".json"));
@@ -110,6 +380,7 @@ export class WebUiSessionPool {
 							const parsed = JSON.parse(content) as StoredSessionData;
 							list.set(sessionId, {
 								id: parsed.id || sessionId,
+								projectId: parsed.projectId || "default",
 								title: parsed.title || `Chat ${sessionId.slice(0, 8)}`,
 								modelId: parsed.modelId || "auto/best-coding",
 								provider: parsed.provider || "omniroute",
@@ -122,17 +393,39 @@ export class WebUiSessionPool {
 			}
 		} catch {}
 
-		return Array.from(list.values()).sort((a, b) => b.lastActive - a.lastActive);
+		return Array.from(list.values());
+	}
+
+	public listSessions(projectId?: string): Array<{
+		id: string;
+		projectId: string;
+		title: string;
+		modelId: string;
+		provider: string;
+		lastActive: number;
+		messageCount: number;
+	}> {
+		const targetProjectId = projectId || this.activeProjectId;
+		const all = this.listSessionsUnfiltered();
+		const filtered = all.filter(
+			(s) => s.projectId === targetProjectId || (!s.projectId && targetProjectId === "default"),
+		);
+		return filtered.sort((a, b) => b.lastActive - a.lastActive);
 	}
 
 	public async getOrCreateSession(
 		sessionId = "default",
 		modelId?: string,
 		provider?: string,
+		projectId?: string,
 	): Promise<WebUiSessionItem> {
+		const targetProjectId = projectId || this.activeProjectId;
+		const targetProject = this.getProject(targetProjectId) || this.getActiveProject();
+
 		const existing = this.sessions.get(sessionId);
 		if (existing) {
 			existing.lastActive = Date.now();
+			if (!existing.projectId) existing.projectId = targetProject.id;
 			if (modelId) {
 				const resolvedModel = this.findModel(modelId, provider);
 				if (resolvedModel && resolvedModel.id !== existing.modelId) {
@@ -160,7 +453,10 @@ export class WebUiSessionPool {
 		}
 
 		const resolvedModel =
-			this.findModel(modelId || storedData?.modelId, provider || storedData?.provider) ||
+			this.findModel(
+				modelId || storedData?.modelId || targetProject.defaultModel,
+				provider || storedData?.provider || targetProject.defaultProvider,
+			) ||
 			this.findModel("auto/best-coding") ||
 			this.modelRegistry.getAll()[0];
 
@@ -169,8 +465,9 @@ export class WebUiSessionPool {
 		}
 
 		const sessionManager = PiSessionManager.inMemory();
+		const sessionCwd = storedData?.cwd || targetProject.path || this.cwd;
 		const { session } = await createAgentSession({
-			cwd: storedData?.cwd || this.cwd,
+			cwd: sessionCwd,
 			authStorage: this.authStorage,
 			modelRegistry: this.modelRegistry,
 			settingsManager: this.settingsManager,
@@ -187,12 +484,13 @@ export class WebUiSessionPool {
 
 		const item: WebUiSessionItem = {
 			id: sessionId,
+			projectId: storedData?.projectId || targetProject.id,
 			session,
 			lastActive: storedData?.lastActive || Date.now(),
 			modelId: resolvedModel.id,
 			provider: resolvedModel.provider,
 			title: storedData?.title || `Chat ${new Date().toLocaleTimeString()}`,
-			cwd: storedData?.cwd || this.cwd,
+			cwd: sessionCwd,
 		};
 
 		this.sessions.set(sessionId, item);
@@ -231,6 +529,7 @@ export class WebUiSessionPool {
 			const filePath = path.join(this.storageDir, `${item.id}.json`);
 			const data: StoredSessionData = {
 				id: item.id,
+				projectId: item.projectId,
 				title: item.title,
 				modelId: item.modelId,
 				provider: item.provider,

@@ -186,8 +186,77 @@ export class AndyWebUiServer {
 				return;
 			}
 
+			// --- 3.1 PROJECTS API ---
+			if (method === "GET" && url === "/api/projects") {
+				const data = this.pool.listProjects();
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(data, null, 2));
+				return;
+			}
+
+			if (method === "POST" && url === "/api/projects") {
+				const body = await this.readJsonBody<any>(req);
+				try {
+					const project = this.pool.createProject(body || {});
+					this.addLog("INFO", "Projects", `Created project "${project.name}" at ${project.path}`);
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ success: true, project }));
+				} catch (err: any) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: err.message || String(err) }));
+				}
+				return;
+			}
+
+			if (method === "POST" && (url === "/api/projects/switch" || url === "/api/projects/active")) {
+				const body = await this.readJsonBody<any>(req);
+				const projectId = body?.projectId || body?.id;
+				try {
+					const activeProject = this.pool.switchProject(projectId);
+					this.addLog(
+						"INFO",
+						"Projects",
+						`Switched active project to "${activeProject.name}" (${activeProject.path})`,
+					);
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ success: true, activeProject, activeProjectId: activeProject.id }));
+				} catch (err: any) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: err.message || String(err) }));
+				}
+				return;
+			}
+
+			if ((method === "PUT" || method === "PATCH") && url.startsWith("/api/projects/")) {
+				const projectId = url.split("/")[3];
+				const body = await this.readJsonBody<any>(req);
+				try {
+					const updated = this.pool.updateProject(projectId, body || {});
+					this.addLog("INFO", "Projects", `Updated project "${updated.name}"`);
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ success: true, project: updated }));
+				} catch (err: any) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: err.message || String(err) }));
+				}
+				return;
+			}
+
+			if (method === "DELETE" && url.startsWith("/api/projects/")) {
+				const projectId = url.split("/")[3];
+				try {
+					this.pool.deleteProject(projectId);
+					this.addLog("INFO", "Projects", `Deleted project ${projectId}`);
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ success: true, activeProject: this.pool.getActiveProject() }));
+				} catch (err: any) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: err.message || String(err) }));
+				}
+				return;
+			}
+
 			// --- 4. MEMORY.MD API ---
-			const projectMemoryPath = path.join(this.pool.cwd, "MEMORY.md");
 			const globalMemoryDir = existsSync(path.join(os.homedir(), ".andy", "agent"))
 				? path.join(os.homedir(), ".andy", "agent")
 				: existsSync(path.join(os.homedir(), ".prime", "agent"))
@@ -197,12 +266,12 @@ export class AndyWebUiServer {
 
 			if (method === "GET" && url === "/api/memory") {
 				const scope = parsedUrl.searchParams.get("scope") || "project";
-				const targetPath = scope === "global" ? globalMemoryPath : projectMemoryPath;
+				const targetPath = scope === "global" ? globalMemoryPath : path.join(this.pool.cwd, "MEMORY.md");
 				let content = "";
 				if (existsSync(targetPath)) {
 					content = readFileSync(targetPath, "utf-8");
 				} else {
-					content = `# Memory (${scope === "global" ? "Global" : `Project: ${path.basename(this.pool.cwd)}`})\n\nGuarda aquí el contexto persistente, decisiones arquitectónicas y preferencias que Andy Agent debe recordar permanentemente.\n`;
+					content = `# Memory (${scope === "global" ? "Global" : `Project: ${this.pool.getActiveProject().name}`})\n\nGuarda aquí el contexto persistente, decisiones arquitectónicas y preferencias que Andy Agent debe recordar permanentemente.\n`;
 				}
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ scope, path: targetPath, exists: existsSync(targetPath), content }));
@@ -213,7 +282,7 @@ export class AndyWebUiServer {
 				const body = await this.readJsonBody<any>(req);
 				const scope = body?.scope || "project";
 				const content = body?.content ?? "";
-				const targetPath = scope === "global" ? globalMemoryPath : projectMemoryPath;
+				const targetPath = scope === "global" ? globalMemoryPath : path.join(this.pool.cwd, "MEMORY.md");
 
 				const dir = path.dirname(targetPath);
 				if (!existsSync(dir)) {
@@ -227,17 +296,16 @@ export class AndyWebUiServer {
 			}
 
 			// --- 5. AGENTS.MD (INSTRUCTIONS / PERSONA) API ---
-			const projectAgentsMdPath = path.join(this.pool.cwd, "AGENTS.md");
 			const globalAgentsMdPath = path.join(globalMemoryDir, "AGENTS.md");
 
 			if (method === "GET" && url === "/api/instructions") {
 				const scope = parsedUrl.searchParams.get("scope") || "project";
-				const targetPath = scope === "global" ? globalAgentsMdPath : projectAgentsMdPath;
+				const targetPath = scope === "global" ? globalAgentsMdPath : path.join(this.pool.cwd, "AGENTS.md");
 				let content = "";
 				if (existsSync(targetPath)) {
 					content = readFileSync(targetPath, "utf-8");
 				} else {
-					content = `# Agent Instructions (AGENTS.md)\n\nDefine aquí las pautas de estilo, convenciones de código y comportamiento de Andy Agent.\n`;
+					content = `# Agent Instructions (AGENTS.md)\n\nDefine aquí las pautas de estilo, convenciones de código y comportamiento de Andy Agent para ${this.pool.getActiveProject().name}.\n`;
 				}
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ scope, path: targetPath, exists: existsSync(targetPath), content }));
@@ -248,7 +316,7 @@ export class AndyWebUiServer {
 				const body = await this.readJsonBody<any>(req);
 				const scope = body?.scope || "project";
 				const content = body?.content ?? "";
-				const targetPath = scope === "global" ? globalAgentsMdPath : projectAgentsMdPath;
+				const targetPath = scope === "global" ? globalAgentsMdPath : path.join(this.pool.cwd, "AGENTS.md");
 
 				const dir = path.dirname(targetPath);
 				if (!existsSync(dir)) {
@@ -901,7 +969,8 @@ ${prompt || ""}`;
 
 			// --- 11. SESSIONS API ---
 			if (method === "GET" && url === "/api/sessions") {
-				const sessions = this.pool.listSessions();
+				const targetProjectId = parsedUrl.searchParams.get("projectId") || undefined;
+				const sessions = this.pool.listSessions(targetProjectId);
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ sessions }, null, 2));
 				return;
@@ -910,7 +979,8 @@ ${prompt || ""}`;
 			if (method === "GET" && url.startsWith("/api/sessions/") && url.endsWith("/messages")) {
 				const parts = url.split("/");
 				const sessionId = parts[3] || "default";
-				const sessionItem = await this.pool.getOrCreateSession(sessionId);
+				const targetProjectId = parsedUrl.searchParams.get("projectId") || undefined;
+				const sessionItem = await this.pool.getOrCreateSession(sessionId, undefined, undefined, targetProjectId);
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ sessionId, messages: sessionItem.session.state.messages }, null, 2));
 				return;
@@ -919,7 +989,8 @@ ${prompt || ""}`;
 			if (method === "GET" && url.startsWith("/api/sessions/") && url.endsWith("/tree")) {
 				const parts = url.split("/");
 				const sessionId = parts[3] || "default";
-				const sessionItem = await this.pool.getOrCreateSession(sessionId);
+				const targetProjectId = parsedUrl.searchParams.get("projectId") || undefined;
+				const sessionItem = await this.pool.getOrCreateSession(sessionId, undefined, undefined, targetProjectId);
 				const messages = sessionItem.session.state.messages;
 				const tree = messages.map((m: any, idx) => ({
 					id: `node-${idx}`,
@@ -967,11 +1038,17 @@ ${prompt || ""}`;
 				return;
 			}
 
-			// --- 13. GRAFT STUDIO API ---
-			const graft = this.pool.getGraftEngine();
+			// --- 13. GRAFT STUDIO API (PROJECT-ISOLATED) ---
+			const targetProjectId = parsedUrl.searchParams.get("projectId") || undefined;
+			const graft = this.pool.getGraftEngine(targetProjectId);
 
 			if (method === "GET" && (url === "/v1/graft/map" || url === "/api/graft/map")) {
-				this.addLog("TOOL", "Graft", "Executing graft.map() architectural indexing");
+				const activeProj = this.pool.getProject(targetProjectId || "") || this.pool.getActiveProject();
+				this.addLog(
+					"TOOL",
+					"Graft",
+					`Executing graft.map() indexing for project "${activeProj.name}" (${activeProj.path})`,
+				);
 				const map = await graft.map();
 				res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" });
 				res.end(map);
@@ -1090,7 +1167,8 @@ ${prompt || ""}`;
 			`Received prompt for session "${sessionId}" [Model: ${modelId || "default"}]: "${promptText.slice(0, 80)}..."`,
 		);
 
-		const sessionItem = await this.pool.getOrCreateSession(sessionId, modelId);
+		const projectId = body?.projectId;
+		const sessionItem = await this.pool.getOrCreateSession(sessionId, modelId, undefined, projectId);
 		const session = sessionItem.session;
 
 		res.writeHead(200, {

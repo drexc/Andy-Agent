@@ -138,6 +138,29 @@ export function getWebUiHtml(): string {
       </button>
     </div>
 
+    <!-- Project Selector Widget -->
+    <div class="px-3 pt-3">
+      <div class="bg-surface-800/90 hover:bg-surface-750 border border-surface-700/80 rounded-xl p-2.5 transition-all">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 overflow-hidden flex-1 cursor-pointer" onclick="openProjectsModal()">
+            <div class="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0">
+              <i data-lucide="folder-kanban" class="w-4 h-4 text-cyan-400"></i>
+            </div>
+            <div class="overflow-hidden flex-1">
+              <div class="flex items-center gap-1.5">
+                <span id="sidebarProjectName" class="text-xs font-semibold text-white truncate">Cargando...</span>
+                <span class="text-[9px] px-1 py-0.2 rounded bg-surface-700 text-cyan-300 font-mono">Proj</span>
+              </div>
+              <p id="sidebarProjectPath" class="text-[10px] text-slate-400 font-mono truncate">...</p>
+            </div>
+          </div>
+          <button onclick="openProjectsModal()" title="Gestionar y cambiar proyectos" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-surface-700 transition-colors shrink-0 ml-1">
+            <i data-lucide="chevrons-up-down" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- New Chat Button -->
     <div class="p-3">
       <button onclick="createNewSession()" class="w-full bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-medium text-xs py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 shadow-md shadow-brand-600/20 transition-all duration-150">
@@ -210,6 +233,12 @@ export function getWebUiHtml(): string {
       <div class="flex items-center gap-2 sm:gap-3 overflow-hidden">
         <button onclick="toggleSidebar()" aria-label="Menu" class="text-slate-300 hover:text-white p-2 rounded-lg hover:bg-surface-750 transition-colors shrink-0">
           <i data-lucide="panel-left" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Project Badge in Header -->
+        <button onclick="openProjectsModal()" title="Proyecto activo - Clic para cambiar" class="hidden sm:flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700/80 px-2.5 py-1 rounded-lg text-xs text-slate-300 hover:text-white transition-colors max-w-[170px] md:max-w-[240px] truncate shrink-0">
+          <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
+          <span id="headerProjectName" class="truncate font-medium">Proyecto Principal</span>
         </button>
 
         <div class="h-5 w-px bg-surface-700 hidden sm:block shrink-0"></div>
@@ -929,10 +958,91 @@ export function getWebUiHtml(): string {
   </div>
 
   <!-- ========================================================================= -->
+  <!-- PROJECTS MANAGER MODAL -->
+  <!-- ========================================================================= -->
+  <div id="projectsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh]">
+      <div class="p-3 sm:p-4 border-b border-surface-750 flex items-center justify-between">
+        <h3 class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
+          <i data-lucide="folder-kanban" class="w-5 h-5 text-cyan-400"></i>
+          Gestor de Proyectos & Espacios de Trabajo
+        </h3>
+        <button onclick="closeProjectsModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-750">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="px-3 sm:px-4 pt-2 border-b border-surface-750 flex gap-2 bg-surface-800/60 text-xs">
+        <button onclick="switchProjectsModalTab('list')" id="projTabListBtn" class="px-3 py-2 font-medium border-b-2 border-cyan-500 text-cyan-300 flex items-center gap-1.5">
+          <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+          Mis Proyectos (<span id="modalProjectsCount">0</span>)
+        </button>
+        <button onclick="switchProjectsModalTab('create')" id="projTabCreateBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          Nuevo Proyecto
+        </button>
+      </div>
+
+      <div class="p-3 sm:p-6 overflow-y-auto space-y-4 text-xs flex-1">
+        <!-- Tab: List of Projects -->
+        <div id="projTabList" class="space-y-3">
+          <div id="projectsCardsList" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="text-slate-400 p-6 text-center col-span-full">Cargando proyectos...</div>
+          </div>
+        </div>
+
+        <!-- Tab: Create Project Form -->
+        <div id="projTabCreate" class="hidden space-y-4">
+          <div class="bg-surface-800 p-4 rounded-xl border border-surface-700 space-y-3">
+            <h4 class="font-semibold text-sm text-slate-200 flex items-center gap-2">
+              <i data-lucide="plus-circle" class="w-4 h-4 text-cyan-400"></i>
+              Crear o Vincular Nuevo Proyecto
+            </h4>
+            <p class="text-[11px] text-slate-400">Cada proyecto aísla sus propios chats, grafo AST Graft, memoria MEMORY.md, directivas AGENTS.md y habilidades.</p>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">Nombre del Proyecto <span class="text-rose-400">*</span></label>
+                <input id="newProjName" type="text" placeholder="Ej: Hitachi IH110 Protocol / Mi App" class="w-full bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
+              </div>
+
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">Ruta de la Carpeta en Disco <span class="text-rose-400">*</span></label>
+                <input id="newProjPath" type="text" placeholder="Ej: C:/Users/.../MiProyecto o /root/projects/app" class="w-full bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-cyan-500">
+                <p class="text-[10px] text-slate-400 mt-1">Si la carpeta no existe, se creará automáticamente.</p>
+              </div>
+
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">Descripción (Opcional)</label>
+                <input id="newProjDescription" type="text" placeholder="Breve resumen del propósito del proyecto..." class="w-full bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
+              </div>
+            </div>
+
+            <div class="pt-2 flex justify-end">
+              <button onclick="submitCreateProject()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs px-4 py-2 rounded-lg flex items-center gap-1.5 shadow-md shadow-cyan-600/20 transition-all">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                Crear y Activar Proyecto
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-3 border-t border-surface-750 bg-surface-800/80 flex justify-between items-center text-xs">
+        <span class="text-slate-400 text-[11px]">Andy Agent Multi-Project Manager</span>
+        <button onclick="closeProjectsModal()" class="px-3 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-surface-700 font-medium">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
   <!-- CLIENT CONTROLLER -->
   <!-- ========================================================================= -->
   <script>
     let currentSessionId = 'default';
+    let currentProjectId = 'default';
+    let projectsList = [];
+    let activeProjectData = null;
     let availableModels = [];
     let allProvidersList = [];
     let providerCatalogs = [];
@@ -953,12 +1063,226 @@ export function getWebUiHtml(): string {
 
     document.addEventListener('DOMContentLoaded', async () => {
       lucide.createIcons();
+      await fetchProjects();
       await fetchModelCatalogs();
       await fetchProviders();
       await fetchSessions();
       await loadSession(currentSessionId);
       initLogsStream();
     });
+
+    // --- PROJECTS MANAGEMENT ---
+    async function fetchProjects() {
+      try {
+        const res = await fetch('/api/projects');
+        const data = await res.json();
+        projectsList = data.projects || [];
+        currentProjectId = data.activeProjectId || (projectsList[0] ? projectsList[0].id : 'default');
+        activeProjectData = data.activeProject || projectsList.find(p => p.id === currentProjectId) || projectsList[0];
+
+        updateProjectHeaders();
+        renderProjectsCards();
+      } catch (err) {
+        console.error('Error fetching projects:', err);
+      }
+    }
+
+    function updateProjectHeaders() {
+      if (!activeProjectData) return;
+      const sidebarName = document.getElementById('sidebarProjectName');
+      const sidebarPath = document.getElementById('sidebarProjectPath');
+      const headerName = document.getElementById('headerProjectName');
+      const modalCount = document.getElementById('modalProjectsCount');
+
+      if (sidebarName) sidebarName.innerText = activeProjectData.name || 'Proyecto Principal';
+      if (sidebarPath) sidebarPath.innerText = activeProjectData.path || '...';
+      if (headerName) headerName.innerText = activeProjectData.name || 'Proyecto Principal';
+      if (modalCount) modalCount.innerText = projectsList.length;
+    }
+
+    function renderProjectsCards() {
+      const container = document.getElementById('projectsCardsList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (projectsList.length === 0) {
+        container.innerHTML = '<div class="text-slate-400 p-6 text-center col-span-full">No hay proyectos registrados</div>';
+        return;
+      }
+
+      projectsList.forEach(p => {
+        const isActive = p.id === currentProjectId;
+        const card = document.createElement('div');
+        card.className = \`p-3.5 rounded-xl border transition-all flex flex-col justify-between \${isActive ? 'bg-cyan-950/30 border-cyan-500/50 shadow-md shadow-cyan-900/20' : 'bg-surface-800 border-surface-700/80 hover:border-surface-600'}\`;
+        
+        const descHtml = p.description ? \`<p class="text-[11px] text-slate-300 line-clamp-1">\${p.description}</p>\` : '';
+        const deleteBtnHtml = (projectsList.length > 1 && !isActive) ? \`
+          <button onclick="deleteProject('\${p.id}', '\${p.name.replace(/'/g, "\\\\'")}')" class="p-1.5 text-slate-400 hover:text-rose-400 rounded hover:bg-surface-700 transition-colors" title="Eliminar proyecto">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        \` : '';
+
+        const actionBtnHtml = isActive ? \`
+          <span class="text-[11px] text-cyan-400 font-medium flex items-center gap-1">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i> Espacio Actual
+          </span>
+        \` : \`
+          <button onclick="switchProject('\${p.id}')" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors">
+            <i data-lucide="log-in" class="w-3.5 h-3.5"></i> Abrir Proyecto
+          </button>
+        \`;
+
+        card.innerHTML = \`
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-xs \${isActive ? 'text-cyan-300' : 'text-white'} truncate flex items-center gap-1.5">
+                <i data-lucide="folder-kanban" class="w-3.5 h-3.5 \${isActive ? 'text-cyan-400' : 'text-slate-400'}"></i>
+                \${p.name}
+              </span>
+              \${isActive ? '<span class="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30">Activo</span>' : ''}
+            </div>
+            \${descHtml}
+            <div class="text-[10px] font-mono text-slate-400 bg-surface-750/70 px-2 py-1 rounded truncate" title="\${p.path}">
+              📂 \${p.path}
+            </div>
+            <div class="flex items-center gap-2 text-[10px] text-slate-400 pt-1">
+              <span>💬 \${p.sessionCount || 0} chats</span>
+              <span>•</span>
+              <span class="text-cyan-400/80">Graft AST independiente</span>
+            </div>
+          </div>
+          <div class="pt-3 mt-2 border-t border-surface-700/50 flex items-center justify-between">
+            \${actionBtnHtml}
+            \${deleteBtnHtml}
+          </div>
+        \`;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    async function switchProject(projectId) {
+      if (projectId === currentProjectId) {
+        closeProjectsModal();
+        return;
+      }
+      try {
+        const res = await fetch('/api/projects/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentProjectId = data.activeProjectId;
+          activeProjectData = data.activeProject;
+          updateProjectHeaders();
+          closeProjectsModal();
+
+          // Refresh all views for new project
+          await fetchSessions();
+          await createNewSession();
+          fetchActiveDoc();
+          fetchSkillsAndPrompts();
+          refreshWorkspaceFiles();
+          fetchGraftMap();
+        } else {
+          alert('Error al cambiar de proyecto: ' + (data.error || 'Desconocido'));
+        }
+      } catch (err) {
+        alert('Error al conectar con el servidor: ' + err.message);
+      }
+    }
+
+    async function submitCreateProject() {
+      const nameInput = document.getElementById('newProjName');
+      const pathInput = document.getElementById('newProjPath');
+      const descInput = document.getElementById('newProjDescription');
+
+      const name = nameInput.value.trim();
+      const path = pathInput.value.trim();
+      const description = descInput.value.trim();
+
+      if (!name) {
+        alert('Ingresa un nombre para el proyecto.');
+        nameInput.focus();
+        return;
+      }
+      if (!path) {
+        alert('Ingresa la ruta de la carpeta en disco.');
+        pathInput.focus();
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, path, description })
+        });
+        const data = await res.json();
+        if (data.success) {
+          nameInput.value = '';
+          pathInput.value = '';
+          descInput.value = '';
+          switchProjectsModalTab('list');
+          await switchProject(data.project.id);
+          await fetchProjects();
+        } else {
+          alert('Error al crear proyecto: ' + (data.error || 'Desconocido'));
+        }
+      } catch (err) {
+        alert('Error al crear proyecto: ' + err.message);
+      }
+    }
+
+    async function deleteProject(projectId, projectName) {
+      if (!confirm(\`¿Estás seguro de eliminar el proyecto "\${projectName}" de Andy Agent?\\n\\n(Tus archivos en disco NO serán eliminados).\`)) return;
+      try {
+        const res = await fetch(\`/api/projects/\${projectId}\`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          await fetchProjects();
+          await fetchSessions();
+        } else {
+          alert('Error al eliminar proyecto: ' + (data.error || 'Desconocido'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function openProjectsModal() {
+      document.getElementById('projectsModal').classList.remove('hidden');
+      fetchProjects();
+      switchProjectsModalTab('list');
+      lucide.createIcons();
+    }
+
+    function closeProjectsModal() {
+      document.getElementById('projectsModal').classList.add('hidden');
+    }
+
+    function switchProjectsModalTab(tab) {
+      const listTab = document.getElementById('projTabList');
+      const createTab = document.getElementById('projTabCreate');
+      const listBtn = document.getElementById('projTabListBtn');
+      const createBtn = document.getElementById('projTabCreateBtn');
+
+      if (tab === 'list') {
+        listTab.classList.remove('hidden');
+        createTab.classList.add('hidden');
+        listBtn.className = 'px-3 py-2 font-medium border-b-2 border-cyan-500 text-cyan-300 flex items-center gap-1.5';
+        createBtn.className = 'px-3 py-2 font-medium text-slate-400 hover:text-white flex items-center gap-1.5';
+        renderProjectsCards();
+      } else {
+        listTab.classList.add('hidden');
+        createTab.classList.remove('hidden');
+        createBtn.className = 'px-3 py-2 font-medium border-b-2 border-cyan-500 text-cyan-300 flex items-center gap-1.5';
+        listBtn.className = 'px-3 py-2 font-medium text-slate-400 hover:text-white flex items-center gap-1.5';
+      }
+      lucide.createIcons();
+    }
 
     // --- NAVIGATION & VIEWS ---
     function switchView(view) {
@@ -1511,7 +1835,7 @@ export function getWebUiHtml(): string {
     // --- SESSIONS ---
     async function fetchSessions() {
       try {
-        const res = await fetch('/api/sessions');
+        const res = await fetch(\`/api/sessions?projectId=\${encodeURIComponent(currentProjectId)}\`);
         const data = await res.json();
         const container = document.getElementById('sessionsContainer');
         container.innerHTML = '';
@@ -1581,7 +1905,7 @@ export function getWebUiHtml(): string {
       chatMessages.innerHTML = '';
       
       try {
-        const res = await fetch(\`/api/sessions/\${sessionId}/messages\`);
+        const res = await fetch(\`/api/sessions/\${sessionId}/messages?projectId=\${encodeURIComponent(currentProjectId)}\`);
         const data = await res.json();
 
         if (data.messages && data.messages.length > 0) {
@@ -1647,6 +1971,7 @@ export function getWebUiHtml(): string {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sessionId: currentSessionId,
+            projectId: currentProjectId,
             model: currentModelId,
             thinkingLevel: currentThinkingLevel,
             messages: [{ role: 'user', content: text }]
@@ -2209,7 +2534,7 @@ export function getWebUiHtml(): string {
       const out = document.getElementById('graftResultContent');
       out.innerText = 'Indexando repositorio con Graft Engine...';
       try {
-        const res = await fetch('/v1/graft/map');
+        const res = await fetch(\`/v1/graft/map?projectId=\${encodeURIComponent(currentProjectId)}\`);
         const text = await res.text();
         out.innerText = text;
       } catch (e) {
@@ -2223,7 +2548,7 @@ export function getWebUiHtml(): string {
       const out = document.getElementById('graftResultContent');
       out.innerText = \`Generando esqueleto para \${file}...\`;
       try {
-        const res = await fetch(\`/v1/graft/skeleton?file=\${encodeURIComponent(file)}\`);
+        const res = await fetch(\`/v1/graft/skeleton?file=\${encodeURIComponent(file)}&projectId=\${encodeURIComponent(currentProjectId)}\`);
         const text = await res.text();
         out.innerText = text;
       } catch (e) {
@@ -2237,7 +2562,7 @@ export function getWebUiHtml(): string {
       const out = document.getElementById('graftResultContent');
       out.innerText = \`Buscando callers de \${symbol}...\`;
       try {
-        const res = await fetch(\`/v1/graft/callers?symbol=\${encodeURIComponent(symbol)}\`);
+        const res = await fetch(\`/v1/graft/callers?symbol=\${encodeURIComponent(symbol)}&projectId=\${encodeURIComponent(currentProjectId)}\`);
         const data = await res.json();
         out.innerText = JSON.stringify(data, null, 2);
       } catch (e) {
@@ -2251,7 +2576,7 @@ export function getWebUiHtml(): string {
       const out = document.getElementById('graftResultContent');
       out.innerText = \`Calculando radio de impacto para \${target}...\`;
       try {
-        const res = await fetch(\`/v1/graft/blast?target=\${encodeURIComponent(target)}\`);
+        const res = await fetch(\`/v1/graft/blast?target=\${encodeURIComponent(target)}&projectId=\${encodeURIComponent(currentProjectId)}\`);
         const data = await res.json();
         out.innerText = JSON.stringify(data, null, 2);
       } catch (e) {
