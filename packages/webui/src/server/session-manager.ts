@@ -106,8 +106,10 @@ export class WebUiSessionPool {
 			}
 
 			if (!modelsConfig.providers.omniroute) {
+				const isDebianOrLinux = process.platform === "linux";
+				const defaultBaseUrl = isDebianOrLinux ? "http://127.0.0.1:20128/v1" : "http://ia.v2nethost.cl:20128/v1";
 				modelsConfig.providers.omniroute = {
-					baseUrl: "http://ia.v2nethost.cl:20128/v1",
+					baseUrl: defaultBaseUrl,
 					apiKey: "sk-7fd5586a69f723fb-71d90e-838d8616",
 					api: "openai-completions",
 					models: [
@@ -115,7 +117,7 @@ export class WebUiSessionPool {
 							id: "auto/best-coding",
 							name: "Omniroute Auto Best Coding",
 							api: "openai-completions",
-							baseUrl: "http://ia.v2nethost.cl:20128/v1",
+							baseUrl: defaultBaseUrl,
 							reasoning: true,
 							input: ["text", "image"],
 						},
@@ -701,12 +703,14 @@ export class WebUiSessionPool {
 		}
 
 		// 5. Fallback: synthesize an Omniroute model so requests route to Omniroute proxy
+		const isDebianOrLinux = process.platform === "linux";
+		const fallbackBaseUrl = isDebianOrLinux ? "http://127.0.0.1:20128/v1" : "http://ia.v2nethost.cl:20128/v1";
 		return {
 			id: targetModelId || "auto/best-coding",
 			name: `Omniroute (${targetModelId || "auto/best-coding"})`,
 			api: "openai-completions" as any,
 			provider: "omniroute",
-			baseUrl: "http://ia.v2nethost.cl:20128/v1",
+			baseUrl: fallbackBaseUrl,
 			reasoning: true,
 			input: ["text", "image"],
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },

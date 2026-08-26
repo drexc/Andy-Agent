@@ -1980,6 +1980,12 @@ export function getWebUiHtml(): string {
           signal: activeAbortController.signal
         });
 
+        if (!response.ok) {
+          const errText = await response.text();
+          appendErrorCard(assistantMsgContainer, 'Error en la solicitud HTTP ' + response.status + ': ' + errText);
+          return;
+        }
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -2226,6 +2232,8 @@ export function getWebUiHtml(): string {
         \`;
       } else {
         const rawText = extractMessageText(msg.content);
+        const hasError = msg.stopReason === 'error' || Boolean(msg.errorMessage);
+        const errorText = msg.errorMessage || (msg.stopReason === 'error' ? 'El proveedor agotó el tiempo de espera o rechazó la solicitud.' : '');
         div.className = 'flex gap-3.5 p-4 rounded-xl bg-surface-850 border border-surface-750/70 text-xs shadow-sm my-2 group';
         div.innerHTML = \`
           <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shrink-0 font-bold shadow-md shadow-brand-500/20">
@@ -2234,12 +2242,21 @@ export function getWebUiHtml(): string {
           <div class="flex-1 space-y-2 overflow-hidden">
             <div class="flex items-center justify-between border-b border-surface-750/50 pb-1 mb-1">
               <span class="text-[11px] font-semibold text-brand-300">Andy Agent</span>
-              <button onclick="copyMessageText(this, decodeURIComponent('\${encodeURIComponent(rawText)}'))" title="Copiar mensaje" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white p-1 rounded transition-opacity">
+              <button onclick="copyMessageText(this, decodeURIComponent('\${encodeURIComponent(rawText || errorText || '')}'))" title="Copiar mensaje" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white p-1 rounded transition-opacity">
                 <i data-lucide="copy" class="w-3.5 h-3.5"></i>
               </button>
             </div>
+            \${hasError ? \`
+              <div class="error-card p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 font-mono text-xs flex items-start gap-2.5 my-1">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+                <div class="flex-1 overflow-hidden">
+                  <div class="font-bold text-rose-200 text-xs mb-1">Aviso del Asistente (Timeout / Error)</div>
+                  <div class="text-[11px] leading-relaxed whitespace-pre-wrap select-text">\${errorText}</div>
+                </div>
+              </div>
+            \` : ''}
             <div class="assistant-content prose-custom text-slate-100 leading-relaxed select-text">
-              \${formatMarkdown(rawText)}
+              \${rawText ? formatMarkdown(rawText) : (!hasError ? '<span class="text-slate-500 italic">Sin contenido</span>' : '')}
             </div>
           </div>
         \`;
