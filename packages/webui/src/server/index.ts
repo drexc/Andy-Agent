@@ -1294,7 +1294,8 @@ ${prompt || ""}`;
 		);
 
 		const projectId = body?.projectId;
-		const sessionItem = await this.pool.getOrCreateSession(sessionId, modelId, undefined, projectId);
+		const provider = body?.provider;
+		const sessionItem = await this.pool.getOrCreateSession(sessionId, modelId, provider, projectId);
 		const session = sessionItem.session;
 
 		res.writeHead(200, {

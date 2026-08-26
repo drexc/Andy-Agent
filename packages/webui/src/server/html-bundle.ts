@@ -1973,6 +1973,7 @@ export function getWebUiHtml(): string {
             sessionId: currentSessionId,
             projectId: currentProjectId,
             model: currentModelId,
+            provider: currentProviderId || 'omniroute',
             thinkingLevel: currentThinkingLevel,
             messages: [{ role: 'user', content: text }]
           }),

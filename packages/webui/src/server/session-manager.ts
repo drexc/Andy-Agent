@@ -74,8 +74,80 @@ export class WebUiSessionPool {
 			mkdirSync(this.storageDir, { recursive: true });
 		}
 
+		// Ensure Omniroute is configured by default if no auth/models exist
+		this.ensureDefaultOmnirouteConfig();
+
 		// Initialize Projects
 		this.loadProjects(cwd);
+	}
+
+	private ensureDefaultOmnirouteConfig(): void {
+		try {
+			const modelsJsonPath = existsSync(path.join(os.homedir(), ".andy", "agent", "models.json"))
+				? path.join(os.homedir(), ".andy", "agent", "models.json")
+				: existsSync(path.join(os.homedir(), ".prime", "agent", "models.json"))
+					? path.join(os.homedir(), ".prime", "agent", "models.json")
+					: path.join(os.homedir(), ".andy", "agent", "models.json");
+
+			let modelsConfig: any = { providers: {} };
+			let needsSave = false;
+
+			if (existsSync(modelsJsonPath)) {
+				try {
+					modelsConfig = JSON.parse(readFileSync(modelsJsonPath, "utf-8"));
+				} catch {}
+			} else {
+				needsSave = true;
+			}
+
+			if (!modelsConfig.providers) {
+				modelsConfig.providers = {};
+				needsSave = true;
+			}
+
+			if (!modelsConfig.providers.omniroute) {
+				modelsConfig.providers.omniroute = {
+					baseUrl: "http://ia.v2nethost.cl:20128/v1",
+					apiKey: "sk-7fd5586a69f723fb-71d90e-838d8616",
+					api: "openai-completions",
+					models: [
+						{
+							id: "auto/best-coding",
+							name: "Omniroute Auto Best Coding",
+							api: "openai-completions",
+							baseUrl: "http://ia.v2nethost.cl:20128/v1",
+							reasoning: true,
+							input: ["text", "image"],
+						},
+					],
+				};
+				needsSave = true;
+			}
+
+			if (needsSave) {
+				const dir = path.dirname(modelsJsonPath);
+				if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+				writeFileSync(modelsJsonPath, JSON.stringify(modelsConfig, null, 2), "utf-8");
+			}
+
+			// Ensure AuthStorage has omniroute credentials
+			if (!this.authStorage.hasAuth("omniroute")) {
+				this.authStorage.set("omniroute", {
+					type: "api_key",
+					key: "sk-7fd5586a69f723fb-71d90e-838d8616",
+				});
+			}
+
+			// If no default provider configured, set to omniroute
+			if (!this.settingsManager.getDefaultProvider()) {
+				this.settingsManager.setDefaultProvider("omniroute");
+				this.settingsManager.setDefaultModel("auto/best-coding");
+			}
+
+			this.modelRegistry.refresh();
+		} catch (e) {
+			console.warn("[WebUI] Warning initializing default Omniroute config:", e);
+		}
 	}
 
 	private loadProjects(initialCwd: string): void {
@@ -452,13 +524,16 @@ export class WebUiSessionPool {
 			} catch {}
 		}
 
+		const defaultProv = this.settingsManager.getDefaultProvider() || "omniroute";
+		const defaultMod = this.settingsManager.getDefaultModel() || "auto/best-coding";
+
+		const targetProvider = provider || storedData?.provider || targetProject.defaultProvider || defaultProv;
+		const targetModel = modelId || storedData?.modelId || targetProject.defaultModel || defaultMod;
+
 		const resolvedModel =
-			this.findModel(
-				modelId || storedData?.modelId || targetProject.defaultModel,
-				provider || storedData?.provider || targetProject.defaultProvider,
-			) ||
-			this.findModel("auto/best-coding") ||
-			this.modelRegistry.getAll()[0];
+			this.findModel(targetModel, targetProvider) ||
+			this.findModel(defaultMod, defaultProv) ||
+			this.findModel("auto/best-coding", "omniroute");
 
 		if (!resolvedModel) {
 			throw new Error("No language model available. Please configure an API key or provider in settings.");
@@ -567,19 +642,39 @@ export class WebUiSessionPool {
 		const all = this.modelRegistry.getAll();
 		if (!all || all.length === 0) return undefined;
 
-		if (!modelId && !provider) {
-			return all.find((m) => this.modelRegistry.hasConfiguredAuth(m)) || all[0];
+		const defaultProv = this.settingsManager.getDefaultProvider() || "omniroute";
+		const defaultMod = this.settingsManager.getDefaultModel() || "auto/best-coding";
+
+		const targetProvider = provider || defaultProv;
+		const targetModelId = modelId || defaultMod;
+
+		// 1. Direct search by provider and model ID
+		if (targetProvider && targetModelId) {
+			const direct = this.modelRegistry.find(targetProvider, targetModelId);
+			if (direct) return direct;
 		}
 
-		if (modelId) {
-			const direct = this.modelRegistry.find(provider || "", modelId);
-			if (direct) return direct;
+		// 2. Direct search by model ID with any provider
+		if (targetModelId) {
+			const directWithTarget = all.find(
+				(m) =>
+					m.provider.toLowerCase() === targetProvider.toLowerCase() &&
+					m.id.toLowerCase() === targetModelId.toLowerCase(),
+			);
+			if (directWithTarget) return directWithTarget;
 
-			const byId = all.find((m) => m.id === modelId || m.id.toLowerCase() === modelId.toLowerCase());
-			if (byId) return byId;
+			const byIdWithAuth = all.find(
+				(m) =>
+					(m.id === targetModelId || m.id.toLowerCase() === targetModelId.toLowerCase()) &&
+					this.modelRegistry.hasConfiguredAuth(m),
+			);
+			if (byIdWithAuth) return byIdWithAuth;
 
-			if (modelId.includes("/")) {
-				const [p, ...rest] = modelId.split("/");
+			const byId = all.find((m) => m.id === targetModelId || m.id.toLowerCase() === targetModelId.toLowerCase());
+			if (byId && this.modelRegistry.hasConfiguredAuth(byId)) return byId;
+
+			if (targetModelId.includes("/")) {
+				const [p, ...rest] = targetModelId.split("/");
 				const mId = rest.join("/");
 				const match = all.find(
 					(m) => m.provider.toLowerCase() === p.toLowerCase() && m.id.toLowerCase() === mId.toLowerCase(),
@@ -588,11 +683,35 @@ export class WebUiSessionPool {
 			}
 		}
 
-		if (provider) {
-			const byProvider = all.find((m) => m.provider.toLowerCase() === provider.toLowerCase());
-			if (byProvider) return byProvider;
+		// 3. Search by provider with configured auth
+		if (targetProvider) {
+			const byProviderWithAuth = all.find(
+				(m) => m.provider.toLowerCase() === targetProvider.toLowerCase() && this.modelRegistry.hasConfiguredAuth(m),
+			);
+			if (byProviderWithAuth) return byProviderWithAuth;
+
+			const byProvider = all.find((m) => m.provider.toLowerCase() === targetProvider.toLowerCase());
+			if (byProvider && this.modelRegistry.hasConfiguredAuth(byProvider)) return byProvider;
 		}
 
-		return all[0];
+		// 4. Search for ANY available model with configured auth
+		const available = this.modelRegistry.getAvailable();
+		if (available.length > 0) {
+			return available[0];
+		}
+
+		// 5. Fallback: synthesize an Omniroute model so requests route to Omniroute proxy
+		return {
+			id: targetModelId || "auto/best-coding",
+			name: `Omniroute (${targetModelId || "auto/best-coding"})`,
+			api: "openai-completions" as any,
+			provider: "omniroute",
+			baseUrl: "http://ia.v2nethost.cl:20128/v1",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+			contextWindow: 128000,
+			maxTokens: 16384,
+		} as Model<any>;
 	}
 }
