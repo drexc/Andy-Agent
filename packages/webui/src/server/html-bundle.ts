@@ -2013,11 +2013,17 @@ export function getWebUiHtml(): string {
                   appendToolCallCard(assistantMsgContainer, event.tool, event.input);
                 } else if (event.type === 'tool_result') {
                   updateToolCallResult(assistantMsgContainer, event.tool, event.output);
+                } else if (event.type === 'error') {
+                  appendErrorCard(assistantMsgContainer, event.error || 'Error en el proveedor');
                 }
               } catch (e) {}
             }
           }
           chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        if (!fullAssistantContent && !assistantMsgContainer.querySelector('.tool-card-') && !assistantMsgContainer.querySelector('.error-card')) {
+          appendErrorCard(assistantMsgContainer, 'No se recibió texto del modelo. Por favor verifica que el proveedor esté activo o ingresa tu API Key.');
         }
       } catch (err) {
         if (err.name !== 'AbortError') {
@@ -2029,6 +2035,22 @@ export function getWebUiHtml(): string {
         await fetchSessions();
         lucide.createIcons();
       }
+    }
+
+    function appendErrorCard(container, errorText) {
+      const body = container.querySelector('.assistant-content');
+      if (body) {
+        body.innerHTML = \`
+          <div class="error-card p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 font-mono text-xs flex items-start gap-2.5 my-1">
+            <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+            <div class="flex-1 overflow-hidden">
+              <div class="font-bold text-rose-200 text-xs mb-1">Aviso del Asistente</div>
+              <div class="text-[11px] leading-relaxed whitespace-pre-wrap select-text">\${errorText}</div>
+            </div>
+          </div>
+        \`;
+      }
+      lucide.createIcons();
     }
 
     function extractMessageText(content) {

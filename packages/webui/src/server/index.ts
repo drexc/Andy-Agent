@@ -1305,14 +1305,16 @@ ${prompt || ""}`;
 		});
 
 		const sendEvent = (event: any) => {
-			res.write(`data: ${JSON.stringify(event)}\n\n`);
+			if (!res.writableEnded) {
+				res.write(`data: ${JSON.stringify(event)}\n\n`);
+			}
 		};
 
 		let fullAssistantText = "";
 		const unsubscribe = session.subscribe((event: any) => {
 			if (event.type === "message_start") {
-				if (event.message.role === "assistant") {
-					this.addLog("RLM", "Turn", `Assistant turn started`);
+				if (event.message?.role === "assistant") {
+					this.addLog("RLM", "Turn", "Assistant turn started");
 				}
 			} else if (event.type === "message_update") {
 				if (event.assistantMessageEvent) {
@@ -1322,14 +1324,34 @@ ${prompt || ""}`;
 						sendEvent({ type: "token", content: ame.delta });
 					} else if (ame.type === "thinking_delta") {
 						sendEvent({ type: "reasoning", content: ame.delta });
+					} else if (ame.type === "error") {
+						const errText = ame.error?.errorMessage || "Error en el proveedor del modelo";
+						this.addLog("ERROR", "Chat", `Provider stream error: ${errText}`);
+						sendEvent({ type: "error", error: errText });
 					}
 				}
-			} else if (event.type === "tool_call") {
-				this.addLog("TOOL", event.toolName, `Tool call started`, event.input);
-				sendEvent({ type: "tool_start", tool: event.toolName, input: event.input });
-			} else if (event.type === "tool_result") {
-				this.addLog("TOOL", event.toolName, `Tool call completed`);
-				sendEvent({ type: "tool_result", tool: event.toolName, output: event.result });
+			} else if (event.type === "tool_execution_start" || event.type === "tool_call") {
+				const toolName = event.toolName || event.tool;
+				const toolArgs = event.args || event.input;
+				this.addLog("TOOL", toolName, "Tool call started", toolArgs);
+				sendEvent({ type: "tool_start", tool: toolName, input: toolArgs });
+			} else if (event.type === "tool_execution_end" || event.type === "tool_result") {
+				const toolName = event.toolName || event.tool;
+				this.addLog("TOOL", toolName, "Tool call completed");
+				sendEvent({ type: "tool_result", tool: toolName, output: event.result });
+			} else if (event.type === "turn_end") {
+				if (event.message?.role === "assistant") {
+					if ((event.message as any).stopReason === "error") {
+						const errText = (event.message as any).errorMessage || "Error en la respuesta del modelo";
+						sendEvent({ type: "error", error: errText });
+					}
+				}
+			}
+		});
+
+		req.on("close", () => {
+			if (session.isStreaming) {
+				session.abort().catch(() => {});
 			}
 		});
 
@@ -1338,6 +1360,31 @@ ${prompt || ""}`;
 				await session.prompt(promptText, { streamingBehavior: "followUp" });
 			} else {
 				await session.prompt(promptText);
+			}
+
+			// Fallback: If no streaming tokens were captured, extract from session state messages
+			if (!fullAssistantText) {
+				const msgs = session.state.messages || [];
+				const lastAssistantMsg = msgs.filter((m: any) => m.role === "assistant").pop() as any;
+				if (lastAssistantMsg) {
+					let extracted = "";
+					if (typeof lastAssistantMsg.content === "string") {
+						extracted = lastAssistantMsg.content;
+					} else if (Array.isArray(lastAssistantMsg.content)) {
+						extracted = lastAssistantMsg.content
+							.filter((c: any) => c.type === "text")
+							.map((c: any) => c.text)
+							.join("\n");
+					}
+					if (extracted) {
+						fullAssistantText = extracted;
+						sendEvent({ type: "token", content: extracted });
+					}
+					if (lastAssistantMsg.stopReason === "error") {
+						const errText = lastAssistantMsg.errorMessage || "Error en la respuesta del modelo";
+						sendEvent({ type: "error", error: errText });
+					}
+				}
 			}
 
 			// Smart auto-title from first prompt
@@ -1369,6 +1416,7 @@ ${prompt || ""}`;
 		} catch (err: any) {
 			this.addLog("ERROR", "Chat", `Execution error: ${err.message || String(err)}`);
 			sendEvent({ type: "error", error: err.message || String(err) });
+			sendEvent({ type: "done" });
 			res.write("data: [DONE]\n\n");
 			res.end();
 		} finally {
