@@ -1145,7 +1145,7 @@ ${prompt || ""}`;
 				return;
 			}
 
-			if (method === "GET" && (url === "/v1/models" || url === "/api/models")) {
+			if (method === "GET" && (url === "/v1/models" || url === "/models" || url === "/api/models")) {
 				const models = this.pool.getAvailableModels();
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(
@@ -1776,6 +1776,7 @@ ${prompt || ""}`;
 
 			let accumulatedText = "";
 			let finishReason: string | null = null;
+			let finalUsage: any = null;
 			try {
 				const eventStream = stream(targetModel, context, streamOptions);
 				for await (const event of eventStream) {
@@ -1796,7 +1797,13 @@ ${prompt || ""}`;
 							object: "chat.completion.chunk",
 							created: Math.floor(Date.now() / 1000),
 							model: modelId,
-							choices: [{ index: 0, delta: { reasoning_content: event.delta }, finish_reason: null }],
+							choices: [
+								{
+									index: 0,
+									delta: { reasoning_content: event.delta, reasoning: event.delta },
+									finish_reason: null,
+								},
+							],
 						};
 						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
 					} else if (event.type === "toolcall_start") {
@@ -1852,6 +1859,7 @@ ${prompt || ""}`;
 						};
 						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
 					} else if (event.type === "done") {
+						finalUsage = event.message?.usage;
 						if (event.reason === "toolUse") {
 							finishReason = "tool_calls";
 						}
@@ -1894,14 +1902,38 @@ ${prompt || ""}`;
 					.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
 
 				if (!res.writableEnded) {
-					const stopChunk = {
+					const stopChunk: any = {
 						id: reqId,
 						object: "chat.completion.chunk",
 						created: Math.floor(Date.now() / 1000),
 						model: modelId,
 						choices: [{ index: 0, delta: {}, finish_reason: finishReason || "stop" }],
 					};
+					if (finalUsage) {
+						stopChunk.usage = {
+							prompt_tokens: finalUsage.input || 0,
+							completion_tokens: finalUsage.output || 0,
+							total_tokens: finalUsage.totalTokens || 0,
+						};
+					}
 					res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
+
+					if (body.stream_options?.include_usage && finalUsage) {
+						const usageChunk = {
+							id: reqId,
+							object: "chat.completion.chunk",
+							created: Math.floor(Date.now() / 1000),
+							model: modelId,
+							choices: [],
+							usage: {
+								prompt_tokens: finalUsage.input || 0,
+								completion_tokens: finalUsage.output || 0,
+								total_tokens: finalUsage.totalTokens || 0,
+							},
+						};
+						res.write(`data: ${JSON.stringify(usageChunk)}\n\n`);
+					}
+
 					res.write("data: [DONE]\n\n");
 					res.end();
 				}
