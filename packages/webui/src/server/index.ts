@@ -12,6 +12,7 @@ import {
 	type ToolResultMessage,
 	type UserMessage,
 } from "@earendil-works/pi-ai";
+import { ApiKeyManager } from "./api-key-manager.js";
 import { AutoLearningEngine } from "./auto-learner.js";
 import { getWebUiHtml } from "./html-bundle.js";
 import { WebUiSessionPool } from "./session-manager.js";
@@ -37,6 +38,7 @@ export class AndyWebUiServer {
 	private pool: WebUiSessionPool;
 	private options: WebUiServerOptions;
 	private autoLearner: AutoLearningEngine;
+	public apiKeyManager: ApiKeyManager;
 	private logs: LogEntry[] = [];
 	private maxLogs = 1000;
 	private logSubscribers = new Set<(entry: LogEntry) => void>();
@@ -45,6 +47,7 @@ export class AndyWebUiServer {
 		this.options = options;
 		this.pool = new WebUiSessionPool(options.cwd || process.cwd());
 		this.autoLearner = new AutoLearningEngine(options.cwd || process.cwd(), this.addLog.bind(this));
+		this.apiKeyManager = new ApiKeyManager();
 		this.server = createServer(this.handleRequest.bind(this));
 		this.addLog("INFO", "Server", `Andy WebUI Server initialized at ${options.cwd || process.cwd()}`);
 	}
@@ -951,6 +954,43 @@ ${prompt || ""}`;
 				}
 			}
 
+			// --- 9.1 API KEYS MANAGEMENT (FOR VSCODE, KILOCODE, CURSOR INTEGRATION) ---
+			if (method === "GET" && url === "/api/keys") {
+				const keys = this.apiKeyManager.listKeys();
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ keys }, null, 2));
+				return;
+			}
+
+			if (method === "POST" && url === "/api/keys") {
+				const body = await this.readJsonBody<any>(req);
+				const name = body?.name || "Clave IDE";
+				const expiresAt = body?.expiresAt ? Number(body.expiresAt) : null;
+				const newKey = this.apiKeyManager.createKey(name, expiresAt);
+				this.addLog("INFO", "APIKeys", `Created API Key "${newKey.name}" (${newKey.id})`);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, key: newKey }));
+				return;
+			}
+
+			if (method === "DELETE" && url.startsWith("/api/keys/")) {
+				const keyId = url.split("/")[3];
+				const ok = this.apiKeyManager.deleteKey(keyId);
+				this.addLog("INFO", "APIKeys", `Deleted API Key ${keyId}`);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: ok, keyId }));
+				return;
+			}
+
+			if (method === "POST" && url.startsWith("/api/keys/") && url.endsWith("/revoke")) {
+				const keyId = url.split("/")[3];
+				const ok = this.apiKeyManager.revokeKey(keyId);
+				this.addLog("INFO", "APIKeys", `Revoked API Key ${keyId}`);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: ok, keyId }));
+				return;
+			}
+
 			// --- 10. MODELS LIST & CATALOG BY PROVIDER ---
 			if (method === "GET" && url === "/api/models/catalog") {
 				const authStorage = this.pool.getAuthStorage();
@@ -1425,6 +1465,31 @@ ${prompt || ""}`;
 	}
 
 	private async handleOpenAiChatCompletions(req: IncomingMessage, res: ServerResponse): Promise<void> {
+		// Validar API Key
+		const authHeader = (req.headers.authorization as string) || (req.headers["x-api-key"] as string) || "";
+		const authResult = this.apiKeyManager.validateKey(authHeader);
+		if (!authResult.valid) {
+			this.addLog(
+				"WARN",
+				"Auth",
+				`Unauthorized API access to /v1/chat/completions: ${authResult.reason || "Invalid key"}`,
+			);
+			res.writeHead(401, { "Content-Type": "application/json" });
+			res.end(
+				JSON.stringify({
+					error: {
+						message:
+							authResult.reason ||
+							"Incorrect or missing API key. Manage your API keys in the Andy Agent WebUI under the API Keys tab.",
+						type: "invalid_request_error",
+						param: null,
+						code: "invalid_api_key",
+					},
+				}),
+			);
+			return;
+		}
+
 		const body = await this.readJsonBody<any>(req);
 		if (!body || !body.messages || !Array.isArray(body.messages)) {
 			res.writeHead(400, { "Content-Type": "application/json" });

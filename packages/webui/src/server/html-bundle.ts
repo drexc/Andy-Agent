@@ -277,6 +277,10 @@ export function getWebUiHtml(): string {
             <i data-lucide="folder-tree" class="w-3.5 h-3.5 text-amber-400"></i>
             Archivos
           </button>
+          <button id="tabApiKeysBtn" onclick="switchView('apikeys')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+            <i data-lucide="key" class="w-3.5 h-3.5 text-yellow-400"></i>
+            API Keys & IDEs
+          </button>
         </nav>
       </div>
 
@@ -712,6 +716,218 @@ export function getWebUiHtml(): string {
       </div>
     </div>
 
+    <!-- ======================================================================= -->
+    <!-- VIEW: API KEYS & IDE INTEGRATION -->
+    <!-- ======================================================================= -->
+    <div id="viewApiKeys" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+            <i data-lucide="key" class="w-5 h-5 text-yellow-400"></i>
+            API Keys & Integración con IDEs
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Conecta VS Code, Kilo Code, Cursor, Windsurf o scripts con la API OpenAI-compatible de Andy Agent.</p>
+        </div>
+
+        <button onclick="openCreateApiKeyModal()" class="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition-all self-start sm:self-auto">
+          <i data-lucide="plus" class="w-4 h-4 text-slate-950"></i>
+          Crear Nueva API Key
+        </button>
+      </div>
+
+      <!-- Endpoint Status Card -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2 bg-surface-850 border border-surface-750 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="text-xs font-semibold text-white">Servidor OpenAI Compatible Activo</span>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono">v1 REST API</span>
+          </div>
+
+          <div class="space-y-2">
+            <label class="block text-[11px] font-medium text-slate-400">URL Base para Extensiones e IDEs (OpenAI Base URL):</label>
+            <div class="flex items-center gap-2">
+              <input id="apiBaseUrlDisplay" type="text" readonly value="http://ia.v2nethost.cl:3000/v1" class="flex-1 bg-surface-900 border border-surface-700 rounded-xl px-3 py-2 text-xs text-brand-300 font-mono focus:outline-none select-all">
+              <button onclick="copyToClipboard(document.getElementById('apiBaseUrlDisplay').value, this)" class="bg-surface-750 hover:bg-surface-700 text-slate-200 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors shrink-0">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>Copiar</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 pt-1">
+            <span>Modelos recomendados:</span>
+            <span class="px-2 py-0.5 rounded bg-surface-750 text-slate-300 font-mono font-semibold text-brand-300">auto/best-coding</span>
+            <span class="px-2 py-0.5 rounded bg-surface-750 text-slate-300 font-mono">gpt-4o</span>
+            <span class="px-2 py-0.5 rounded bg-surface-750 text-slate-300 font-mono">claude-3-5-sonnet</span>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-surface-850 to-surface-800 border border-surface-750 rounded-2xl p-4 sm:p-5 flex flex-col justify-between space-y-3">
+          <div>
+            <div class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+              <i data-lucide="shield-check" class="w-4 h-4 text-brand-400"></i>
+              Seguridad & Acceso
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+              Las claves API autentican peticiones externas mediante encabezados <code class="text-brand-300 font-mono">Authorization: Bearer &lt;key&gt;</code>.
+            </p>
+          </div>
+          <div class="text-[10px] text-slate-500 font-mono">Storage: ~/.andy/agent/api_keys.json</div>
+        </div>
+      </div>
+
+      <!-- Active API Keys Table / Cards -->
+      <div class="bg-surface-850 border border-surface-750 rounded-2xl p-4 sm:p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+            <i data-lucide="list" class="w-4 h-4 text-yellow-400"></i>
+            Tus Claves API Registradas
+          </h3>
+          <button onclick="fetchApiKeys()" class="text-xs text-slate-400 hover:text-white flex items-center gap-1">
+            <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+            Refrescar
+          </button>
+        </div>
+
+        <div id="apiKeysListContainer" class="space-y-2 text-xs">
+          <div class="text-slate-400 p-6 text-center">Cargando claves API...</div>
+        </div>
+      </div>
+
+      <!-- Integration Guides (Tabs / Cards) -->
+      <div class="bg-surface-850 border border-surface-750 rounded-2xl p-4 sm:p-5 space-y-4">
+        <h3 class="font-bold text-sm text-slate-200 flex items-center gap-2">
+          <i data-lucide="book-open" class="w-4 h-4 text-indigo-400"></i>
+          Guía de Integración Rápida con tu IDE
+        </h3>
+
+        <!-- Guide Selector Tabs -->
+        <div class="flex items-center gap-1.5 border-b border-surface-750 pb-2 overflow-x-auto no-scrollbar text-xs">
+          <button onclick="switchIdeGuide('vscode')" id="ideTabVscodeBtn" class="px-3 py-1.5 rounded-lg font-medium bg-brand-600 text-white flex items-center gap-1.5 transition-colors">
+            <i data-lucide="code" class="w-3.5 h-3.5"></i>
+            VS Code (Cline / Roo / Continue)
+          </button>
+          <button onclick="switchIdeGuide('kilocode')" id="ideTabKilocodeBtn" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-750 flex items-center gap-1.5 transition-colors">
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+            Kilo Code / Cursor
+          </button>
+          <button onclick="switchIdeGuide('python')" id="ideTabPythonBtn" class="px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-750 flex items-center gap-1.5 transition-colors">
+            <i data-lucide="terminal" class="w-3.5 h-3.5 text-emerald-400"></i>
+            Python SDK & Curl
+          </button>
+        </div>
+
+        <!-- IDE Guide 1: VS Code -->
+        <div id="ideGuideVscode" class="space-y-3 text-xs leading-relaxed">
+          <p class="text-slate-300">
+            En VS Code, puedes usar extensiones como <strong>Cline</strong>, <strong>Roo Code</strong> o <strong>Continue.dev</strong> seleccionando el proveedor <em>OpenAI Compatible</em>:
+          </p>
+          <div class="bg-surface-900 border border-surface-750 rounded-xl p-3.5 font-mono text-[11px] text-slate-200 relative group select-text">
+            <button onclick="copyToClipboard(document.getElementById('vscodeConfigCode').innerText, this)" class="absolute right-2.5 top-2.5 bg-surface-800 hover:bg-surface-700 text-slate-300 px-2 py-1 rounded text-[10px] flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              <span>Copiar</span>
+            </button>
+            <pre id="vscodeConfigCode" class="overflow-x-auto text-cyan-300">{
+  "apiProvider": "openai-compatible",
+  "baseUrl": "http://ia.v2nethost.cl:3000/v1",
+  "apiKey": "TU_ANDY_API_KEY_AQUI",
+  "modelId": "auto/best-coding"
+}</pre>
+          </div>
+          <ul class="list-disc list-inside text-[11px] text-slate-400 space-y-1">
+            <li><strong>Base URL:</strong> <code class="text-brand-300">http://ia.v2nethost.cl:3000/v1</code></li>
+            <li><strong>Model ID:</strong> <code class="text-brand-300">auto/best-coding</code></li>
+            <li><strong>API Key:</strong> Tu clave generada arriba que comienza con <code class="text-yellow-400">andy_sk_...</code></li>
+          </ul>
+        </div>
+
+        <!-- IDE Guide 2: Kilo Code / Cursor -->
+        <div id="ideGuideKilocode" class="hidden space-y-3 text-xs leading-relaxed">
+          <p class="text-slate-300">
+            En <strong>Kilo Code</strong> o <strong>Cursor</strong> (Settings -> Models -> OpenAI Compatible):
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="bg-surface-900 border border-surface-750 p-3 rounded-xl">
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">OpenAI Base URL</div>
+              <div class="font-mono text-cyan-300 text-xs mt-1 truncate">http://ia.v2nethost.cl:3000/v1</div>
+            </div>
+            <div class="bg-surface-900 border border-surface-750 p-3 rounded-xl">
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">Model Name / ID</div>
+              <div class="font-mono text-cyan-300 text-xs mt-1 truncate">auto/best-coding</div>
+            </div>
+            <div class="bg-surface-900 border border-surface-750 p-3 rounded-xl">
+              <div class="text-[10px] text-slate-400 uppercase font-semibold">API Key</div>
+              <div class="font-mono text-yellow-300 text-xs mt-1 truncate">andy_sk_••••••••</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- IDE Guide 3: Python & Curl -->
+        <div id="ideGuidePython" class="hidden space-y-3 text-xs leading-relaxed">
+          <p class="text-slate-300">
+            Puedes consumir Andy Agent usando la biblioteca oficial de OpenAI en Python:
+          </p>
+          <div class="bg-surface-900 border border-surface-750 rounded-xl p-3.5 font-mono text-[11px] text-slate-200 relative group select-text">
+            <pre class="overflow-x-auto text-emerald-300">from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://ia.v2nethost.cl:3000/v1",
+    api_key="TU_ANDY_API_KEY_AQUI"
+)
+
+response = client.chat.completions.create(
+    model="auto/best-coding",
+    messages=[{"role": "user", "content": "Hola Andy Agent"}],
+    stream=True
+)
+
+for chunk in response:
+    print(chunk.choices[0].delta.content or "", end="")</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATE API KEY MODAL -->
+    <div id="createApiKeyModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+          <h3 class="font-bold text-sm text-white flex items-center gap-2">
+            <i data-lucide="key" class="w-4 h-4 text-yellow-400"></i>
+            Crear Nueva API Key
+          </h3>
+          <button onclick="closeCreateApiKeyModal()" class="text-slate-400 hover:text-white p-1 rounded">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Nombre / Identificador</label>
+            <input id="newKeyNameInput" type="text" placeholder="Ej: VS Code Laptop, Kilo Code Desktop..." class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Expiración</label>
+            <select id="newKeyExpiresSelect" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500 cursor-pointer">
+              <option value="0">Nunca expira</option>
+              <option value="30">30 días</option>
+              <option value="90">90 días</option>
+              <option value="365">1 año</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
+          <button onclick="closeCreateApiKeyModal()" class="px-3 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
+          <button onclick="saveNewApiKey()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20">Crear Clave</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Mobile Bottom Navigation Bar (< md) -->
     <nav id="mobileBottomNav" class="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface-850/95 backdrop-blur-md border-t border-surface-750 flex items-center justify-around z-40 px-1 safe-pb">
       <button onclick="switchView('chat')" id="mobTabChat" class="flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors">
@@ -730,9 +946,9 @@ export function getWebUiHtml(): string {
         <i data-lucide="brain" class="w-5 h-5"></i>
         <span class="mt-0.5">Memoria</span>
       </button>
-      <button onclick="switchView('logs')" id="mobTabLogs" class="flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors">
-        <i data-lucide="scroll-text" class="w-5 h-5"></i>
-        <span class="mt-0.5">Logs</span>
+      <button onclick="switchView('apikeys')" id="mobTabApiKeys" class="flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors">
+        <i data-lucide="key" class="w-5 h-5"></i>
+        <span class="mt-0.5">API Keys</span>
       </button>
     </nav>
   </main>
@@ -1286,18 +1502,18 @@ export function getWebUiHtml(): string {
 
     // --- NAVIGATION & VIEWS ---
     function switchView(view) {
-      ['viewChat', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles'].forEach(v => {
+      ['viewChat', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys'].forEach(v => {
         const el = document.getElementById(v);
         if (el) el.classList.add('hidden');
       });
 
-      ['tabChatBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn'].forEach(t => {
+      ['tabChatBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn', 'tabApiKeysBtn'].forEach(t => {
         const el = document.getElementById(t);
         if (el) el.className = 'px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
       });
 
       // Reset mobile bottom nav buttons
-      ['mobTabChat', 'mobTabProviders', 'mobTabGraft', 'mobTabMemory', 'mobTabLogs'].forEach(id => {
+      ['mobTabChat', 'mobTabProviders', 'mobTabGraft', 'mobTabMemory', 'mobTabApiKeys'].forEach(id => {
         const btn = document.getElementById(id);
         if (btn) btn.className = 'flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors';
       });
@@ -1336,13 +1552,17 @@ export function getWebUiHtml(): string {
       } else if (view === 'logs') {
         document.getElementById('viewLogs').classList.remove('hidden');
         document.getElementById('tabLogsBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
-        const mob = document.getElementById('mobTabLogs');
-        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         renderLogs();
       } else if (view === 'files') {
         document.getElementById('viewFiles').classList.remove('hidden');
         document.getElementById('tabFilesBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         refreshWorkspaceFiles();
+      } else if (view === 'apikeys') {
+        document.getElementById('viewApiKeys').classList.remove('hidden');
+        document.getElementById('tabApiKeysBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+        const mob = document.getElementById('mobTabApiKeys');
+        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
+        fetchApiKeys();
       }
       
       // Auto close sidebar on mobile if open
@@ -2932,6 +3152,166 @@ export function getWebUiHtml(): string {
       if (!confirm(\`¿Eliminar servidor MCP \${name}?\`)) return;
       await fetch(\`/api/mcp/\${name}\`, { method: 'DELETE' });
       await fetchMcpServers();
+    }
+
+    // --- API KEYS & IDE INTEGRATION ---
+    function switchIdeGuide(guide) {
+      ['ideGuideVscode', 'ideGuideKilocode', 'ideGuidePython'].forEach(g => {
+        const el = document.getElementById(g);
+        if (el) el.classList.add('hidden');
+      });
+      ['ideTabVscodeBtn', 'ideTabKilocodeBtn', 'ideTabPythonBtn'].forEach(b => {
+        const el = document.getElementById(b);
+        if (el) el.className = 'px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-750 flex items-center gap-1.5 transition-colors';
+      });
+
+      if (guide === 'vscode') {
+        document.getElementById('ideGuideVscode').classList.remove('hidden');
+        document.getElementById('ideTabVscodeBtn').className = 'px-3 py-1.5 rounded-lg font-medium bg-brand-600 text-white flex items-center gap-1.5 transition-colors';
+      } else if (guide === 'kilocode') {
+        document.getElementById('ideGuideKilocode').classList.remove('hidden');
+        document.getElementById('ideTabKilocodeBtn').className = 'px-3 py-1.5 rounded-lg font-medium bg-brand-600 text-white flex items-center gap-1.5 transition-colors';
+      } else if (guide === 'python') {
+        document.getElementById('ideGuidePython').classList.remove('hidden');
+        document.getElementById('ideTabPythonBtn').className = 'px-3 py-1.5 rounded-lg font-medium bg-brand-600 text-white flex items-center gap-1.5 transition-colors';
+      }
+    }
+
+    async function fetchApiKeys() {
+      const container = document.getElementById('apiKeysListContainer');
+      const baseInput = document.getElementById('apiBaseUrlDisplay');
+      if (baseInput) {
+        baseInput.value = window.location.origin + '/v1';
+      }
+      container.innerHTML = '<div class="text-slate-400 p-6 text-center">Cargando claves API...</div>';
+      try {
+        const res = await fetch('/api/keys');
+        const data = await res.json();
+        renderApiKeysList(data.keys || []);
+      } catch (err) {
+        container.innerHTML = '<div class="text-rose-400 p-6 text-center">Error al cargar claves API: ' + err.message + '</div>';
+      }
+    }
+
+    function renderApiKeysList(keys) {
+      const container = document.getElementById('apiKeysListContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!keys || keys.length === 0) {
+        container.innerHTML = \`
+          <div class="p-6 text-center text-slate-400 bg-surface-800/40 rounded-xl border border-surface-750/50">
+            <i data-lucide="key" class="w-8 h-8 mx-auto mb-2 text-slate-500 opacity-60"></i>
+            <p class="font-medium text-slate-300">No hay claves API registradas</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">Crea una clave API para conectar Kilo Code, VS Code o Cursor.</p>
+            <button onclick="openCreateApiKeyModal()" class="mt-3 px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-lg text-xs">
+              + Crear Primera Clave
+            </button>
+          </div>
+        \`;
+        lucide.createIcons();
+        return;
+      }
+
+      keys.forEach(k => {
+        const isActive = k.status === 'active';
+        const card = document.createElement('div');
+        card.className = 'flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-surface-800/80 hover:bg-surface-800 border border-surface-750 rounded-xl transition-all';
+        
+        const createdDate = new Date(k.createdAt).toLocaleDateString();
+        const lastUsedText = k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString() : 'Sin uso reciente';
+        const rawKeyEscaped = encodeURIComponent(k.key);
+
+        card.innerHTML = \`
+          <div class="space-y-1 overflow-hidden">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white text-xs">\${k.name}</span>
+              <span class="text-[9px] px-1.5 py-0.5 rounded-full font-mono \${isActive ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}">
+                \${isActive ? 'Activa' : 'Revocada'}
+              </span>
+            </div>
+            <div class="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
+              <span class="bg-surface-900 px-2 py-0.5 rounded border border-surface-750 text-slate-300 select-all">\${k.maskedKey}</span>
+              <button onclick="copyMessageText(this, decodeURIComponent('\${rawKeyEscaped}'))" title="Copiar clave completa" class="text-brand-400 hover:text-brand-300 p-1 rounded hover:bg-surface-700 transition-colors">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+            <div class="text-[10px] text-slate-500 flex items-center gap-3">
+              <span>Creada: \${createdDate}</span>
+              <span>Último uso: \${lastUsedText}</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
+            \${isActive ? \`
+              <button onclick="revokeApiKey('\${k.id}')" title="Revocar clave" class="px-2.5 py-1 rounded-lg bg-surface-750 hover:bg-surface-700 text-slate-300 hover:text-white text-[11px] transition-colors">
+                Revocar
+              </button>
+            \` : ''}
+            <button onclick="deleteApiKey('\${k.id}')" title="Eliminar clave" class="p-1.5 rounded-lg bg-surface-750 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 text-[11px] transition-colors">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        \`;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    function openCreateApiKeyModal() {
+      document.getElementById('createApiKeyModal').classList.remove('hidden');
+      document.getElementById('newKeyNameInput').value = '';
+      document.getElementById('newKeyNameInput').focus();
+    }
+
+    function closeCreateApiKeyModal() {
+      document.getElementById('createApiKeyModal').classList.add('hidden');
+    }
+
+    async function saveNewApiKey() {
+      const nameInput = document.getElementById('newKeyNameInput');
+      const expiresSelect = document.getElementById('newKeyExpiresSelect');
+      const name = nameInput.value.trim() || 'Nueva API Key';
+      const days = Number(expiresSelect.value);
+      const expiresAt = days > 0 ? Date.now() + (days * 24 * 60 * 60 * 1000) : null;
+
+      try {
+        const res = await fetch('/api/keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, expiresAt })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeCreateApiKeyModal();
+          await fetchApiKeys();
+          alert('¡Clave API creada exitosamente!\\n\\n' + data.key.key + '\\n\\n(Copia esta clave ahora para configurarla en tu IDE).');
+        } else {
+          alert('Error al crear clave: ' + (data.error || 'Desconocido'));
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function revokeApiKey(id) {
+      if (!confirm('¿Seguro que deseas revocar esta API Key? Los IDEs conectados con ella dejarán de tener acceso.')) return;
+      try {
+        await fetch('/api/keys/' + id + '/revoke', { method: 'POST' });
+        await fetchApiKeys();
+      } catch (e) {
+        alert('Error al revocar: ' + e.message);
+      }
+    }
+
+    async function deleteApiKey(id) {
+      if (!confirm('¿Seguro que deseas eliminar permanentemente esta API Key?')) return;
+      try {
+        await fetch('/api/keys/' + id, { method: 'DELETE' });
+        await fetchApiKeys();
+      } catch (e) {
+        alert('Error al eliminar: ' + e.message);
+      }
     }
 
     function toggleTheme() {
