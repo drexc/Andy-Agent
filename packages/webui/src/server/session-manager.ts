@@ -23,6 +23,9 @@ export interface ProjectItem {
 	defaultProvider?: string;
 	autonomousMode?: boolean; // Goose-style autonomous mode: edit files & execute commands without asking confirmation
 	maxAutonomousSteps?: number;
+	source?: "webui" | "ide" | "cli";
+	apiKeyId?: string;
+	clientName?: string;
 }
 
 export interface WebUiSessionItem {
@@ -372,6 +375,61 @@ export class WebUiSessionPool {
 		project.autonomousMode = !(project.autonomousMode !== false);
 		this.saveProjects();
 		return project;
+	}
+
+	public getOrCreateIdeProject(
+		apiKey?: { id: string; name: string; maskedKey?: string },
+		clientHint?: string,
+		workspacePath?: string,
+	): ProjectItem {
+		const rawName = apiKey?.name || clientHint || "IDE Integration";
+		const cleanClient = rawName.replace(/^\[IDE\]\s*/i, "").trim() || "IDE";
+		const projectName = `[IDE] ${cleanClient}`;
+
+		// Check if project exists by apiKeyId or name
+		for (const p of this.projects.values()) {
+			if (apiKey && p.apiKeyId === apiKey.id) {
+				p.lastActive = Date.now();
+				this.saveProjects();
+				return p;
+			}
+			if (p.name.toLowerCase() === projectName.toLowerCase()) {
+				p.lastActive = Date.now();
+				if (apiKey && !p.apiKeyId) {
+					p.apiKeyId = apiKey.id;
+				}
+				this.saveProjects();
+				return p;
+			}
+		}
+
+		// Create dedicated workspace directory for this IDE connection
+		const slug = cleanClient.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+		const defaultDir = path.join(os.homedir(), ".andy", "agent", "workspaces", slug || "ide_workspace");
+		const projPath = workspacePath ? path.resolve(workspacePath) : defaultDir;
+		if (!existsSync(projPath)) {
+			mkdirSync(projPath, { recursive: true });
+		}
+
+		const id = `proj-ide-${Math.random().toString(36).substring(2, 9)}`;
+		const newProj: ProjectItem = {
+			id,
+			name: projectName,
+			path: projPath,
+			description: `Proyecto generado automáticamente para la conexión de ${cleanClient} (${apiKey?.name ? `API Key: ${apiKey.name}` : "CLI / IDE"})`,
+			createdAt: Date.now(),
+			lastActive: Date.now(),
+			autonomousMode: true,
+			maxAutonomousSteps: 25,
+			source: "ide",
+			apiKeyId: apiKey?.id,
+			clientName: cleanClient,
+		};
+
+		this.projects.set(id, newProj);
+		this.getOrCreateGraftEngine(id, projPath);
+		this.saveProjects();
+		return newProj;
 	}
 
 	public deleteProject(projectId: string): boolean {

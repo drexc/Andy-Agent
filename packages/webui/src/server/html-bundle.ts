@@ -1436,14 +1436,22 @@ for chunk in response:
           </button>
         \`;
 
+        const isIdeProject = p.source === 'ide' || p.name.startsWith('[IDE]');
+        const ideBadgeHtml = isIdeProject ? \`
+          <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium border border-indigo-500/30 flex items-center gap-1">
+            <i data-lucide="terminal" class="w-2.5 h-2.5"></i> \${p.clientName || 'IDE'}
+          </span>
+        \` : '';
+
         card.innerHTML = \`
           <div class="space-y-1.5">
             <div class="flex items-center justify-between">
               <span class="font-bold text-xs \${isActive ? 'text-cyan-300' : 'text-white'} truncate flex items-center gap-1.5">
-                <i data-lucide="folder-kanban" class="w-3.5 h-3.5 \${isActive ? 'text-cyan-400' : 'text-slate-400'}"></i>
+                <i data-lucide="\${isIdeProject ? 'code-2' : 'folder-kanban'}" class="w-3.5 h-3.5 \${isActive ? 'text-cyan-400' : isIdeProject ? 'text-indigo-400' : 'text-slate-400'}"></i>
                 \${p.name}
               </span>
               <div class="flex items-center gap-1.5">
+                \${ideBadgeHtml}
                 \${autonomyBadgeHtml}
                 \${isActive ? '<span class="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30">Activo</span>' : ''}
               </div>

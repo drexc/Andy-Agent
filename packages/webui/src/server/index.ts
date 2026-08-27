@@ -1553,7 +1553,31 @@ ${prompt || ""}`;
 
 		const isStream = body.stream === true;
 		const reqId = `chatcmpl-${randomUUID()}`;
-		const sessionId = (req.headers["x-session-id"] as string) || body.user || "kilocode-session";
+
+		// Detect client type / IDE and create or reuse dedicated Project
+		const userAgent = (req.headers["user-agent"] as string) || "";
+		let clientHint = "";
+		if (userAgent.toLowerCase().includes("kilocode") || userAgent.toLowerCase().includes("kilo"))
+			clientHint = "Kilo Code";
+		else if (userAgent.toLowerCase().includes("cline")) clientHint = "Cline (VSCode)";
+		else if (userAgent.toLowerCase().includes("roo")) clientHint = "Roo Code";
+		else if (userAgent.toLowerCase().includes("cursor")) clientHint = "Cursor";
+		else if (userAgent.toLowerCase().includes("windsurf")) clientHint = "Windsurf";
+		else if (userAgent.toLowerCase().includes("continue")) clientHint = "Continue";
+		else if (userAgent.toLowerCase().includes("vscode") || userAgent.toLowerCase().includes("code"))
+			clientHint = "VS Code";
+		else if (userAgent.toLowerCase().includes("python")) clientHint = "Python SDK";
+		else if (userAgent.toLowerCase().includes("curl")) clientHint = "CLI / cURL";
+
+		const customWorkspace =
+			(req.headers["x-workspace-path"] as string) ||
+			(req.headers["x-project-path"] as string) ||
+			(req.headers["x-project-dir"] as string) ||
+			undefined;
+
+		const ideProject = this.pool.getOrCreateIdeProject(authResult.key, clientHint, customWorkspace);
+		const customSessionId = (req.headers["x-session-id"] as string) || (body.user as string);
+		const sessionId = customSessionId ? `ide-${ideProject.id}-${customSessionId}` : `ide-session-${ideProject.id}`;
 
 		// Extract prompt and system instruction
 		const messages: any[] = body.messages;
@@ -1615,16 +1639,33 @@ ${prompt || ""}`;
 		this.addLog(
 			"INFO",
 			"OpenAI Bridge",
-			`Incoming chat completion for model "${modelId}" (session: ${sessionId}, stream: ${isStream})`,
+			`Incoming chat completion for model "${modelId}" (project: "${ideProject.name}", session: ${sessionId}, stream: ${isStream})`,
 		);
 
-		const sessionItem = await this.pool.getOrCreateSession(sessionId, modelId);
+		const sessionItem = await this.pool.getOrCreateSession(sessionId, modelId, undefined, ideProject.id);
 		const session = sessionItem.session;
 		const targetModel = session.model;
 		if (!targetModel) {
 			res.writeHead(400, { "Content-Type": "application/json" });
 			res.end(JSON.stringify({ error: { message: `Model "${modelId}" could not be resolved.` } }));
 			return;
+		}
+
+		// Set human-readable title for the IDE chat session
+		const firstUserMsg = nonSystem.find((m: any) => m.role === "user");
+		if (firstUserMsg) {
+			const promptSnippet =
+				typeof firstUserMsg.content === "string"
+					? firstUserMsg.content
+					: Array.isArray(firstUserMsg.content)
+						? firstUserMsg.content.map((c: any) => c.text || "").join(" ")
+						: "";
+			if (
+				promptSnippet &&
+				(!sessionItem.title || sessionItem.title.startsWith("Chat ") || sessionItem.title.startsWith("IDE Chat"))
+			) {
+				sessionItem.title = `${ideProject.clientName || "IDE"}: ${promptSnippet.slice(0, 32)}${promptSnippet.length > 32 ? "..." : ""}`;
+			}
 		}
 
 		// Parse tools from OpenAI format if provided by Kilo Code / VS Code
@@ -1901,6 +1942,36 @@ ${prompt || ""}`;
 					})
 					.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
 
+				// Persist chat session with full context and assistant response for WebUI visibility
+				try {
+					const assistantContent: (TextContent | ThinkingContent | ToolCall)[] = [];
+					if (accumulatedText) {
+						assistantContent.push({ type: "text", text: accumulatedText });
+					}
+					const finalAssistantMessage: AssistantMessage = {
+						role: "assistant",
+						content: assistantContent,
+						api: targetModel.api,
+						provider: targetModel.provider,
+						model: targetModel.id,
+						usage: finalUsage || {
+							input: 0,
+							output: 0,
+							cacheRead: 0,
+							cacheWrite: 0,
+							totalTokens: 0,
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+						},
+						stopReason: finishReason === "tool_calls" ? "toolUse" : "stop",
+						timestamp: Date.now(),
+					};
+					(sessionItem.session.state as any).messages = [...contextMessages, finalAssistantMessage];
+					sessionItem.lastActive = Date.now();
+					this.pool.persistSession(sessionItem);
+				} catch (err: any) {
+					this.addLog("WARN", "OpenAI Bridge", `Failed to persist IDE session: ${err.message}`);
+				}
+
 				if (!res.writableEnded) {
 					const stopChunk: any = {
 						id: reqId,
@@ -1977,6 +2048,49 @@ ${prompt || ""}`;
 						modelId,
 					})
 					.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
+
+				// Persist chat session for non-streaming response
+				try {
+					const assistantContent: (TextContent | ThinkingContent | ToolCall)[] = [];
+					if (accumulatedText) {
+						assistantContent.push({ type: "text", text: accumulatedText });
+					}
+					if (toolCalls.length > 0) {
+						for (const tc of toolCalls) {
+							assistantContent.push({
+								type: "toolCall",
+								id: tc.id,
+								name: tc.function.name,
+								arguments:
+									typeof tc.function.arguments === "string"
+										? JSON.parse(tc.function.arguments || "{}")
+										: tc.function.arguments,
+							});
+						}
+					}
+					const finalAssistantMessage: AssistantMessage = {
+						role: "assistant",
+						content: assistantContent,
+						api: targetModel.api,
+						provider: targetModel.provider,
+						model: targetModel.id,
+						usage: {
+							input: result.usage?.input || 0,
+							output: result.usage?.output || 0,
+							cacheRead: result.usage?.cacheRead || 0,
+							cacheWrite: result.usage?.cacheWrite || 0,
+							totalTokens: result.usage?.totalTokens || 0,
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+						},
+						stopReason: toolCalls.length > 0 ? "toolUse" : "stop",
+						timestamp: Date.now(),
+					};
+					(sessionItem.session.state as any).messages = [...contextMessages, finalAssistantMessage];
+					sessionItem.lastActive = Date.now();
+					this.pool.persistSession(sessionItem);
+				} catch (err: any) {
+					this.addLog("WARN", "OpenAI Bridge", `Failed to persist IDE session: ${err.message}`);
+				}
 
 				const messageObj: any = {
 					role: "assistant",
