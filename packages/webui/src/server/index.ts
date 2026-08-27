@@ -1145,7 +1145,10 @@ ${prompt || ""}`;
 				return;
 			}
 
-			if (method === "GET" && (url === "/v1/models" || url === "/models" || url === "/api/models")) {
+			if (
+				method === "GET" &&
+				(url === "/v1/models" || url === "/models" || url === "/api/models" || url.endsWith("/models"))
+			) {
 				const models = this.pool.getAvailableModels();
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(
@@ -1233,7 +1236,10 @@ ${prompt || ""}`;
 			}
 
 			// --- 12.1 OPENAI-COMPATIBLE CHAT COMPLETIONS (KILOCODE, CURSOR, CLINE, ROO-CODE) ---
-			if (method === "POST" && (url === "/v1/chat/completions" || url === "/chat/completions")) {
+			if (
+				method === "POST" &&
+				(url === "/v1/chat/completions" || url === "/chat/completions" || url.endsWith("/chat/completions"))
+			) {
 				await this.handleOpenAiChatCompletions(req, res);
 				return;
 			}
@@ -1811,13 +1817,16 @@ ${prompt || ""}`;
 				object: "chat.completion.chunk",
 				created: Math.floor(Date.now() / 1000),
 				model: modelId,
-				choices: [{ index: 0, delta: { role: "assistant", content: "" }, finish_reason: null }],
+				choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }],
 			};
 			res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
 
 			let accumulatedText = "";
 			let finishReason: string | null = null;
 			let finalUsage: any = null;
+			const toolIndexMap = new Map<number, number>();
+			let nextToolIndex = 0;
+
 			try {
 				const eventStream = stream(targetModel, context, streamOptions);
 				for await (const event of eventStream) {
@@ -1848,6 +1857,10 @@ ${prompt || ""}`;
 						};
 						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
 					} else if (event.type === "toolcall_start") {
+						if (!toolIndexMap.has(event.contentIndex)) {
+							toolIndexMap.set(event.contentIndex, nextToolIndex++);
+						}
+						const tcIndex = toolIndexMap.get(event.contentIndex) ?? 0;
 						const tc = event.partial.content[event.contentIndex] as ToolCall;
 						const chunk = {
 							id: reqId,
@@ -1860,7 +1873,7 @@ ${prompt || ""}`;
 									delta: {
 										tool_calls: [
 											{
-												index: event.contentIndex,
+												index: tcIndex,
 												id: tc?.id || `call_${Math.random().toString(36).substring(2, 9)}`,
 												type: "function",
 												function: {
@@ -1876,6 +1889,10 @@ ${prompt || ""}`;
 						};
 						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
 					} else if (event.type === "toolcall_delta") {
+						if (!toolIndexMap.has(event.contentIndex)) {
+							toolIndexMap.set(event.contentIndex, nextToolIndex++);
+						}
+						const tcIndex = toolIndexMap.get(event.contentIndex) ?? 0;
 						const chunk = {
 							id: reqId,
 							object: "chat.completion.chunk",
@@ -1887,7 +1904,7 @@ ${prompt || ""}`;
 									delta: {
 										tool_calls: [
 											{
-												index: event.contentIndex,
+												index: tcIndex,
 												function: {
 													arguments: event.delta,
 												},
