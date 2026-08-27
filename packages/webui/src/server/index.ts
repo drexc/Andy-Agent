@@ -9,6 +9,10 @@ import {
 	complete,
 	type Message,
 	stream,
+	type TextContent,
+	type ThinkingContent,
+	type Tool,
+	type ToolCall,
 	type ToolResultMessage,
 	type UserMessage,
 } from "@earendil-works/pi-ai";
@@ -1623,17 +1627,71 @@ ${prompt || ""}`;
 			return;
 		}
 
+		// Parse tools from OpenAI format if provided by Kilo Code / VS Code
+		let tools: Tool[] | undefined;
+		if (Array.isArray(body.tools) && body.tools.length > 0) {
+			tools = body.tools
+				.map((t: any) => {
+					if (t.type === "function" && t.function) {
+						return {
+							name: t.function.name,
+							description: t.function.description || "",
+							parameters: t.function.parameters || { type: "object", properties: {} },
+						};
+					}
+					if (t.name && t.parameters) {
+						return {
+							name: t.name,
+							description: t.description || "",
+							parameters: t.parameters,
+						};
+					}
+					return null;
+				})
+				.filter(Boolean) as Tool[];
+		}
+
 		const contextMessages: Message[] = nonSystem.map((m: any) => {
 			if (m.role === "assistant") {
-				const textContent =
-					typeof m.content === "string"
-						? m.content
-						: Array.isArray(m.content)
-							? m.content.map((c: any) => c.text || JSON.stringify(c)).join("\n")
-							: JSON.stringify(m.content || "");
+				const contentParts: (TextContent | ThinkingContent | ToolCall)[] = [];
+				if (typeof m.content === "string" && m.content) {
+					contentParts.push({ type: "text", text: m.content });
+				} else if (Array.isArray(m.content)) {
+					for (const part of m.content) {
+						if (part.type === "text" && part.text) {
+							contentParts.push({ type: "text", text: part.text });
+						} else if (part.type === "thinking" && part.thinking) {
+							contentParts.push({ type: "thinking", thinking: part.thinking });
+						}
+					}
+				}
+				if (Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
+					for (const tc of m.tool_calls) {
+						const fn = tc.function || tc;
+						let argsObj: any = {};
+						if (typeof fn.arguments === "string") {
+							try {
+								argsObj = JSON.parse(fn.arguments);
+							} catch {
+								argsObj = { raw: fn.arguments };
+							}
+						} else if (typeof fn.arguments === "object" && fn.arguments) {
+							argsObj = fn.arguments;
+						}
+						contentParts.push({
+							type: "toolCall",
+							id: tc.id || `call_${Math.random().toString(36).substring(2, 9)}`,
+							name: fn.name,
+							arguments: argsObj,
+						});
+					}
+				}
+				if (contentParts.length === 0) {
+					contentParts.push({ type: "text", text: "" });
+				}
 				return {
 					role: "assistant",
-					content: [{ type: "text", text: textContent }],
+					content: contentParts,
 					api: targetModel.api,
 					provider: targetModel.provider,
 					model: targetModel.id,
@@ -1645,7 +1703,7 @@ ${prompt || ""}`;
 						totalTokens: 0,
 						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 					},
-					stopReason: "stop",
+					stopReason: m.tool_calls?.length ? "toolUse" : "stop",
 					timestamp: Date.now(),
 				} as AssistantMessage;
 			}
@@ -1677,6 +1735,7 @@ ${prompt || ""}`;
 			systemPrompt,
 			messages:
 				contextMessages.length > 0 ? contextMessages : [{ role: "user", content: "Hello", timestamp: Date.now() }],
+			tools,
 		};
 
 		const auth = await sessionItem.session.modelRegistry.getApiKeyAndHeaders(targetModel);
@@ -1716,6 +1775,7 @@ ${prompt || ""}`;
 			res.write(`data: ${JSON.stringify(initialChunk)}\n\n`);
 
 			let accumulatedText = "";
+			let finishReason: string | null = null;
 			try {
 				const eventStream = stream(targetModel, context, streamOptions);
 				for await (const event of eventStream) {
@@ -1736,11 +1796,65 @@ ${prompt || ""}`;
 							object: "chat.completion.chunk",
 							created: Math.floor(Date.now() / 1000),
 							model: modelId,
+							choices: [{ index: 0, delta: { reasoning_content: event.delta }, finish_reason: null }],
+						};
+						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+					} else if (event.type === "toolcall_start") {
+						const tc = event.partial.content[event.contentIndex] as ToolCall;
+						const chunk = {
+							id: reqId,
+							object: "chat.completion.chunk",
+							created: Math.floor(Date.now() / 1000),
+							model: modelId,
 							choices: [
-								{ index: 0, delta: { content: "", reasoning_content: event.delta }, finish_reason: null },
+								{
+									index: 0,
+									delta: {
+										tool_calls: [
+											{
+												index: event.contentIndex,
+												id: tc?.id || `call_${Math.random().toString(36).substring(2, 9)}`,
+												type: "function",
+												function: {
+													name: tc?.name || "",
+													arguments: "",
+												},
+											},
+										],
+									},
+									finish_reason: null,
+								},
 							],
 						};
 						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+					} else if (event.type === "toolcall_delta") {
+						const chunk = {
+							id: reqId,
+							object: "chat.completion.chunk",
+							created: Math.floor(Date.now() / 1000),
+							model: modelId,
+							choices: [
+								{
+									index: 0,
+									delta: {
+										tool_calls: [
+											{
+												index: event.contentIndex,
+												function: {
+													arguments: event.delta,
+												},
+											},
+										],
+									},
+									finish_reason: null,
+								},
+							],
+						};
+						res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+					} else if (event.type === "done") {
+						if (event.reason === "toolUse") {
+							finishReason = "tool_calls";
+						}
 					}
 				}
 			} catch (err: any) {
@@ -1785,7 +1899,7 @@ ${prompt || ""}`;
 						object: "chat.completion.chunk",
 						created: Math.floor(Date.now() / 1000),
 						model: modelId,
-						choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+						choices: [{ index: 0, delta: {}, finish_reason: finishReason || "stop" }],
 					};
 					res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
 					res.write("data: [DONE]\n\n");
@@ -1797,11 +1911,22 @@ ${prompt || ""}`;
 			try {
 				const result = await complete(targetModel, context, streamOptions);
 				let accumulatedText = "";
+				const toolCalls: any[] = [];
 				if (Array.isArray(result.content)) {
-					accumulatedText = result.content
-						.filter((c: any) => c.type === "text")
-						.map((c: any) => c.text || "")
-						.join("\n");
+					for (const c of result.content) {
+						if (c.type === "text") {
+							accumulatedText += (accumulatedText ? "\n" : "") + (c.text || "");
+						} else if (c.type === "toolCall") {
+							toolCalls.push({
+								id: c.id,
+								type: "function",
+								function: {
+									name: c.name,
+									arguments: typeof c.arguments === "string" ? c.arguments : JSON.stringify(c.arguments || {}),
+								},
+							});
+						}
+					}
 				} else if (typeof (result as any).content === "string") {
 					accumulatedText = (result as any).content;
 				}
@@ -1821,6 +1946,14 @@ ${prompt || ""}`;
 					})
 					.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
 
+				const messageObj: any = {
+					role: "assistant",
+					content: accumulatedText || null,
+				};
+				if (toolCalls.length > 0) {
+					messageObj.tool_calls = toolCalls;
+				}
+
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(
 					JSON.stringify({
@@ -1831,11 +1964,8 @@ ${prompt || ""}`;
 						choices: [
 							{
 								index: 0,
-								message: {
-									role: "assistant",
-									content: accumulatedText || "(Completado exitosamente)",
-								},
-								finish_reason: "stop",
+								message: messageObj,
+								finish_reason: toolCalls.length > 0 ? "tool_calls" : "stop",
 							},
 						],
 						usage: {
