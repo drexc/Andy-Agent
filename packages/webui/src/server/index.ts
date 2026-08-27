@@ -230,6 +230,36 @@ export class AndyWebUiServer {
 				return;
 			}
 
+			if (method === "POST" && (url === "/api/projects/toggle-autonomy" || url === "/api/projects/autonomy")) {
+				const body = await this.readJsonBody<any>(req);
+				const targetId = body?.projectId || body?.id || this.pool.getActiveProject().id;
+				try {
+					let updated: any;
+					if (body && typeof body.autonomousMode === "boolean") {
+						updated = this.pool.updateProject(targetId, { autonomousMode: body.autonomousMode });
+					} else {
+						updated = this.pool.toggleProjectAutonomy(targetId);
+					}
+					this.addLog(
+						"INFO",
+						"Projects",
+						`Set autonomousMode=${updated.autonomousMode !== false} for project "${updated.name}"`,
+					);
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(
+						JSON.stringify({
+							success: true,
+							project: updated,
+							autonomousMode: updated.autonomousMode !== false,
+						}),
+					);
+				} catch (err: any) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: err.message || String(err) }));
+				}
+				return;
+			}
+
 			if ((method === "PUT" || method === "PATCH") && url.startsWith("/api/projects/")) {
 				const projectId = url.split("/")[3];
 				const body = await this.readJsonBody<any>(req);
@@ -1396,10 +1426,21 @@ ${prompt || ""}`;
 		});
 
 		try {
+			const targetProject = this.pool.getProject(sessionItem.projectId) || this.pool.getActiveProject();
+			const isAutonomous = targetProject.autonomousMode !== false;
+
+			let effectivePrompt = promptText;
+			const msgs = session.state.messages || [];
+			const isFirstTurn = msgs.length === 0 || !msgs.some((m: any) => m.role === "assistant");
+			if (isAutonomous && isFirstTurn) {
+				const autonomousDirective = `[AUTONOMOUS_AGENT_MODE: ACTIVE]\nYou are operating in Goose-style Autonomous Mode for this project. You have full authority to directly read, create, and edit files, run terminal commands, execute tests, and make sequential tool calls without pausing to ask the user for confirmation. Execute the required steps and solve the objective completely.\n\n`;
+				effectivePrompt = autonomousDirective + promptText;
+			}
+
 			if (session.isStreaming) {
-				await session.prompt(promptText, { streamingBehavior: "followUp" });
+				await session.prompt(effectivePrompt, { streamingBehavior: "followUp" });
 			} else {
-				await session.prompt(promptText);
+				await session.prompt(effectivePrompt);
 			}
 
 			// Fallback: If no streaming tokens were captured, extract from session state messages

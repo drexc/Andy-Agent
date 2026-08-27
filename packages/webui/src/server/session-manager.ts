@@ -21,6 +21,8 @@ export interface ProjectItem {
 	lastActive: number;
 	defaultModel?: string;
 	defaultProvider?: string;
+	autonomousMode?: boolean; // Goose-style autonomous mode: edit files & execute commands without asking confirmation
+	maxAutonomousSteps?: number;
 }
 
 export interface WebUiSessionItem {
@@ -160,6 +162,9 @@ export class WebUiSessionPool {
 				const parsed = JSON.parse(content) as StoredProjectsFile;
 				if (Array.isArray(parsed.projects) && parsed.projects.length > 0) {
 					for (const p of parsed.projects) {
+						if (p.autonomousMode === undefined) {
+							p.autonomousMode = true;
+						}
 						this.projects.set(p.id, p);
 					}
 					if (parsed.activeProjectId && this.projects.has(parsed.activeProjectId)) {
@@ -182,6 +187,8 @@ export class WebUiSessionPool {
 				description: "Proyecto predeterminado del espacio de trabajo",
 				createdAt: Date.now(),
 				lastActive: Date.now(),
+				autonomousMode: true,
+				maxAutonomousSteps: 25,
 			};
 			this.projects.set(initialProject.id, initialProject);
 			this.activeProjectId = initialProject.id;
@@ -261,6 +268,8 @@ export class WebUiSessionPool {
 		description?: string;
 		defaultModel?: string;
 		defaultProvider?: string;
+		autonomousMode?: boolean;
+		maxAutonomousSteps?: number;
 	}): ProjectItem {
 		const name = data.name?.trim();
 		const rawPath = data.path?.trim();
@@ -282,6 +291,8 @@ export class WebUiSessionPool {
 			lastActive: Date.now(),
 			defaultModel: data.defaultModel,
 			defaultProvider: data.defaultProvider,
+			autonomousMode: data.autonomousMode !== false,
+			maxAutonomousSteps: data.maxAutonomousSteps || 25,
 		};
 
 		this.projects.set(id, project);
@@ -318,6 +329,8 @@ export class WebUiSessionPool {
 			description?: string;
 			defaultModel?: string;
 			defaultProvider?: string;
+			autonomousMode?: boolean;
+			maxAutonomousSteps?: number;
 		},
 	): ProjectItem {
 		const project = this.projects.get(projectId);
@@ -329,6 +342,8 @@ export class WebUiSessionPool {
 		if (data.description !== undefined) project.description = data.description.trim();
 		if (data.defaultModel !== undefined) project.defaultModel = data.defaultModel;
 		if (data.defaultProvider !== undefined) project.defaultProvider = data.defaultProvider;
+		if (data.autonomousMode !== undefined) project.autonomousMode = Boolean(data.autonomousMode);
+		if (data.maxAutonomousSteps !== undefined) project.maxAutonomousSteps = Number(data.maxAutonomousSteps) || 25;
 
 		if (data.path && data.path.trim() && data.path.trim() !== project.path) {
 			const newPath = path.resolve(data.path.trim());
@@ -344,6 +359,17 @@ export class WebUiSessionPool {
 			}
 		}
 
+		this.saveProjects();
+		return project;
+	}
+
+	public toggleProjectAutonomy(projectId?: string): ProjectItem {
+		const targetId = projectId || this.activeProjectId;
+		const project = this.projects.get(targetId);
+		if (!project) {
+			throw new Error(`Project "${targetId}" not found`);
+		}
+		project.autonomousMode = !(project.autonomousMode !== false);
 		this.saveProjects();
 		return project;
 	}

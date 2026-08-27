@@ -321,6 +321,12 @@ export function getWebUiHtml(): string {
           </div>
         </div>
 
+        <!-- Goose-Style Autonomous Agent Toggle Button -->
+        <button onclick="toggleActiveProjectAutonomy()" id="autonomyHeaderBtn" title="Alternar Modo Autónomo (Goose-style auto-edit sin confirmación)" class="flex items-center gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-300 transition-all shadow-sm shrink-0">
+          <span id="autonomyHeaderDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="autonomyHeaderText" class="hidden sm:inline">Autónomo: ON</span>
+        </button>
+
         <select id="thinkingLevelSelect" onchange="setThinkingLevel(this.value)" class="hidden sm:block bg-surface-800 hover:bg-surface-750 border border-surface-700 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-300 focus:outline-none focus:border-brand-500 cursor-pointer">
           <option value="off">Thinking: Off</option>
           <option value="low">Thinking: Low</option>
@@ -1232,6 +1238,19 @@ for chunk in response:
                 <label class="block text-slate-300 mb-1 font-medium">Descripción (Opcional)</label>
                 <input id="newProjDescription" type="text" placeholder="Breve resumen del propósito del proyecto..." class="w-full bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-cyan-500">
               </div>
+
+              <div class="pt-1">
+                <label class="flex items-start gap-2.5 text-slate-200 text-xs font-medium cursor-pointer bg-surface-750/60 p-3 rounded-xl border border-surface-700 hover:border-emerald-500/40 transition-colors">
+                  <input id="newProjAutonomy" type="checkbox" checked class="rounded bg-surface-700 border-surface-600 text-emerald-500 w-4 h-4 mt-0.5 shrink-0">
+                  <div>
+                    <div class="text-white font-semibold flex items-center gap-1.5">
+                      <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+                      Modo Autónomo Activo (Goose-style)
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">Permite al agente editar archivos, crear código y ejecutar comandos automáticamente sin pedir confirmaciones adicionales.</div>
+                  </div>
+                </label>
+              </div>
             </div>
 
             <div class="pt-2 flex justify-end">
@@ -1314,6 +1333,67 @@ for chunk in response:
       if (sidebarPath) sidebarPath.innerText = activeProjectData.path || '...';
       if (headerName) headerName.innerText = activeProjectData.name || 'Proyecto Principal';
       if (modalCount) modalCount.innerText = projectsList.length;
+
+      updateAutonomyHeaderButton(activeProjectData.autonomousMode !== false);
+    }
+
+    function updateAutonomyHeaderButton(isAutonomous) {
+      const btn = document.getElementById('autonomyHeaderBtn');
+      const dot = document.getElementById('autonomyHeaderDot');
+      const text = document.getElementById('autonomyHeaderText');
+      if (!btn) return;
+
+      if (isAutonomous) {
+        btn.className = 'flex items-center gap-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-300 transition-all shadow-sm shrink-0';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        if (text) text.innerText = 'Autónomo: ON';
+        btn.title = 'Modo Autónomo ACTIVO (Goose-style): El agente edita archivos y ejecuta comandos automáticamente sin pedir permisos. Haz clic para pausar.';
+      } else {
+        btn.className = 'flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 transition-all shadow-sm shrink-0';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-slate-500';
+        if (text) text.innerText = 'Autónomo: OFF';
+        btn.title = 'Modo Supervisado (Autónomo DESACTIVADO): Haz clic para activar el modo autónomo sin confirmaciones.';
+      }
+    }
+
+    async function toggleActiveProjectAutonomy() {
+      try {
+        const res = await fetch('/api/projects/toggle-autonomy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: currentProjectId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (activeProjectData) {
+            activeProjectData.autonomousMode = data.autonomousMode;
+          }
+          updateAutonomyHeaderButton(data.autonomousMode);
+          await fetchProjects();
+        }
+      } catch (e) {
+        console.error('Error toggling autonomy:', e);
+      }
+    }
+
+    async function toggleProjectAutonomyById(projectId) {
+      try {
+        const res = await fetch('/api/projects/toggle-autonomy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          if (projectId === currentProjectId && activeProjectData) {
+            activeProjectData.autonomousMode = data.autonomousMode;
+            updateAutonomyHeaderButton(data.autonomousMode);
+          }
+          await fetchProjects();
+        }
+      } catch (e) {
+        console.error('Error toggling project autonomy:', e);
+      }
     }
 
     function renderProjectsCards() {
@@ -1328,6 +1408,7 @@ for chunk in response:
 
       projectsList.forEach(p => {
         const isActive = p.id === currentProjectId;
+        const isAuto = p.autonomousMode !== false;
         const card = document.createElement('div');
         card.className = \`p-3.5 rounded-xl border transition-all flex flex-col justify-between \${isActive ? 'bg-cyan-950/30 border-cyan-500/50 shadow-md shadow-cyan-900/20' : 'bg-surface-800 border-surface-700/80 hover:border-surface-600'}\`;
         
@@ -1348,6 +1429,13 @@ for chunk in response:
           </button>
         \`;
 
+        const autonomyBadgeHtml = \`
+          <button onclick="event.stopPropagation(); toggleProjectAutonomyById('\${p.id}')" title="Alternar Modo Autónomo para este proyecto" class="px-2 py-0.5 rounded-full text-[10px] font-semibold border flex items-center gap-1 transition-colors \${isAuto ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25' : 'bg-surface-750 border-surface-700 text-slate-400 hover:bg-surface-700'}">
+            <span class="w-1.5 h-1.5 rounded-full \${isAuto ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'}"></span>
+            \${isAuto ? '⚡ Autónomo' : 'Supervisado'}
+          </button>
+        \`;
+
         card.innerHTML = \`
           <div class="space-y-1.5">
             <div class="flex items-center justify-between">
@@ -1355,7 +1443,10 @@ for chunk in response:
                 <i data-lucide="folder-kanban" class="w-3.5 h-3.5 \${isActive ? 'text-cyan-400' : 'text-slate-400'}"></i>
                 \${p.name}
               </span>
-              \${isActive ? '<span class="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30">Activo</span>' : ''}
+              <div class="flex items-center gap-1.5">
+                \${autonomyBadgeHtml}
+                \${isActive ? '<span class="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-semibold border border-cyan-500/30">Activo</span>' : ''}
+              </div>
             </div>
             \${descHtml}
             <div class="text-[10px] font-mono text-slate-400 bg-surface-750/70 px-2 py-1 rounded truncate" title="\${p.path}">
@@ -1414,10 +1505,12 @@ for chunk in response:
       const nameInput = document.getElementById('newProjName');
       const pathInput = document.getElementById('newProjPath');
       const descInput = document.getElementById('newProjDescription');
+      const autoInput = document.getElementById('newProjAutonomy');
 
       const name = nameInput.value.trim();
       const path = pathInput.value.trim();
       const description = descInput.value.trim();
+      const autonomousMode = autoInput ? autoInput.checked : true;
 
       if (!name) {
         alert('Ingresa un nombre para el proyecto.');
@@ -1434,7 +1527,7 @@ for chunk in response:
         const res = await fetch('/api/projects', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, path, description })
+          body: JSON.stringify({ name, path, description, autonomousMode })
         });
         const data = await res.json();
         if (data.success) {
