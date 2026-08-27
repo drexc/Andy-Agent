@@ -1301,8 +1301,23 @@ for chunk in response:
       await fetchProjects();
       await fetchModelCatalogs();
       await fetchProviders();
+
+      try {
+        const res = await fetch(\`/api/sessions?projectId=\${encodeURIComponent(currentProjectId)}\`);
+        const data = await res.json();
+        const sessions = data.sessions || [];
+        if (sessions.length > 0) {
+          currentSessionId = sessions[0].id;
+          await loadSession(currentSessionId);
+        } else {
+          currentSessionId = 'session-' + Math.random().toString(36).substring(2, 9);
+          await loadSession(currentSessionId);
+        }
+      } catch (e) {
+        await loadSession(currentSessionId);
+      }
+
       await fetchSessions();
-      await loadSession(currentSessionId);
       initLogsStream();
     });
 
@@ -1494,9 +1509,24 @@ for chunk in response:
           updateProjectHeaders();
           closeProjectsModal();
 
-          // Refresh all views for new project
+          // Refresh all views strictly for the new project
+          try {
+            const sessionsRes = await fetch(\`/api/sessions?projectId=\${encodeURIComponent(currentProjectId)}\`);
+            const sessionsData = await sessionsRes.json();
+            const sessions = sessionsData.sessions || [];
+            if (sessions.length > 0) {
+              currentSessionId = sessions[0].id;
+              await loadSession(currentSessionId);
+            } else {
+              currentSessionId = 'session-' + Math.random().toString(36).substring(2, 9);
+              await loadSession(currentSessionId);
+            }
+          } catch (e) {
+            await createNewSession();
+          }
+
           await fetchSessions();
-          await createNewSession();
+          await fetchProjects();
           fetchActiveDoc();
           fetchSkillsAndPrompts();
           refreshWorkspaceFiles();
@@ -2160,9 +2190,20 @@ for chunk in response:
         const data = await res.json();
         const container = document.getElementById('sessionsContainer');
         container.innerHTML = '';
-        document.getElementById('sessionCountBadge').innerText = data.sessions.length;
+        const sessions = data.sessions || [];
+        document.getElementById('sessionCountBadge').innerText = sessions.length;
 
-        data.sessions.forEach(session => {
+        if (sessions.length === 0) {
+          container.innerHTML = \`
+            <div class="p-4 text-center text-slate-500 text-xs italic space-y-2">
+              <p>No hay chats en este proyecto</p>
+              <button onclick="createNewSession()" class="text-cyan-400 hover:text-cyan-300 font-medium text-[11px] block mx-auto">+ Iniciar nueva conversación</button>
+            </div>
+          \`;
+          return;
+        }
+
+        sessions.forEach(session => {
           const isActive = session.id === currentSessionId;
           const div = document.createElement('div');
           div.className = \`group flex items-center justify-between px-3 py-2 rounded-lg text-xs cursor-pointer transition-all \${isActive ? 'bg-brand-600/20 text-brand-300 border border-brand-500/30 font-medium' : 'text-slate-300 hover:bg-surface-750 hover:text-white'}\`;
