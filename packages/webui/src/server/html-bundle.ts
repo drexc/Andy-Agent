@@ -109,6 +109,49 @@ export function getWebUiHtml(): string {
     .code-block-header { display: flex; align-items: center; justify-content: space-between; padding: 0.35rem 0.75rem; background: #161922; border-bottom: 1px solid #252b3b; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #94a3b8; }
     .code-copy-btn { padding: 0.2rem 0.5rem; border-radius: 0.25rem; font-size: 0.7rem; color: #94a3b8; background: #1d222e; border: 1px solid #252b3b; transition: all 0.15s; cursor: pointer; }
     .code-copy-btn:hover { color: #fff; background: #252b3b; }
+
+    /* Light Theme Overrides */
+    html.light {
+      --bg-surface-950: #f8fafc;
+      --bg-surface-900: #f1f5f9;
+      --bg-surface-850: #ffffff;
+      --bg-surface-800: #f8fafc;
+      --bg-surface-750: #e2e8f0;
+      --bg-surface-700: #cbd5e1;
+    }
+    html.light body { background-color: #f8fafc !important; color: #0f172a !important; }
+    html.light .bg-surface-950 { background-color: #f8fafc !important; }
+    html.light .bg-surface-900 { background-color: #f1f5f9 !important; }
+    html.light .bg-surface-850 { background-color: #ffffff !important; }
+    html.light .bg-surface-800 { background-color: #f8fafc !important; }
+    html.light .bg-surface-750 { background-color: #e2e8f0 !important; }
+    html.light .bg-surface-700 { background-color: #cbd5e1 !important; }
+    html.light .border-surface-750 { border-color: #e2e8f0 !important; }
+    html.light .border-surface-700 { border-color: #cbd5e1 !important; }
+    html.light .text-slate-100, html.light .text-slate-200 { color: #0f172a !important; }
+    html.light .text-slate-300 { color: #334155 !important; }
+    html.light .text-slate-400 { color: #64748b !important; }
+    html.light .text-white { color: #0f172a !important; }
+    html.light textarea, html.light input, html.light select {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+      border-color: #cbd5e1 !important;
+    }
+    html.light textarea::placeholder, html.light input::placeholder {
+      color: #94a3b8 !important;
+    }
+    html.light .prose-custom { color: #1e293b !important; }
+    html.light .prose-custom p, html.light .prose-custom li { color: #334155 !important; }
+    html.light .prose-custom strong, html.light .prose-custom h1, html.light .prose-custom h2, html.light .prose-custom h3 { color: #0f172a !important; }
+    html.light .prose-custom code:not(pre code) { background: #ede9fe !important; color: #6d28d9 !important; border-color: #ddd6fe !important; }
+    html.light .prose-custom pre { background: #f8fafc !important; border-color: #e2e8f0 !important; }
+    html.light .prose-custom blockquote { background: #f5f3ff !important; color: #475569 !important; border-left-color: #7c3aed !important; }
+    html.light .prose-custom th { background: #f1f5f9 !important; color: #1e293b !important; }
+    html.light .prose-custom td, html.light .prose-custom th { border-color: #e2e8f0 !important; }
+    html.light .code-block-header { background: #f1f5f9 !important; border-color: #e2e8f0 !important; color: #475569 !important; }
+    html.light .code-copy-btn { background: #ffffff !important; border-color: #cbd5e1 !important; color: #475569 !important; }
+    html.light #footerNav, html.light header { background-color: rgba(255, 255, 255, 0.95) !important; }
+    html.light #sidebar { background-color: #ffffff !important; }
   </style>
 </head>
 <body class="bg-surface-900 text-slate-100 min-h-[100dvh] h-[100dvh] max-h-[100dvh] h-screen w-full flex overflow-hidden antialiased">
@@ -117,9 +160,9 @@ export function getWebUiHtml(): string {
   <div id="sidebarBackdrop" onclick="toggleSidebar(false)" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"></div>
 
   <!-- ========================================================================= -->
-  <!-- SIDEBAR (DRAWER ON MOBILE) -->
+  <!-- SIDEBAR (DRAWER ON MOBILE / SLIDEABLE ON DESKTOP) -->
   <!-- ========================================================================= -->
-  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 md:relative md:flex transition-transform duration-300 ease-in-out w-72 max-w-[85vw] bg-surface-850 border-r border-surface-750 flex flex-col justify-between shrink-0 shadow-2xl md:shadow-none h-full overflow-hidden">
+  <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 md:static transition-all duration-300 ease-in-out w-72 max-w-[85vw] bg-surface-850 border-r border-surface-750 flex flex-col justify-between shrink-0 shadow-2xl md:shadow-none h-full overflow-hidden">
     <div class="p-4 border-b border-surface-750 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/20 font-bold text-white tracking-wider">
@@ -133,8 +176,9 @@ export function getWebUiHtml(): string {
           <p class="text-[11px] text-slate-400">Context Engine & WebUI</p>
         </div>
       </div>
-      <button onclick="toggleSidebar()" class="text-slate-400 hover:text-white p-1 rounded-md hover:bg-surface-750 md:hidden">
-        <i data-lucide="x" class="w-4 h-4"></i>
+      <button onclick="toggleSidebar()" title="Ocultar panel lateral" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-750 transition-colors cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4 md:hidden"></i>
+        <i data-lucide="panel-left-close" class="w-4 h-4 hidden md:block"></i>
       </button>
     </div>
 
@@ -216,8 +260,8 @@ export function getWebUiHtml(): string {
         <span>Configuración</span>
       </button>
       <div class="flex items-center gap-1">
-        <button onclick="toggleTheme()" title="Cambiar tema" class="p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-surface-750">
-          <i data-lucide="moon" class="w-4 h-4"></i>
+        <button onclick="toggleTheme()" title="Cambiar tema (Oscuro / Claro)" class="theme-toggle-btn p-1.5 text-slate-400 hover:text-white rounded-md hover:bg-surface-750 transition-colors cursor-pointer">
+          <i data-lucide="moon" class="theme-toggle-icon w-4 h-4"></i>
         </button>
       </div>
     </div>
@@ -232,7 +276,7 @@ export function getWebUiHtml(): string {
     <header class="h-14 border-b border-surface-750 bg-surface-850/95 backdrop-blur px-3 sm:px-4 flex items-center justify-between z-20 shrink-0 gap-3">
       <!-- Left side: Sidebar Toggle & Project Selector -->
       <div class="flex items-center gap-2 shrink-0">
-        <button onclick="toggleSidebar()" aria-label="Menu" title="Alternar panel lateral" class="text-slate-300 hover:text-white p-2 rounded-xl hover:bg-surface-750 transition-colors shrink-0">
+        <button onclick="toggleSidebar()" aria-label="Menu" title="Alternar panel lateral" class="text-slate-300 hover:text-white p-2 rounded-xl hover:bg-surface-750 transition-colors shrink-0 cursor-pointer">
           <i data-lucide="panel-left" class="w-5 h-5"></i>
         </button>
 
@@ -296,7 +340,12 @@ export function getWebUiHtml(): string {
           <option value="high">Thinking: High</option>
         </select>
 
-        <button onclick="clearCurrentChat()" title="Limpiar chat" class="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-lg hover:bg-surface-750 transition-colors">
+        <!-- Theme Toggle in Header -->
+        <button onclick="toggleTheme()" title="Cambiar tema (Oscuro / Claro)" class="theme-toggle-btn p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-lg hover:bg-surface-750 transition-colors cursor-pointer">
+          <i data-lucide="moon" class="theme-toggle-icon w-4 h-4"></i>
+        </button>
+
+        <button onclick="clearCurrentChat()" title="Limpiar chat" class="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-lg hover:bg-surface-750 transition-colors cursor-pointer">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
 
@@ -1594,6 +1643,7 @@ for chunk in response:
     };
 
     document.addEventListener('DOMContentLoaded', async () => {
+      initTheme();
       lucide.createIcons();
       const authenticated = await checkAuthSession();
       if (!authenticated) {
@@ -2086,13 +2136,58 @@ for chunk in response:
           if (backdrop) backdrop.classList.add('hidden');
         }
       } else {
+        const isHidden = sidebar.classList.contains('md:-ml-72') || sidebar.classList.contains('hidden');
+        let shouldHide;
         if (typeof forceState === 'boolean') {
-          if (forceState) sidebar.classList.remove('hidden');
-          else sidebar.classList.add('hidden');
+          shouldHide = !forceState;
         } else {
-          sidebar.classList.toggle('hidden');
+          shouldHide = !isHidden;
+        }
+        
+        if (shouldHide) {
+          sidebar.classList.add('md:-ml-72');
+          sidebar.classList.add('md:opacity-0');
+          sidebar.classList.add('md:pointer-events-none');
+        } else {
+          sidebar.classList.remove('md:-ml-72');
+          sidebar.classList.remove('md:opacity-0');
+          sidebar.classList.remove('md:pointer-events-none');
+          sidebar.classList.remove('hidden');
         }
       }
+      setTimeout(updateFooterNavScrollButtons, 320);
+    }
+
+    // --- THEME SWITCHER (DARK / LIGHT MODE) ---
+    function initTheme() {
+      const savedTheme = localStorage.getItem('andy_theme') || 'dark';
+      applyTheme(savedTheme);
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.contains('dark');
+      const newTheme = isDark ? 'light' : 'dark';
+      applyTheme(newTheme);
+      localStorage.setItem('andy_theme', newTheme);
+    }
+
+    function applyTheme(theme) {
+      const isLight = theme === 'light';
+      if (isLight) {
+        document.documentElement.classList.remove('dark');
+        document.documentElement.classList.add('light');
+      } else {
+        document.documentElement.classList.remove('light');
+        document.documentElement.classList.add('dark');
+      }
+
+      document.querySelectorAll('.theme-toggle-icon').forEach(icon => {
+        icon.setAttribute('data-lucide', isLight ? 'sun' : 'moon');
+      });
+      document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+        btn.title = isLight ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro';
+      });
+      lucide.createIcons();
     }
 
     // --- MODEL CATALOGS & PROVIDER-GROUPED DROPDOWN ---
