@@ -176,9 +176,8 @@ export function getWebUiHtml(): string {
           <p class="text-[11px] text-slate-400">Context Engine & WebUI</p>
         </div>
       </div>
-      <button onclick="toggleSidebar()" title="Ocultar panel lateral" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-750 transition-colors cursor-pointer">
-        <i data-lucide="x" class="w-4 h-4 md:hidden"></i>
-        <i data-lucide="panel-left-close" class="w-4 h-4 hidden md:block"></i>
+      <button onclick="toggleSidebar(false)" title="Cerrar menú" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-750 transition-colors md:hidden cursor-pointer">
+        <i data-lucide="x" class="w-4 h-4"></i>
       </button>
     </div>
 
@@ -339,11 +338,6 @@ export function getWebUiHtml(): string {
           <option value="medium" selected>Thinking: Med</option>
           <option value="high">Thinking: High</option>
         </select>
-
-        <!-- Theme Toggle in Header -->
-        <button onclick="toggleTheme()" title="Cambiar tema (Oscuro / Claro)" class="theme-toggle-btn p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-lg hover:bg-surface-750 transition-colors cursor-pointer">
-          <i data-lucide="moon" class="theme-toggle-icon w-4 h-4"></i>
-        </button>
 
         <button onclick="clearCurrentChat()" title="Limpiar chat" class="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-lg hover:bg-surface-750 transition-colors cursor-pointer">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -1231,14 +1225,14 @@ for chunk in response:
     <!-- ======================================================================= -->
     <!-- UNIFIED FOOTER WORKSPACE NAVIGATION DOCK -->
     <!-- ======================================================================= -->
-    <footer id="footerNav" class="h-12 sm:h-13 bg-surface-850/95 backdrop-blur-md border-t border-surface-750 flex items-center px-1 sm:px-3 z-30 shrink-0 safe-pb relative group">
+    <footer id="footerNav" class="h-12 sm:h-13 bg-surface-850/95 backdrop-blur-md border-t border-surface-750 flex items-center px-1.5 sm:px-2.5 z-30 shrink-0 safe-pb relative w-full overflow-hidden">
       <!-- Scroll Left Arrow Button -->
       <button id="footerScrollLeftBtn" onclick="scrollFooterTabs(-220)" aria-label="Desplazar pestañas a la izquierda" title="Desplazar pestañas a la izquierda" class="hidden p-1.5 rounded-xl bg-surface-800/95 hover:bg-surface-700 text-slate-300 hover:text-white border border-surface-700 shadow-md z-10 mr-1 shrink-0 transition-all items-center justify-center cursor-pointer">
         <i data-lucide="chevron-left" class="w-4 h-4"></i>
       </button>
 
       <!-- Footer Tabs Container -->
-      <div id="footerNavTabs" onscroll="updateFooterNavScrollButtons()" onwheel="handleFooterNavWheel(event)" class="w-full flex items-center justify-start md:justify-center overflow-x-auto no-scrollbar scroll-smooth gap-1 sm:gap-1.5 py-1 select-none">
+      <div id="footerNavTabs" onscroll="updateFooterNavScrollButtons()" onwheel="handleFooterNavWheel(event)" class="flex-1 min-w-0 flex items-center justify-start overflow-x-auto no-scrollbar scroll-smooth gap-1 sm:gap-1.5 py-1 select-none">
         <button id="tabChatBtn" onclick="switchView('chat')" class="px-3 py-1.5 rounded-xl font-semibold text-xs text-white bg-brand-600 shadow-md shadow-brand-500/25 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
           <i data-lucide="message-square" class="w-4 h-4"></i>
           <span>Chat & RLM</span>
@@ -2052,6 +2046,15 @@ for chunk in response:
     }
 
     window.addEventListener('resize', updateFooterNavScrollButtons);
+    if (typeof ResizeObserver !== 'undefined') {
+      const footerResizeObserver = new ResizeObserver(() => {
+        updateFooterNavScrollButtons();
+      });
+      window.addEventListener('DOMContentLoaded', () => {
+        const tabsEl = document.getElementById('footerNavTabs');
+        if (tabsEl) footerResizeObserver.observe(tabsEl);
+      });
+    }
 
     function switchView(view) {
       ['viewChat', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys', 'viewUsers'].forEach(v => {
