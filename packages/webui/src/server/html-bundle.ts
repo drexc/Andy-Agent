@@ -1182,8 +1182,14 @@ for chunk in response:
     <!-- ======================================================================= -->
     <!-- UNIFIED FOOTER WORKSPACE NAVIGATION DOCK -->
     <!-- ======================================================================= -->
-    <footer id="footerNav" class="h-12 sm:h-13 bg-surface-850/95 backdrop-blur-md border-t border-surface-750 flex items-center px-2 sm:px-4 z-30 shrink-0 safe-pb">
-      <div id="footerNavTabs" class="w-full flex items-center justify-start md:justify-center overflow-x-auto no-scrollbar scroll-smooth gap-1 sm:gap-1.5 py-1 select-none" onwheel="if(event.deltaY){ event.preventDefault(); this.scrollLeft += event.deltaY; }">
+    <footer id="footerNav" class="h-12 sm:h-13 bg-surface-850/95 backdrop-blur-md border-t border-surface-750 flex items-center px-1 sm:px-3 z-30 shrink-0 safe-pb relative group">
+      <!-- Scroll Left Arrow Button -->
+      <button id="footerScrollLeftBtn" onclick="scrollFooterTabs(-220)" aria-label="Desplazar pestañas a la izquierda" title="Desplazar pestañas a la izquierda" class="hidden p-1.5 rounded-xl bg-surface-800/95 hover:bg-surface-700 text-slate-300 hover:text-white border border-surface-700 shadow-md z-10 mr-1 shrink-0 transition-all items-center justify-center cursor-pointer">
+        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Footer Tabs Container -->
+      <div id="footerNavTabs" onscroll="updateFooterNavScrollButtons()" onwheel="handleFooterNavWheel(event)" class="w-full flex items-center justify-start md:justify-center overflow-x-auto no-scrollbar scroll-smooth gap-1 sm:gap-1.5 py-1 select-none">
         <button id="tabChatBtn" onclick="switchView('chat')" class="px-3 py-1.5 rounded-xl font-semibold text-xs text-white bg-brand-600 shadow-md shadow-brand-500/25 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
           <i data-lucide="message-square" class="w-4 h-4"></i>
           <span>Chat & RLM</span>
@@ -1225,6 +1231,11 @@ for chunk in response:
           <span>Usuarios & Seguridad</span>
         </button>
       </div>
+
+      <!-- Scroll Right Arrow Button -->
+      <button id="footerScrollRightBtn" onclick="scrollFooterTabs(220)" aria-label="Desplazar pestañas a la derecha" title="Desplazar pestañas a la derecha" class="hidden p-1.5 rounded-xl bg-surface-800/95 hover:bg-surface-700 text-slate-300 hover:text-white border border-surface-700 shadow-md z-10 ml-1 shrink-0 transition-all items-center justify-center cursor-pointer">
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      </button>
     </footer>
   </main>
 
@@ -1614,6 +1625,7 @@ for chunk in response:
 
       await fetchSessions();
       initLogsStream();
+      setTimeout(updateFooterNavScrollButtons, 150);
     }
 
     // --- PROJECTS MANAGEMENT ---
@@ -1940,6 +1952,57 @@ for chunk in response:
       users: 'tabUsersBtn'
     };
 
+    function scrollFooterTabs(offset) {
+      const nav = document.getElementById('footerNavTabs');
+      if (!nav) return;
+      nav.scrollBy({ left: offset, behavior: 'smooth' });
+      setTimeout(updateFooterNavScrollButtons, 180);
+    }
+
+    function handleFooterNavWheel(e) {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        const nav = document.getElementById('footerNavTabs');
+        if (nav) {
+          nav.scrollLeft += e.deltaY;
+          updateFooterNavScrollButtons();
+        }
+      }
+    }
+
+    function updateFooterNavScrollButtons() {
+      const nav = document.getElementById('footerNavTabs');
+      const leftBtn = document.getElementById('footerScrollLeftBtn');
+      const rightBtn = document.getElementById('footerScrollRightBtn');
+      if (!nav || !leftBtn || !rightBtn) return;
+      
+      const hasOverflow = nav.scrollWidth > nav.clientWidth + 4;
+      if (hasOverflow) {
+        if (nav.scrollLeft > 6) {
+          leftBtn.classList.remove('hidden');
+          leftBtn.classList.add('flex');
+        } else {
+          leftBtn.classList.add('hidden');
+          leftBtn.classList.remove('flex');
+        }
+        
+        if (nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 6) {
+          rightBtn.classList.remove('hidden');
+          rightBtn.classList.add('flex');
+        } else {
+          rightBtn.classList.add('hidden');
+          rightBtn.classList.remove('flex');
+        }
+      } else {
+        leftBtn.classList.add('hidden');
+        leftBtn.classList.remove('flex');
+        rightBtn.classList.add('hidden');
+        rightBtn.classList.remove('flex');
+      }
+    }
+
+    window.addEventListener('resize', updateFooterNavScrollButtons);
+
     function switchView(view) {
       ['viewChat', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys', 'viewUsers'].forEach(v => {
         const el = document.getElementById(v);
@@ -1995,6 +2058,7 @@ for chunk in response:
       if (window.innerWidth < 768) {
         toggleSidebar(false);
       }
+      setTimeout(updateFooterNavScrollButtons, 120);
       lucide.createIcons();
     }
 
@@ -3912,6 +3976,7 @@ for chunk in response:
         if (tabUsersBtn) tabUsersBtn.classList.add('hidden');
         if (userDropdownUsersAdminBtn) userDropdownUsersAdminBtn.classList.add('hidden');
       }
+      setTimeout(updateFooterNavScrollButtons, 100);
       lucide.createIcons();
     }
 
