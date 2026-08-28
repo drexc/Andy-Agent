@@ -229,81 +229,25 @@ export function getWebUiHtml(): string {
   <main class="flex-1 flex flex-col h-full overflow-hidden bg-surface-900 relative">
     
     <!-- Header Navigation -->
-    <header class="h-14 border-b border-surface-750 bg-surface-850/95 backdrop-blur px-2 sm:px-3.5 flex items-center justify-between z-20 shrink-0 gap-2">
-      <!-- Left side: Toggle & Project -->
-      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        <button onclick="toggleSidebar()" aria-label="Menu" title="Alternar panel lateral" class="text-slate-300 hover:text-white p-1.5 sm:p-2 rounded-lg hover:bg-surface-750 transition-colors shrink-0">
+    <header class="h-14 border-b border-surface-750 bg-surface-850/95 backdrop-blur px-3 sm:px-4 flex items-center justify-between z-20 shrink-0 gap-3">
+      <!-- Left side: Sidebar Toggle & Project Selector -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button onclick="toggleSidebar()" aria-label="Menu" title="Alternar panel lateral" class="text-slate-300 hover:text-white p-2 rounded-xl hover:bg-surface-750 transition-colors shrink-0">
           <i data-lucide="panel-left" class="w-5 h-5"></i>
         </button>
 
         <!-- Project Badge in Header -->
-        <button onclick="openProjectsModal()" title="Proyecto activo - Clic para cambiar" class="hidden sm:flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700/80 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:text-white transition-colors max-w-[130px] md:max-w-[190px] truncate shrink-0">
-          <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
-          <span id="headerProjectName" class="truncate font-medium">Proyecto Principal</span>
-        </button>
-
-        <div class="h-5 w-px bg-surface-700 hidden sm:block shrink-0"></div>
-      </div>
-
-      <!-- Center: Responsive Scrollable Tab Navigation with Arrow Controls & Mouse Wheel -->
-      <div class="relative flex items-center flex-1 min-w-0 mx-0 sm:mx-1 overflow-hidden group">
-        <!-- Scroll Left Button (Desktop/Tablet) -->
-        <button id="navScrollLeftBtn" onclick="scrollHeaderTabs(-200)" title="Desplazar pestañas a la izquierda" class="hidden p-1 rounded-lg bg-surface-800/95 hover:bg-surface-700 text-slate-400 hover:text-white border border-surface-700 shadow-md z-10 mr-1 shrink-0 transition-all items-center justify-center">
-          <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
-        </button>
-
-        <!-- Navigation Tabs Container -->
-        <nav id="headerNavTabs" onwheel="handleHeaderNavWheel(event)" onscroll="updateNavScrollButtons()" class="flex items-center gap-1 bg-surface-800/90 p-1 rounded-xl border border-surface-700/60 text-xs overflow-x-auto no-scrollbar scroll-smooth flex-nowrap min-w-0 w-full select-none">
-          <button id="tabChatBtn" onclick="switchView('chat')" class="px-2.5 py-1.5 rounded-lg font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
-            Chat & RLM
-          </button>
-          <button id="tabProvidersBtn" onclick="switchView('providers')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
-            Proveedores
-          </button>
-          <button id="tabGraftBtn" onclick="switchView('graft')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="git-fork" class="w-3.5 h-3.5 text-cyan-400"></i>
-            Graft Studio
-          </button>
-          <button id="tabFilesBtn" onclick="switchView('files')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="folder-tree" class="w-3.5 h-3.5 text-amber-400"></i>
-            Archivos
-          </button>
-          <button id="tabLogsBtn" onclick="switchView('logs')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="scroll-text" class="w-3.5 h-3.5 text-emerald-400"></i>
-            Logs
-          </button>
-          <button id="tabMemoryBtn" onclick="switchView('memory')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="brain" class="w-3.5 h-3.5 text-purple-400"></i>
-            Memoria
-          </button>
-          <button id="tabSkillsBtn" onclick="switchView('skills')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i>
-            Skills
-          </button>
-          <button id="tabTreeBtn" onclick="switchView('tree')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="git-branch" class="w-3.5 h-3.5 text-rose-400"></i>
-            Ramas
-          </button>
-          <button id="tabApiKeysBtn" onclick="switchView('apikeys')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="key" class="w-3.5 h-3.5 text-yellow-400"></i>
-            API Keys & IDEs
-          </button>
-          <button id="tabUsersBtn" onclick="switchView('users')" class="hidden px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i>
-            Usuarios & Seguridad
-          </button>
-        </nav>
-
-        <!-- Scroll Right Button (Desktop/Tablet) -->
-        <button id="navScrollRightBtn" onclick="scrollHeaderTabs(200)" title="Desplazar pestañas a la derecha" class="hidden p-1 rounded-lg bg-surface-800/95 hover:bg-surface-700 text-slate-400 hover:text-white border border-surface-700 shadow-md z-10 ml-1 shrink-0 transition-all items-center justify-center">
-          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+        <button onclick="openProjectsModal()" title="Proyecto activo - Clic para cambiar o crear proyectos" class="flex items-center gap-2 bg-surface-800 hover:bg-surface-750 border border-surface-700/80 px-3 py-1.5 rounded-xl text-xs text-slate-200 hover:text-white transition-all shadow-sm max-w-[200px] sm:max-w-[300px] md:max-w-[400px] truncate group cursor-pointer">
+          <div class="w-6 h-6 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-cyan-400"></i>
+          </div>
+          <span id="headerProjectName" class="truncate font-semibold text-xs text-slate-100">Proyecto Principal</span>
+          <i data-lucide="chevrons-up-down" class="w-3.5 h-3.5 text-slate-400 shrink-0 opacity-60 group-hover:opacity-100"></i>
         </button>
       </div>
 
-      <!-- Controls -->
-      <div class="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
+      <!-- Right side: Controls -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <!-- Model Selector Dropdown with Provider Categorization -->
         <div class="relative">
           <button onclick="toggleModelDropdown()" id="modelSelectorBtn" class="flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 transition-colors shadow-sm max-w-[125px] sm:max-w-[200px] md:max-w-none truncate">
@@ -393,7 +337,7 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: CHAT & RLM -->
     <!-- ======================================================================= -->
-    <div id="viewChat" class="flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-14 md:pb-0 overflow-hidden relative">
+    <div id="viewChat" class="flex-1 flex flex-col min-h-0 overflow-hidden relative">
       <div id="chatMessages" class="flex-1 overflow-y-auto p-3 sm:p-4 md:px-8 space-y-4 sm:space-y-6 max-w-5xl w-full mx-auto select-text">
         <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-8 sm:py-12 space-y-4 sm:space-y-6">
           <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-400 flex items-center justify-center shadow-xl shadow-brand-500/25">
@@ -490,7 +434,7 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: MULTI-PROVIDER HUB (AUTO-FETCH MODELS DROPDOWNS) -->
     <!-- ======================================================================= -->
-    <div id="viewProviders" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-6">
+    <div id="viewProviders" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-6">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -518,7 +462,7 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: MEMORY & AGENT RULES (MEMORY.MD & AGENTS.MD) -->
     <!-- ======================================================================= -->
-    <div id="viewMemory" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+    <div id="viewMemory" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -569,7 +513,7 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: SKILLS & PROMPTS STUDIO -->
     <!-- ======================================================================= -->
-    <div id="viewSkills" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+    <div id="viewSkills" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -611,7 +555,7 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: BRANCH TREE (TIME TRAVEL DAG) -->
     <!-- ======================================================================= -->
-    <div id="viewTree" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+    <div id="viewTree" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -635,7 +579,7 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: LOGS & TRAZAS -->
     <!-- ======================================================================= -->
-    <div id="viewLogs" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+    <div id="viewLogs" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -665,7 +609,7 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: GRAFT STUDIO -->
     <!-- ======================================================================= -->
-    <div id="viewGraft" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4 sm:space-y-6">
+    <div id="viewGraft" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4 sm:space-y-6">
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -739,7 +683,7 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: WORKSPACE FILES -->
     <!-- ======================================================================= -->
-    <div id="viewFiles" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+    <div id="viewFiles" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -775,7 +719,7 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: API KEYS & IDE INTEGRATION -->
     <!-- ======================================================================= -->
-    <div id="viewApiKeys" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-5">
+    <div id="viewApiKeys" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-5">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -883,7 +827,7 @@ export function getWebUiHtml(): string {
           </p>
           <div class="bg-surface-900 border border-surface-750 rounded-xl p-3.5 font-mono text-[11px] text-slate-200 relative group select-text">
             <button onclick="copyToClipboard(document.getElementById('vscodeConfigCode').innerText, this)" class="absolute right-2.5 top-2.5 bg-surface-800 hover:bg-surface-700 text-slate-300 px-2 py-1 rounded text-[10px] flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-              <i data-lucide="copy" class="w-3 h-3"></i>
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
               <span>Copiar</span>
             </button>
             <pre id="vscodeConfigCode" class="overflow-x-auto text-cyan-300">{
@@ -928,7 +872,7 @@ export function getWebUiHtml(): string {
           </p>
           <div class="bg-surface-900 border border-surface-750 rounded-xl p-3.5 font-mono text-[11px] text-slate-200 relative group select-text">
             <pre class="overflow-x-auto text-emerald-300">from openai import OpenAI
-
+ 
 client = OpenAI(
     base_url="http://ia.v2nethost.cl:3000/v1",
     api_key="TU_ANDY_API_KEY_AQUI"
@@ -950,7 +894,7 @@ for chunk in response:
     <!-- ======================================================================= -->
     <!-- VIEW: USERS & SECURITY MANAGEMENT (ADMIN ONLY) -->
     <!-- ======================================================================= -->
-    <div id="viewUsers" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-6">
+    <div id="viewUsers" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-6">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -1235,29 +1179,53 @@ for chunk in response:
       </div>
     </div>
 
-    <!-- Mobile Bottom Navigation Bar (< md) -->
-    <nav id="mobileBottomNav" class="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface-850/95 backdrop-blur-md border-t border-surface-750 flex items-center justify-around z-40 px-1 safe-pb">
-      <button onclick="switchView('chat')" id="mobTabChat" class="flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors">
-        <i data-lucide="message-square" class="w-5 h-5"></i>
-        <span class="mt-0.5">Chat</span>
-      </button>
-      <button onclick="switchView('providers')" id="mobTabProviders" class="flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors">
-        <i data-lucide="zap" class="w-5 h-5"></i>
-        <span class="mt-0.5">Modelos</span>
-      </button>
-      <button onclick="switchView('graft')" id="mobTabGraft" class="flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors">
-        <i data-lucide="git-fork" class="w-5 h-5"></i>
-        <span class="mt-0.5">Graft</span>
-      </button>
-      <button onclick="switchView('memory')" id="mobTabMemory" class="flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors">
-        <i data-lucide="brain" class="w-5 h-5"></i>
-        <span class="mt-0.5">Memoria</span>
-      </button>
-      <button onclick="switchView('apikeys')" id="mobTabApiKeys" class="flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors">
-        <i data-lucide="key" class="w-5 h-5"></i>
-        <span class="mt-0.5">API Keys</span>
-      </button>
-    </nav>
+    <!-- ======================================================================= -->
+    <!-- UNIFIED FOOTER WORKSPACE NAVIGATION DOCK -->
+    <!-- ======================================================================= -->
+    <footer id="footerNav" class="h-12 sm:h-13 bg-surface-850/95 backdrop-blur-md border-t border-surface-750 flex items-center px-2 sm:px-4 z-30 shrink-0 safe-pb">
+      <div id="footerNavTabs" class="w-full flex items-center justify-start md:justify-center overflow-x-auto no-scrollbar scroll-smooth gap-1 sm:gap-1.5 py-1 select-none" onwheel="if(event.deltaY){ event.preventDefault(); this.scrollLeft += event.deltaY; }">
+        <button id="tabChatBtn" onclick="switchView('chat')" class="px-3 py-1.5 rounded-xl font-semibold text-xs text-white bg-brand-600 shadow-md shadow-brand-500/25 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="message-square" class="w-4 h-4"></i>
+          <span>Chat & RLM</span>
+        </button>
+        <button id="tabProvidersBtn" onclick="switchView('providers')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+          <span>Proveedores</span>
+        </button>
+        <button id="tabGraftBtn" onclick="switchView('graft')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="git-fork" class="w-4 h-4 text-cyan-400"></i>
+          <span>Graft Studio</span>
+        </button>
+        <button id="tabFilesBtn" onclick="switchView('files')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="folder-tree" class="w-4 h-4 text-amber-400"></i>
+          <span>Archivos</span>
+        </button>
+        <button id="tabLogsBtn" onclick="switchView('logs')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="scroll-text" class="w-4 h-4 text-emerald-400"></i>
+          <span>Logs</span>
+        </button>
+        <button id="tabMemoryBtn" onclick="switchView('memory')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="brain" class="w-4 h-4 text-purple-400"></i>
+          <span>Memoria</span>
+        </button>
+        <button id="tabSkillsBtn" onclick="switchView('skills')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i>
+          <span>Skills</span>
+        </button>
+        <button id="tabTreeBtn" onclick="switchView('tree')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="git-branch" class="w-4 h-4 text-rose-400"></i>
+          <span>Ramas</span>
+        </button>
+        <button id="tabApiKeysBtn" onclick="switchView('apikeys')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="key" class="w-4 h-4 text-yellow-400"></i>
+          <span>API Keys & IDEs</span>
+        </button>
+        <button id="tabUsersBtn" onclick="switchView('users')" class="hidden px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="users" class="w-4 h-4 text-cyan-400"></i>
+          <span>Usuarios & Seguridad</span>
+        </button>
+      </div>
+    </footer>
   </main>
 
   <!-- ========================================================================= -->
@@ -1646,7 +1614,6 @@ for chunk in response:
 
       await fetchSessions();
       initLogsStream();
-      setTimeout(updateNavScrollButtons, 150);
     }
 
     // --- PROJECTS MANAGEMENT ---
@@ -1973,42 +1940,6 @@ for chunk in response:
       users: 'tabUsersBtn'
     };
 
-    function scrollHeaderTabs(offset) {
-      const nav = document.getElementById('headerNavTabs');
-      if (!nav) return;
-      nav.scrollBy({ left: offset, behavior: 'smooth' });
-      setTimeout(updateNavScrollButtons, 180);
-    }
-
-    function handleHeaderNavWheel(e) {
-      if (e.deltaY !== 0) {
-        e.preventDefault();
-        const nav = document.getElementById('headerNavTabs');
-        if (nav) {
-          nav.scrollLeft += e.deltaY;
-          updateNavScrollButtons();
-        }
-      }
-    }
-
-    function updateNavScrollButtons() {
-      const nav = document.getElementById('headerNavTabs');
-      const leftBtn = document.getElementById('navScrollLeftBtn');
-      const rightBtn = document.getElementById('navScrollRightBtn');
-      if (!nav || !leftBtn || !rightBtn) return;
-      
-      const hasOverflow = nav.scrollWidth > nav.clientWidth + 6;
-      if (hasOverflow && window.innerWidth >= 768) {
-        leftBtn.style.display = nav.scrollLeft > 6 ? 'flex' : 'none';
-        rightBtn.style.display = (nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 6) ? 'flex' : 'none';
-      } else {
-        leftBtn.style.display = 'none';
-        rightBtn.style.display = 'none';
-      }
-    }
-
-    window.addEventListener('resize', updateNavScrollButtons);
-
     function switchView(view) {
       ['viewChat', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys', 'viewUsers'].forEach(v => {
         const el = document.getElementById(v);
@@ -2017,37 +1948,25 @@ for chunk in response:
 
       ['tabChatBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn', 'tabApiKeysBtn', 'tabUsersBtn'].forEach(t => {
         const el = document.getElementById(t);
-        if (el) el.className = 'px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
-      });
-
-      // Reset mobile bottom nav buttons
-      ['mobTabChat', 'mobTabProviders', 'mobTabGraft', 'mobTabMemory', 'mobTabApiKeys'].forEach(id => {
-        const btn = document.getElementById(id);
-        if (btn) btn.className = 'flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors';
+        if (el) el.className = 'px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0';
       });
 
       const activeBtnId = TAB_BUTTON_MAP[view];
       if (activeBtnId) {
         const btn = document.getElementById(activeBtnId);
         if (btn) {
-          btn.className = 'px-2.5 py-1.5 rounded-lg font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+          btn.className = 'px-3 py-1.5 rounded-xl font-semibold text-xs text-white bg-brand-600 shadow-md shadow-brand-500/25 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0';
           btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
         }
       }
 
       if (view === 'chat') {
         document.getElementById('viewChat').classList.remove('hidden');
-        const mob = document.getElementById('mobTabChat');
-        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
       } else if (view === 'providers') {
         document.getElementById('viewProviders').classList.remove('hidden');
-        const mob = document.getElementById('mobTabProviders');
-        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchProviders();
       } else if (view === 'graft') {
         document.getElementById('viewGraft').classList.remove('hidden');
-        const mob = document.getElementById('mobTabGraft');
-        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchGraftMap();
       } else if (view === 'files') {
         document.getElementById('viewFiles').classList.remove('hidden');
@@ -2057,8 +1976,6 @@ for chunk in response:
         renderLogs();
       } else if (view === 'memory') {
         document.getElementById('viewMemory').classList.remove('hidden');
-        const mob = document.getElementById('mobTabMemory');
-        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchActiveDoc();
       } else if (view === 'skills') {
         document.getElementById('viewSkills').classList.remove('hidden');
@@ -2068,8 +1985,6 @@ for chunk in response:
         refreshBranchTree();
       } else if (view === 'apikeys') {
         document.getElementById('viewApiKeys').classList.remove('hidden');
-        const mob = document.getElementById('mobTabApiKeys');
-        if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchApiKeys();
       } else if (view === 'users') {
         document.getElementById('viewUsers').classList.remove('hidden');
@@ -2080,7 +1995,6 @@ for chunk in response:
       if (window.innerWidth < 768) {
         toggleSidebar(false);
       }
-      setTimeout(updateNavScrollButtons, 100);
       lucide.createIcons();
     }
 
