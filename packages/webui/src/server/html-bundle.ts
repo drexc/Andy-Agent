@@ -281,6 +281,10 @@ export function getWebUiHtml(): string {
             <i data-lucide="key" class="w-3.5 h-3.5 text-yellow-400"></i>
             API Keys & IDEs
           </button>
+          <button id="tabUsersBtn" onclick="switchView('users')" class="hidden px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+            <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i>
+            Usuarios & Seguridad
+          </button>
         </nav>
       </div>
 
@@ -337,6 +341,38 @@ export function getWebUiHtml(): string {
         <button onclick="clearCurrentChat()" title="Limpiar chat" class="p-1.5 sm:p-2 text-slate-400 hover:text-white rounded-lg hover:bg-surface-750 transition-colors">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
+
+        <!-- User Profile Dropdown -->
+        <div class="relative">
+          <button onclick="toggleUserDropdown()" id="userProfileBtn" class="flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-200 transition-colors shadow-sm shrink-0">
+            <div class="w-5 h-5 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
+              <span id="userAvatarLetter">A</span>
+            </div>
+            <span id="headerUserName" class="hidden md:inline font-medium text-xs max-w-[100px] truncate">admin</span>
+            <span id="headerUserRoleBadge" class="hidden sm:inline text-[9px] px-1 py-0.2 rounded bg-brand-500/20 text-brand-300 font-mono">admin</span>
+            <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+          </button>
+
+          <div id="userDropdownMenu" class="hidden absolute right-0 mt-1.5 w-56 bg-surface-850 border border-surface-700 rounded-xl shadow-2xl z-50 text-xs overflow-hidden py-1">
+            <div class="px-3 py-2 border-b border-surface-750 bg-surface-800/50">
+              <div id="userDropdownDisplayName" class="font-semibold text-white truncate">Administrador</div>
+              <div id="userDropdownUsername" class="text-[11px] text-slate-400 font-mono truncate">@admin</div>
+            </div>
+            <button onclick="openChangePasswordModal(); toggleUserDropdown(false);" class="w-full text-left px-3 py-2 hover:bg-surface-750 text-slate-300 hover:text-white flex items-center gap-2 transition-colors">
+              <i data-lucide="key-round" class="w-3.5 h-3.5 text-yellow-400"></i>
+              <span>Cambiar Contraseña</span>
+            </button>
+            <button id="userDropdownUsersAdminBtn" onclick="switchView('users'); toggleUserDropdown(false);" class="w-full text-left px-3 py-2 hover:bg-surface-750 text-slate-300 hover:text-white flex items-center gap-2 transition-colors">
+              <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>Gestión de Usuarios</span>
+            </button>
+            <div class="border-t border-surface-750 my-1"></div>
+            <button onclick="performLogout()" class="w-full text-left px-3 py-2 hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 flex items-center gap-2 transition-colors">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -897,6 +933,257 @@ for chunk in response:
       </div>
     </div>
 
+    <!-- ======================================================================= -->
+    <!-- VIEW: USERS & SECURITY MANAGEMENT (ADMIN ONLY) -->
+    <!-- ======================================================================= -->
+    <div id="viewUsers" class="hidden flex-1 flex flex-col h-[calc(100dvh-3.5rem)] pb-16 md:pb-6 overflow-y-auto p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <i data-lucide="users" class="w-5 h-5 text-cyan-400"></i>
+            Gestión de Usuarios & Capa de Seguridad
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Control de acceso, roles de usuario, reseteo de contraseñas y sesiones activas.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="fetchUsersList()" class="px-3 py-2 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-xl text-xs font-medium flex items-center gap-1.5 transition-colors">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            Actualizar
+          </button>
+          <button onclick="openCreateUserModal()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-cyan-600/25 transition-all">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            Nuevo Usuario
+          </button>
+        </div>
+      </div>
+
+      <!-- Users Table Card -->
+      <div class="bg-surface-850 border border-surface-750/70 rounded-2xl overflow-hidden shadow-xl">
+        <div class="p-4 border-b border-surface-750 flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Cuentas Registradas (<span id="usersTableCount">0</span>)</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-surface-800/80 text-slate-400 text-[11px] font-semibold uppercase tracking-wider border-b border-surface-750">
+              <tr>
+                <th class="px-4 py-3">Usuario</th>
+                <th class="px-4 py-3">Nombre</th>
+                <th class="px-4 py-3">Rol</th>
+                <th class="px-4 py-3">Estado</th>
+                <th class="px-4 py-3">Creado</th>
+                <th class="px-4 py-3">Último Acceso</th>
+                <th class="px-4 py-3 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody" class="divide-y divide-surface-750/60">
+              <tr>
+                <td colspan="7" class="px-4 py-8 text-center text-slate-500 italic">Cargando usuarios...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATE USER MODAL -->
+    <div id="createUserModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+          <h3 class="font-bold text-sm text-white flex items-center gap-2">
+            <i data-lucide="user-plus" class="w-4 h-4 text-cyan-400"></i>
+            Crear Nuevo Usuario
+          </h3>
+          <button onclick="closeCreateUserModal()" class="text-slate-400 hover:text-white p-1 rounded">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Nombre de Usuario (Login) <span class="text-rose-400">*</span></label>
+            <input id="newUsernameInput" type="text" placeholder="ej: developer1, ana_dev" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Nombre para Mostrar</label>
+            <input id="newDisplayNameInput" type="text" placeholder="ej: Ana Desarrolladora" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500">
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Contraseña Inicial <span class="text-rose-400">*</span></label>
+            <input id="newPasswordInput" type="password" placeholder="Mínimo 4 caracteres" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Rol</label>
+            <select id="newRoleSelect" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500 cursor-pointer">
+              <option value="user" selected>Usuario Estándar (Acceso a WebUI, Chats y Proyectos)</option>
+              <option value="admin">Administrador (Acceso Total y Gestión de Usuarios)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
+          <button onclick="closeCreateUserModal()" class="px-3 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
+          <button onclick="submitCreateUser()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md shadow-cyan-600/25">Guardar Usuario</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT USER / RESET PASSWORD MODAL -->
+    <div id="editUserModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+          <h3 class="font-bold text-sm text-white flex items-center gap-2">
+            <i data-lucide="user-cog" class="w-4 h-4 text-cyan-400"></i>
+            Editar Usuario: <span id="editUserModalTitleName" class="font-mono text-cyan-300">...</span>
+          </h3>
+          <button onclick="closeEditUserModal()" class="text-slate-400 hover:text-white p-1 rounded">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <input type="hidden" id="editUserIdHidden">
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Nombre para Mostrar</label>
+            <input id="editDisplayNameInput" type="text" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">Rol</label>
+              <select id="editRoleSelect" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500 cursor-pointer">
+                <option value="user">Usuario</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">Estado</label>
+              <select id="editStatusSelect" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500 cursor-pointer">
+                <option value="active">Activo</option>
+                <option value="disabled">Desactivado</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-surface-750 space-y-2">
+            <label class="block text-amber-300 font-semibold">Restablecer Contraseña (Opcional)</label>
+            <input id="editNewPasswordInput" type="password" placeholder="Dejar vacío para no cambiar" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
+          <button onclick="closeEditUserModal()" class="px-3 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
+          <button onclick="submitEditUser()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md shadow-cyan-600/25">Guardar Cambios</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHANGE PASSWORD MODAL (FOR CURRENT USER) -->
+    <div id="changePasswordModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+          <h3 class="font-bold text-sm text-white flex items-center gap-2">
+            <i data-lucide="key-round" class="w-4 h-4 text-yellow-400"></i>
+            Cambiar Mi Contraseña
+          </h3>
+          <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-white p-1 rounded">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div id="changePasswordErrorAlert" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-rose-400"></i>
+          <span id="changePasswordErrorText">Error al cambiar contraseña</span>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Contraseña Actual <span class="text-rose-400">*</span></label>
+            <input id="currPasswordInput" type="password" placeholder="Tu contraseña actual" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Nueva Contraseña <span class="text-rose-400">*</span></label>
+            <input id="changeNewPasswordInput" type="password" placeholder="Mínimo 4 caracteres" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Confirmar Nueva Contraseña <span class="text-rose-400">*</span></label>
+            <input id="changeConfirmPasswordInput" type="password" placeholder="Repite la nueva contraseña" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
+          </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
+          <button onclick="closeChangePasswordModal()" class="px-3 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
+          <button onclick="submitChangePassword()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md shadow-brand-600/20">Actualizar Contraseña</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================= -->
+    <!-- LOGIN OVERLAY / FULL SCREEN AUTH -->
+    <!-- ======================================================================= -->
+    <div id="loginOverlay" class="hidden fixed inset-0 bg-surface-900/98 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+      <div class="w-full max-w-md bg-surface-850/95 border border-surface-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 relative overflow-hidden backdrop-blur">
+        <!-- Glow accents -->
+        <div class="absolute -top-24 -left-24 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="text-center space-y-2 relative">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-xl shadow-brand-500/25 font-bold text-white text-2xl mx-auto">
+            Ψ
+          </div>
+          <h2 class="text-xl font-bold text-white tracking-tight">Andy Agent</h2>
+          <p class="text-xs text-slate-400">Ingresa tus credenciales para acceder a la WebUI</p>
+        </div>
+
+        <div id="loginErrorAlert" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+          <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-rose-400"></i>
+          <span id="loginErrorText">Usuario o contraseña incorrectos</span>
+        </div>
+
+        <form onsubmit="event.preventDefault(); submitLogin();" class="space-y-4 text-xs">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1.5">Usuario</label>
+            <div class="relative">
+              <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+              <input id="loginUsernameInput" type="text" placeholder="Usuario (ej: admin)" required autocomplete="username" class="w-full bg-surface-800 border border-surface-700 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-brand-500 transition-colors">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1.5">Contraseña</label>
+            <div class="relative">
+              <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+              <input id="loginPasswordInput" type="password" placeholder="••••••••" required autocomplete="current-password" class="w-full bg-surface-800 border border-surface-700 rounded-xl pl-10 pr-10 py-2.5 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-brand-500 transition-colors">
+              <button type="button" onclick="togglePasswordVisibility('loginPasswordInput', this)" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-200">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] pt-1">
+            <label class="flex items-center gap-2 text-slate-300 cursor-pointer">
+              <input id="loginRememberMeCheckbox" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-brand-500">
+              Mantener sesión iniciada
+            </label>
+          </div>
+
+          <button id="loginSubmitBtn" type="submit" class="w-full bg-gradient-to-r from-brand-600 via-brand-500 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-brand-500/25 transition-all text-xs flex items-center justify-center gap-2">
+            <i data-lucide="log-in" class="w-4 h-4"></i>
+            Iniciar Sesión
+          </button>
+        </form>
+
+        <div class="text-center text-[10px] text-slate-500">
+          Andy Agent RLM • Autenticación y Seguridad Nativa
+        </div>
+      </div>
+    </div>
+
     <!-- CREATE API KEY MODAL -->
     <div id="createApiKeyModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
@@ -1274,6 +1561,8 @@ for chunk in response:
   <!-- CLIENT CONTROLLER -->
   <!-- ========================================================================= -->
   <script>
+    let currentUser = null;
+    let authToken = localStorage.getItem('andy_session_token') || '';
     let currentSessionId = 'default';
     let currentProjectId = 'default';
     let projectsList = [];
@@ -1296,8 +1585,32 @@ for chunk in response:
     let debounceTimers = {};
     let providerModelsCache = {};
 
+    // --- FETCH AUTH INTERCEPTOR ---
+    const originalFetch = window.fetch;
+    window.fetch = async function(resource, init = {}) {
+      const headers = new Headers(init.headers || {});
+      if (authToken && !headers.has('Authorization')) {
+        headers.set('Authorization', 'Bearer ' + authToken);
+      }
+      init.headers = headers;
+      const response = await originalFetch(resource, init);
+      if (response.status === 401 && typeof resource === 'string' && resource.startsWith('/api/') && !resource.startsWith('/api/auth/login') && !resource.startsWith('/api/auth/status')) {
+        showLoginOverlay('Tu sesión ha expirado o requiere autenticación.');
+      }
+      return response;
+    };
+
     document.addEventListener('DOMContentLoaded', async () => {
       lucide.createIcons();
+      const authenticated = await checkAuthSession();
+      if (!authenticated) {
+        showLoginOverlay();
+        return;
+      }
+      await initializeApp();
+    });
+
+    async function initializeApp() {
       await fetchProjects();
       await fetchModelCatalogs();
       await fetchProviders();
@@ -1319,7 +1632,7 @@ for chunk in response:
 
       await fetchSessions();
       initLogsStream();
-    });
+    }
 
     // --- PROJECTS MANAGEMENT ---
     async function fetchProjects() {
@@ -1633,12 +1946,12 @@ for chunk in response:
 
     // --- NAVIGATION & VIEWS ---
     function switchView(view) {
-      ['viewChat', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys'].forEach(v => {
+      ['viewChat', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys', 'viewUsers'].forEach(v => {
         const el = document.getElementById(v);
         if (el) el.classList.add('hidden');
       });
 
-      ['tabChatBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn', 'tabApiKeysBtn'].forEach(t => {
+      ['tabChatBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn', 'tabApiKeysBtn', 'tabUsersBtn'].forEach(t => {
         const el = document.getElementById(t);
         if (el) el.className = 'px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
       });
@@ -1694,6 +2007,10 @@ for chunk in response:
         const mob = document.getElementById('mobTabApiKeys');
         if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchApiKeys();
+      } else if (view === 'users') {
+        document.getElementById('viewUsers').classList.remove('hidden');
+        document.getElementById('tabUsersBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+        fetchUsersList();
       }
       
       // Auto close sidebar on mobile if open
@@ -3453,6 +3770,429 @@ for chunk in response:
         await fetchApiKeys();
       } catch (e) {
         alert('Error al eliminar: ' + e.message);
+      }
+    }
+
+    // --- AUTHENTICATION & USER MANAGEMENT CLIENT LOGIC ---
+    async function checkAuthSession() {
+      if (!authToken) {
+        showLoginOverlay();
+        return false;
+      }
+      try {
+        const res = await originalFetch('/api/auth/me', {
+          headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            currentUser = data.user;
+            updateUserInterface();
+            hideLoginOverlay();
+            return true;
+          }
+        }
+      } catch (e) {
+        console.warn('Auth verification failed:', e);
+      }
+      showLoginOverlay();
+      return false;
+    }
+
+    function showLoginOverlay(errMsg) {
+      const overlay = document.getElementById('loginOverlay');
+      if (overlay) overlay.classList.remove('hidden');
+      const errAlert = document.getElementById('loginErrorAlert');
+      const errText = document.getElementById('loginErrorText');
+      if (errMsg && errAlert && errText) {
+        errText.innerText = errMsg;
+        errAlert.classList.remove('hidden');
+      } else if (errAlert) {
+        errAlert.classList.add('hidden');
+      }
+      const userInput = document.getElementById('loginUsernameInput');
+      if (userInput) setTimeout(() => userInput.focus(), 100);
+      lucide.createIcons();
+    }
+
+    function hideLoginOverlay() {
+      const overlay = document.getElementById('loginOverlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>';
+      } else {
+        input.type = 'password';
+        btn.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>';
+      }
+      lucide.createIcons();
+    }
+
+    async function submitLogin() {
+      const usernameInput = document.getElementById('loginUsernameInput');
+      const passwordInput = document.getElementById('loginPasswordInput');
+      const rememberCheckbox = document.getElementById('loginRememberMeCheckbox');
+      const errAlert = document.getElementById('loginErrorAlert');
+      const errText = document.getElementById('loginErrorText');
+      const submitBtn = document.getElementById('loginSubmitBtn');
+
+      const username = (usernameInput?.value || '').trim();
+      const password = passwordInput?.value || '';
+      const rememberMe = Boolean(rememberCheckbox?.checked);
+
+      if (!username || !password) {
+        if (errText && errAlert) {
+          errText.innerText = 'Ingresa tu usuario y contraseña.';
+          errAlert.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="animate-spin inline-block mr-2">◌</span> Verificando...';
+      }
+
+      try {
+        const res = await originalFetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, rememberMe })
+        });
+        const data = await res.json();
+        if (data.success && data.token) {
+          authToken = data.token;
+          currentUser = data.user;
+          localStorage.setItem('andy_session_token', authToken);
+          updateUserInterface();
+          hideLoginOverlay();
+          if (errAlert) errAlert.classList.add('hidden');
+          await initializeApp();
+        } else {
+          if (errText && errAlert) {
+            errText.innerText = data.error || 'Credenciales incorrectas.';
+            errAlert.classList.remove('hidden');
+          }
+        }
+      } catch (e) {
+        if (errText && errAlert) {
+          errText.innerText = 'Error de conexión con el servidor: ' + e.message;
+          errAlert.classList.remove('hidden');
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i data-lucide="log-in" class="w-4 h-4"></i> Iniciar Sesión';
+          lucide.createIcons();
+        }
+      }
+    }
+
+    async function performLogout() {
+      if (!confirm('¿Seguro que deseas cerrar tu sesión?')) return;
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (e) {}
+      authToken = '';
+      currentUser = null;
+      localStorage.removeItem('andy_session_token');
+      toggleUserDropdown(false);
+      showLoginOverlay('Has cerrado sesión correctamente.');
+    }
+
+    function updateUserInterface() {
+      if (!currentUser) return;
+      const nameLabel = document.getElementById('headerUserName');
+      const roleBadge = document.getElementById('headerUserRoleBadge');
+      const avatarLetter = document.getElementById('userAvatarLetter');
+      const dropdownDisplayName = document.getElementById('userDropdownDisplayName');
+      const dropdownUsername = document.getElementById('userDropdownUsername');
+      const tabUsersBtn = document.getElementById('tabUsersBtn');
+      const userDropdownUsersAdminBtn = document.getElementById('userDropdownUsersAdminBtn');
+
+      const displayName = currentUser.displayName || currentUser.username;
+      if (nameLabel) nameLabel.innerText = displayName;
+      if (roleBadge) {
+        roleBadge.innerText = currentUser.role === 'admin' ? 'admin' : 'usuario';
+        roleBadge.className = currentUser.role === 'admin' 
+          ? 'hidden sm:inline text-[9px] px-1 py-0.2 rounded bg-brand-500/20 text-brand-300 font-mono'
+          : 'hidden sm:inline text-[9px] px-1 py-0.2 rounded bg-slate-700 text-slate-300 font-mono';
+      }
+      if (avatarLetter) avatarLetter.innerText = displayName.charAt(0).toUpperCase();
+      if (dropdownDisplayName) dropdownDisplayName.innerText = displayName;
+      if (dropdownUsername) dropdownUsername.innerText = '@' + currentUser.username;
+
+      if (currentUser.role === 'admin') {
+        if (tabUsersBtn) tabUsersBtn.classList.remove('hidden');
+        if (userDropdownUsersAdminBtn) userDropdownUsersAdminBtn.classList.remove('hidden');
+      } else {
+        if (tabUsersBtn) tabUsersBtn.classList.add('hidden');
+        if (userDropdownUsersAdminBtn) userDropdownUsersAdminBtn.classList.add('hidden');
+      }
+      lucide.createIcons();
+    }
+
+    function toggleUserDropdown(forceState) {
+      const menu = document.getElementById('userDropdownMenu');
+      if (!menu) return;
+      if (typeof forceState === 'boolean') {
+        if (forceState) menu.classList.remove('hidden');
+        else menu.classList.add('hidden');
+      } else {
+        menu.classList.toggle('hidden');
+      }
+    }
+
+    // --- CHANGE PASSWORD MODAL ---
+    function openChangePasswordModal() {
+      document.getElementById('changePasswordModal').classList.remove('hidden');
+      document.getElementById('currPasswordInput').value = '';
+      document.getElementById('changeNewPasswordInput').value = '';
+      document.getElementById('changeConfirmPasswordInput').value = '';
+      const errAlert = document.getElementById('changePasswordErrorAlert');
+      if (errAlert) errAlert.classList.add('hidden');
+      lucide.createIcons();
+    }
+
+    function closeChangePasswordModal() {
+      document.getElementById('changePasswordModal').classList.add('hidden');
+    }
+
+    async function submitChangePassword() {
+      const oldPassword = document.getElementById('currPasswordInput').value;
+      const newPassword = document.getElementById('changeNewPasswordInput').value;
+      const confirmPassword = document.getElementById('changeConfirmPasswordInput').value;
+      const errAlert = document.getElementById('changePasswordErrorAlert');
+      const errText = document.getElementById('changePasswordErrorText');
+
+      if (!oldPassword || !newPassword) {
+        if (errText && errAlert) {
+          errText.innerText = 'Completa todos los campos obligatorios.';
+          errAlert.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        if (errText && errAlert) {
+          errText.innerText = 'La nueva contraseña y su confirmación no coinciden.';
+          errAlert.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (newPassword.length < 4) {
+        if (errText && errAlert) {
+          errText.innerText = 'La nueva contraseña debe tener al menos 4 caracteres.';
+          errAlert.classList.remove('hidden');
+        }
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ oldPassword, newPassword })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeChangePasswordModal();
+          alert('✓ Contraseña actualizada exitosamente.');
+        } else {
+          if (errText && errAlert) {
+            errText.innerText = data.error || 'Error al cambiar contraseña.';
+            errAlert.classList.remove('hidden');
+          }
+        }
+      } catch (err) {
+        if (errText && errAlert) {
+          errText.innerText = 'Error: ' + err.message;
+          errAlert.classList.remove('hidden');
+        }
+      }
+    }
+
+    // --- USERS MANAGEMENT (CRUD) ---
+    async function fetchUsersList() {
+      const tableBody = document.getElementById('usersTableBody');
+      const countLabel = document.getElementById('usersTableCount');
+      if (!tableBody) return;
+
+      tableBody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 italic">Cargando usuarios...</td></tr>';
+
+      try {
+        const res = await fetch('/api/auth/users');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.users)) {
+          if (countLabel) countLabel.innerText = data.users.length;
+          renderUsersTable(data.users);
+        } else {
+          tableBody.innerHTML = \`<tr><td colspan="7" class="px-4 py-8 text-center text-rose-400">Error: \${data.error || 'No se pudieron cargar los usuarios'}</td></tr>\`;
+        }
+      } catch (e) {
+        tableBody.innerHTML = \`<tr><td colspan="7" class="px-4 py-8 text-center text-rose-400">Error de red: \${e.message}</td></tr>\`;
+      }
+    }
+
+    function renderUsersTable(users) {
+      const tableBody = document.getElementById('usersTableBody');
+      if (!tableBody) return;
+      tableBody.innerHTML = '';
+
+      if (users.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-slate-500 italic">No hay usuarios registrados.</td></tr>';
+        return;
+      }
+
+      users.forEach(u => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-surface-800/50 transition-colors';
+
+        const createdDate = new Date(u.createdAt).toLocaleDateString();
+        const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Nunca';
+        const isSelf = currentUser && currentUser.id === u.id;
+
+        const roleBadge = u.role === 'admin'
+          ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Administrador</span>'
+          : '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-700 text-slate-300">Usuario</span>';
+
+        const statusBadge = u.status === 'active'
+          ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Activo</span>'
+          : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/30"><span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span> Desactivado</span>';
+
+        const safeUser = JSON.stringify(u).replace(/"/g, '&quot;');
+
+        tr.innerHTML = \`
+          <td class="px-4 py-3 font-mono font-medium text-white flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow-sm shrink-0">
+              \${(u.displayName || u.username).charAt(0).toUpperCase()}
+            </div>
+            <span>\${u.username}</span>
+            \${isSelf ? '<span class="text-[9px] bg-brand-500/20 text-brand-300 px-1 py-0.2 rounded font-mono">Tú</span>' : ''}
+          </td>
+          <td class="px-4 py-3 text-slate-300">\${u.displayName || u.username}</td>
+          <td class="px-4 py-3">\${roleBadge}</td>
+          <td class="px-4 py-3">\${statusBadge}</td>
+          <td class="px-4 py-3 text-slate-400 text-[11px]">\${createdDate}</td>
+          <td class="px-4 py-3 text-slate-400 text-[11px] font-mono">\${lastLogin}</td>
+          <td class="px-4 py-3 text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              <button onclick='openEditUserModal(\${safeUser})' title="Editar usuario o restablecer clave" class="p-1.5 rounded-lg bg-surface-750 hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 text-xs transition-colors">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+              \${!isSelf ? \`
+                <button onclick="deleteUserById('\${u.id}', '\${u.username}')" title="Eliminar usuario" class="p-1.5 rounded-lg bg-surface-750 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 text-xs transition-colors">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              \` : ''}
+            </div>
+          </td>
+        \`;
+        tableBody.appendChild(tr);
+      });
+      lucide.createIcons();
+    }
+
+    function openCreateUserModal() {
+      document.getElementById('createUserModal').classList.remove('hidden');
+      document.getElementById('newUsernameInput').value = '';
+      document.getElementById('newDisplayNameInput').value = '';
+      document.getElementById('newPasswordInput').value = '';
+      document.getElementById('newRoleSelect').value = 'user';
+      document.getElementById('newUsernameInput').focus();
+    }
+
+    function closeCreateUserModal() {
+      document.getElementById('createUserModal').classList.add('hidden');
+    }
+
+    async function submitCreateUser() {
+      const username = document.getElementById('newUsernameInput').value.trim();
+      const displayName = document.getElementById('newDisplayNameInput').value.trim();
+      const password = document.getElementById('newPasswordInput').value;
+      const role = document.getElementById('newRoleSelect').value;
+
+      if (!username) return alert('Ingresa un nombre de usuario.');
+      if (!password || password.length < 4) return alert('La contraseña debe tener al menos 4 caracteres.');
+
+      try {
+        const res = await fetch('/api/auth/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, displayName, password, role })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeCreateUserModal();
+          await fetchUsersList();
+          alert(\`✓ Usuario "\${data.user.username}" creado exitosamente.\`);
+        } else {
+          alert('Error al crear usuario: ' + (data.error || 'Desconocido'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    function openEditUserModal(user) {
+      document.getElementById('editUserModal').classList.remove('hidden');
+      document.getElementById('editUserIdHidden').value = user.id;
+      document.getElementById('editUserModalTitleName').innerText = user.username;
+      document.getElementById('editDisplayNameInput').value = user.displayName || user.username;
+      document.getElementById('editRoleSelect').value = user.role || 'user';
+      document.getElementById('editStatusSelect').value = user.status || 'active';
+      document.getElementById('editNewPasswordInput').value = '';
+    }
+
+    function closeEditUserModal() {
+      document.getElementById('editUserModal').classList.add('hidden');
+    }
+
+    async function submitEditUser() {
+      const userId = document.getElementById('editUserIdHidden').value;
+      const displayName = document.getElementById('editDisplayNameInput').value.trim();
+      const role = document.getElementById('editRoleSelect').value;
+      const status = document.getElementById('editStatusSelect').value;
+      const newPassword = document.getElementById('editNewPasswordInput').value;
+
+      try {
+        const res = await fetch('/api/auth/users/' + userId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ displayName, role, status, newPassword: newPassword || undefined })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeEditUserModal();
+          await fetchUsersList();
+          alert('✓ Usuario actualizado exitosamente.');
+        } else {
+          alert('Error al actualizar usuario: ' + (data.error || 'Desconocido'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+    }
+
+    async function deleteUserById(userId, username) {
+      if (!confirm(\`¿Estás seguro de eliminar al usuario "\${username}"?\\n\\nEsta acción cerrará todas sus sesiones activas.\`)) return;
+      try {
+        const res = await fetch('/api/auth/users/' + userId, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+          await fetchUsersList();
+          alert('✓ Usuario eliminado exitosamente.');
+        } else {
+          alert('Error al eliminar usuario: ' + (data.error || 'Desconocido'));
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
       }
     }
 

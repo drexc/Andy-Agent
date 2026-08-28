@@ -17,6 +17,7 @@ import {
 	type UserMessage,
 } from "@earendil-works/pi-ai";
 import { ApiKeyManager } from "./api-key-manager.js";
+import { AuthManager } from "./auth-manager.js";
 import { AutoLearningEngine } from "./auto-learner.js";
 import { getWebUiHtml } from "./html-bundle.js";
 import { WebUiSessionPool } from "./session-manager.js";
@@ -43,6 +44,7 @@ export class AndyWebUiServer {
 	private options: WebUiServerOptions;
 	private autoLearner: AutoLearningEngine;
 	public apiKeyManager: ApiKeyManager;
+	public authManager: AuthManager;
 	private logs: LogEntry[] = [];
 	private maxLogs = 1000;
 	private logSubscribers = new Set<(entry: LogEntry) => void>();
@@ -52,6 +54,7 @@ export class AndyWebUiServer {
 		this.pool = new WebUiSessionPool(options.cwd || process.cwd());
 		this.autoLearner = new AutoLearningEngine(options.cwd || process.cwd(), this.addLog.bind(this));
 		this.apiKeyManager = new ApiKeyManager();
+		this.authManager = new AuthManager();
 		this.server = createServer(this.handleRequest.bind(this));
 		this.addLog("INFO", "Server", `Andy WebUI Server initialized at ${options.cwd || process.cwd()}`);
 	}
@@ -108,6 +111,24 @@ export class AndyWebUiServer {
 		});
 	}
 
+	private getAuthToken(req: IncomingMessage): string {
+		const authHeader = req.headers.authorization;
+		if (authHeader) {
+			return authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
+		}
+		const cookieHeader = req.headers.cookie;
+		if (cookieHeader) {
+			const cookies = cookieHeader.split(";");
+			for (const c of cookies) {
+				const [name, val] = c.trim().split("=");
+				if (name === "andy_session" && val) {
+					return decodeURIComponent(val);
+				}
+			}
+		}
+		return "";
+	}
+
 	private async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
 		const method = req.method || "GET";
 		const parsedUrl = new URL(req.url || "/", "http://localhost");
@@ -147,6 +168,7 @@ export class AndyWebUiServer {
 							endpoints: {
 								webui: "/",
 								health: "/health",
+								auth: "/api/auth",
 								models: "/v1/models",
 								chatCompletions: "/v1/chat/completions",
 								chatWebUi: "/api/chat",
@@ -167,6 +189,212 @@ export class AndyWebUiServer {
 					),
 				);
 				return;
+			}
+
+			// --- 2.1 AUTHENTICATION & SESSION MANAGEMENT API ---
+			if (method === "POST" && url === "/api/auth/login") {
+				const body = await this.readJsonBody<any>(req);
+				const username = body?.username || "";
+				const password = body?.password || "";
+				const rememberMe = Boolean(body?.rememberMe);
+
+				const result = this.authManager.login(username, password, rememberMe);
+				if (!result.success) {
+					this.addLog("WARN", "Auth", `Failed login attempt for user "${username}"`);
+					res.writeHead(401, { "Content-Type": "application/json" });
+					res.end(JSON.stringify(result));
+					return;
+				}
+
+				this.addLog("INFO", "Auth", `User "${result.user?.username}" logged in successfully`);
+				const maxAge = rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
+				res.setHeader(
+					"Set-Cookie",
+					`andy_session=${result.token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`,
+				);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(result));
+				return;
+			}
+
+			const token = this.getAuthToken(req);
+			const authValidation = this.authManager.validateSession(token);
+			const currentUser = authValidation.user;
+
+			if (method === "POST" && url === "/api/auth/logout") {
+				if (token) {
+					this.authManager.logout(token);
+				}
+				res.setHeader("Set-Cookie", "andy_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true }));
+				return;
+			}
+
+			if (method === "GET" && url === "/api/auth/status") {
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(
+					JSON.stringify({
+						authenticated: Boolean(currentUser),
+						user: currentUser || null,
+						totalUsers: this.authManager.getTotalUsersCount(),
+					}),
+				);
+				return;
+			}
+
+			if (method === "GET" && url === "/api/auth/me") {
+				if (!currentUser) {
+					res.writeHead(401, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Unauthorized", authenticated: false }));
+					return;
+				}
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, user: currentUser }));
+				return;
+			}
+
+			if (method === "POST" && url === "/api/auth/change-password") {
+				if (!currentUser) {
+					res.writeHead(401, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Unauthorized", code: "AUTH_REQUIRED" }));
+					return;
+				}
+				const body = await this.readJsonBody<any>(req);
+				const oldPassword = body?.oldPassword || "";
+				const newPassword = body?.newPassword || "";
+				const result = this.authManager.changePassword(currentUser.id, oldPassword, newPassword);
+				if (!result.success) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify(result));
+					return;
+				}
+				this.addLog("INFO", "Auth", `Password updated for user "${currentUser.username}"`);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(result));
+				return;
+			}
+
+			if (method === "GET" && url === "/api/auth/users") {
+				if (!currentUser || currentUser.role !== "admin") {
+					res.writeHead(403, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Permiso denegado. Se requiere rol de Administrador." }));
+					return;
+				}
+				try {
+					const users = this.authManager.listUsers(currentUser.id);
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ success: true, users }));
+				} catch (err: any) {
+					res.writeHead(403, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: err.message || String(err) }));
+				}
+				return;
+			}
+
+			if (method === "POST" && url === "/api/auth/users") {
+				if (!currentUser || currentUser.role !== "admin") {
+					res.writeHead(403, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Permiso denegado. Se requiere rol de Administrador." }));
+					return;
+				}
+				const body = await this.readJsonBody<any>(req);
+				const result = this.authManager.createUser(currentUser.id, body || {});
+				if (!result.success) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify(result));
+					return;
+				}
+				this.addLog(
+					"INFO",
+					"Auth",
+					`Admin "${currentUser.username}" created user "${result.user?.username}" (${result.user?.role})`,
+				);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(result));
+				return;
+			}
+
+			if ((method === "PUT" || method === "PATCH") && url.startsWith("/api/auth/users/")) {
+				if (!currentUser || currentUser.role !== "admin") {
+					res.writeHead(403, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Permiso denegado. Se requiere rol de Administrador." }));
+					return;
+				}
+				const targetUserId = url.split("/")[4];
+				const body = await this.readJsonBody<any>(req);
+
+				if (body?.newPassword) {
+					const passResult = this.authManager.adminResetPassword(currentUser.id, targetUserId, body.newPassword);
+					if (!passResult.success) {
+						res.writeHead(400, { "Content-Type": "application/json" });
+						res.end(JSON.stringify(passResult));
+						return;
+					}
+					this.addLog(
+						"INFO",
+						"Auth",
+						`Admin "${currentUser.username}" reset password for user ID "${targetUserId}"`,
+					);
+				}
+
+				const result = this.authManager.updateUser(currentUser.id, targetUserId, body || {});
+				if (!result.success) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify(result));
+					return;
+				}
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(result));
+				return;
+			}
+
+			if (method === "DELETE" && url.startsWith("/api/auth/users/")) {
+				if (!currentUser || currentUser.role !== "admin") {
+					res.writeHead(403, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Permiso denegado. Se requiere rol de Administrador." }));
+					return;
+				}
+				const targetUserId = url.split("/")[4];
+				const result = this.authManager.deleteUser(currentUser.id, targetUserId);
+				if (!result.success) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify(result));
+					return;
+				}
+				this.addLog("INFO", "Auth", `Admin "${currentUser.username}" deleted user ID "${targetUserId}"`);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(result));
+				return;
+			}
+
+			// --- ROUTE PROTECTION MIDDLEWARE FOR WEBUI /api/* ENDPOINTS ---
+			const isPublicAuthRoute = url === "/api/auth/login" || url === "/api/auth/status" || url === "/api/auth/setup";
+
+			const isIdeOpenAiRoute =
+				url === "/v1/chat/completions" ||
+				url === "/chat/completions" ||
+				url.endsWith("/chat/completions") ||
+				url === "/v1/models" ||
+				url === "/models" ||
+				url === "/api/models" ||
+				url.endsWith("/models") ||
+				url.startsWith("/v1/graft/") ||
+				url === "/health" ||
+				url === "/v1" ||
+				url === "/v1/";
+
+			if (url.startsWith("/api/") && !isPublicAuthRoute && !isIdeOpenAiRoute) {
+				if (!authValidation.valid || !currentUser) {
+					res.writeHead(401, { "Content-Type": "application/json" });
+					res.end(
+						JSON.stringify({
+							error: "Sesión no válida o expirada. Inicia sesión para continuar.",
+							code: "AUTH_REQUIRED",
+						}),
+					);
+					return;
+				}
 			}
 
 			// --- 3. LOGS API ---
