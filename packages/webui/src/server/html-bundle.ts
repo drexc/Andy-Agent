@@ -229,67 +229,81 @@ export function getWebUiHtml(): string {
   <main class="flex-1 flex flex-col h-full overflow-hidden bg-surface-900 relative">
     
     <!-- Header Navigation -->
-    <header class="h-14 border-b border-surface-750 bg-surface-850/90 backdrop-blur px-2.5 sm:px-4 flex items-center justify-between z-20 shrink-0">
-      <div class="flex items-center gap-2 sm:gap-3 overflow-hidden">
-        <button onclick="toggleSidebar()" aria-label="Menu" class="text-slate-300 hover:text-white p-2 rounded-lg hover:bg-surface-750 transition-colors shrink-0">
+    <header class="h-14 border-b border-surface-750 bg-surface-850/95 backdrop-blur px-2 sm:px-3.5 flex items-center justify-between z-20 shrink-0 gap-2">
+      <!-- Left side: Toggle & Project -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button onclick="toggleSidebar()" aria-label="Menu" title="Alternar panel lateral" class="text-slate-300 hover:text-white p-1.5 sm:p-2 rounded-lg hover:bg-surface-750 transition-colors shrink-0">
           <i data-lucide="panel-left" class="w-5 h-5"></i>
         </button>
 
         <!-- Project Badge in Header -->
-        <button onclick="openProjectsModal()" title="Proyecto activo - Clic para cambiar" class="hidden sm:flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700/80 px-2.5 py-1 rounded-lg text-xs text-slate-300 hover:text-white transition-colors max-w-[170px] md:max-w-[240px] truncate shrink-0">
+        <button onclick="openProjectsModal()" title="Proyecto activo - Clic para cambiar" class="hidden sm:flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700/80 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs text-slate-300 hover:text-white transition-colors max-w-[130px] md:max-w-[190px] truncate shrink-0">
           <i data-lucide="folder-kanban" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
           <span id="headerProjectName" class="truncate font-medium">Proyecto Principal</span>
         </button>
 
         <div class="h-5 w-px bg-surface-700 hidden sm:block shrink-0"></div>
+      </div>
 
-        <!-- Navigation Tabs (Horizontally scrollable on mobile) -->
-        <nav class="flex items-center gap-1 bg-surface-800/90 p-1 rounded-lg border border-surface-700/60 text-xs overflow-x-auto no-scrollbar max-w-[calc(100vw-180px)] sm:max-w-none flex-nowrap scroll-smooth">
-          <button id="tabChatBtn" onclick="switchView('chat')" class="px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+      <!-- Center: Responsive Scrollable Tab Navigation with Arrow Controls & Mouse Wheel -->
+      <div class="relative flex items-center flex-1 min-w-0 mx-0 sm:mx-1 overflow-hidden group">
+        <!-- Scroll Left Button (Desktop/Tablet) -->
+        <button id="navScrollLeftBtn" onclick="scrollHeaderTabs(-200)" title="Desplazar pestañas a la izquierda" class="hidden p-1 rounded-lg bg-surface-800/95 hover:bg-surface-700 text-slate-400 hover:text-white border border-surface-700 shadow-md z-10 mr-1 shrink-0 transition-all items-center justify-center">
+          <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+        </button>
+
+        <!-- Navigation Tabs Container -->
+        <nav id="headerNavTabs" onwheel="handleHeaderNavWheel(event)" onscroll="updateNavScrollButtons()" class="flex items-center gap-1 bg-surface-800/90 p-1 rounded-xl border border-surface-700/60 text-xs overflow-x-auto no-scrollbar scroll-smooth flex-nowrap min-w-0 w-full select-none">
+          <button id="tabChatBtn" onclick="switchView('chat')" class="px-2.5 py-1.5 rounded-lg font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
             Chat & RLM
           </button>
-          <button id="tabProvidersBtn" onclick="switchView('providers')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+          <button id="tabProvidersBtn" onclick="switchView('providers')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
             Proveedores
           </button>
-          <button id="tabGraftBtn" onclick="switchView('graft')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+          <button id="tabGraftBtn" onclick="switchView('graft')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="git-fork" class="w-3.5 h-3.5 text-cyan-400"></i>
             Graft Studio
           </button>
-          <button id="tabMemoryBtn" onclick="switchView('memory')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="brain" class="w-3.5 h-3.5 text-purple-400"></i>
-            Memoria
-          </button>
-          <button id="tabSkillsBtn" onclick="switchView('skills')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i>
-            Skills
-          </button>
-          <button id="tabTreeBtn" onclick="switchView('tree')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="git-branch" class="w-3.5 h-3.5 text-rose-400"></i>
-            Ramas
-          </button>
-          <button id="tabLogsBtn" onclick="switchView('logs')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
-            <i data-lucide="scroll-text" class="w-3.5 h-3.5 text-emerald-400"></i>
-            Logs
-          </button>
-          <button id="tabFilesBtn" onclick="switchView('files')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+          <button id="tabFilesBtn" onclick="switchView('files')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="folder-tree" class="w-3.5 h-3.5 text-amber-400"></i>
             Archivos
           </button>
-          <button id="tabApiKeysBtn" onclick="switchView('apikeys')" class="px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+          <button id="tabLogsBtn" onclick="switchView('logs')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+            <i data-lucide="scroll-text" class="w-3.5 h-3.5 text-emerald-400"></i>
+            Logs
+          </button>
+          <button id="tabMemoryBtn" onclick="switchView('memory')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+            <i data-lucide="brain" class="w-3.5 h-3.5 text-purple-400"></i>
+            Memoria
+          </button>
+          <button id="tabSkillsBtn" onclick="switchView('skills')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-400"></i>
+            Skills
+          </button>
+          <button id="tabTreeBtn" onclick="switchView('tree')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+            <i data-lucide="git-branch" class="w-3.5 h-3.5 text-rose-400"></i>
+            Ramas
+          </button>
+          <button id="tabApiKeysBtn" onclick="switchView('apikeys')" class="px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="key" class="w-3.5 h-3.5 text-yellow-400"></i>
             API Keys & IDEs
           </button>
-          <button id="tabUsersBtn" onclick="switchView('users')" class="hidden px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
+          <button id="tabUsersBtn" onclick="switchView('users')" class="hidden px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0">
             <i data-lucide="users" class="w-3.5 h-3.5 text-cyan-400"></i>
             Usuarios & Seguridad
           </button>
         </nav>
+
+        <!-- Scroll Right Button (Desktop/Tablet) -->
+        <button id="navScrollRightBtn" onclick="scrollHeaderTabs(200)" title="Desplazar pestañas a la derecha" class="hidden p-1 rounded-lg bg-surface-800/95 hover:bg-surface-700 text-slate-400 hover:text-white border border-surface-700 shadow-md z-10 ml-1 shrink-0 transition-all items-center justify-center">
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+        </button>
       </div>
 
       <!-- Controls -->
-      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <div class="flex items-center gap-1 sm:gap-1.5 md:gap-2 shrink-0">
         <!-- Model Selector Dropdown with Provider Categorization -->
         <div class="relative">
           <button onclick="toggleModelDropdown()" id="modelSelectorBtn" class="flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 transition-colors shadow-sm max-w-[125px] sm:max-w-[200px] md:max-w-none truncate">
@@ -1632,6 +1646,7 @@ for chunk in response:
 
       await fetchSessions();
       initLogsStream();
+      setTimeout(updateNavScrollButtons, 150);
     }
 
     // --- PROJECTS MANAGEMENT ---
@@ -1945,6 +1960,55 @@ for chunk in response:
     }
 
     // --- NAVIGATION & VIEWS ---
+    const TAB_BUTTON_MAP = {
+      chat: 'tabChatBtn',
+      providers: 'tabProvidersBtn',
+      graft: 'tabGraftBtn',
+      files: 'tabFilesBtn',
+      logs: 'tabLogsBtn',
+      memory: 'tabMemoryBtn',
+      skills: 'tabSkillsBtn',
+      tree: 'tabTreeBtn',
+      apikeys: 'tabApiKeysBtn',
+      users: 'tabUsersBtn'
+    };
+
+    function scrollHeaderTabs(offset) {
+      const nav = document.getElementById('headerNavTabs');
+      if (!nav) return;
+      nav.scrollBy({ left: offset, behavior: 'smooth' });
+      setTimeout(updateNavScrollButtons, 180);
+    }
+
+    function handleHeaderNavWheel(e) {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        const nav = document.getElementById('headerNavTabs');
+        if (nav) {
+          nav.scrollLeft += e.deltaY;
+          updateNavScrollButtons();
+        }
+      }
+    }
+
+    function updateNavScrollButtons() {
+      const nav = document.getElementById('headerNavTabs');
+      const leftBtn = document.getElementById('navScrollLeftBtn');
+      const rightBtn = document.getElementById('navScrollRightBtn');
+      if (!nav || !leftBtn || !rightBtn) return;
+      
+      const hasOverflow = nav.scrollWidth > nav.clientWidth + 6;
+      if (hasOverflow && window.innerWidth >= 768) {
+        leftBtn.style.display = nav.scrollLeft > 6 ? 'flex' : 'none';
+        rightBtn.style.display = (nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 6) ? 'flex' : 'none';
+      } else {
+        leftBtn.style.display = 'none';
+        rightBtn.style.display = 'none';
+      }
+    }
+
+    window.addEventListener('resize', updateNavScrollButtons);
+
     function switchView(view) {
       ['viewChat', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys', 'viewUsers'].forEach(v => {
         const el = document.getElementById(v);
@@ -1953,7 +2017,7 @@ for chunk in response:
 
       ['tabChatBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn', 'tabApiKeysBtn', 'tabUsersBtn'].forEach(t => {
         const el = document.getElementById(t);
-        if (el) el.className = 'px-2.5 py-1 rounded-md font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+        if (el) el.className = 'px-2.5 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white hover:bg-surface-700/50 flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
       });
 
       // Reset mobile bottom nav buttons
@@ -1962,54 +2026,53 @@ for chunk in response:
         if (btn) btn.className = 'flex flex-col items-center justify-center w-14 h-full text-slate-400 hover:text-white font-medium text-[10px] transition-colors';
       });
 
+      const activeBtnId = TAB_BUTTON_MAP[view];
+      if (activeBtnId) {
+        const btn = document.getElementById(activeBtnId);
+        if (btn) {
+          btn.className = 'px-2.5 py-1.5 rounded-lg font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
+          btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
+      }
+
       if (view === 'chat') {
         document.getElementById('viewChat').classList.remove('hidden');
-        document.getElementById('tabChatBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         const mob = document.getElementById('mobTabChat');
         if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
       } else if (view === 'providers') {
         document.getElementById('viewProviders').classList.remove('hidden');
-        document.getElementById('tabProvidersBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         const mob = document.getElementById('mobTabProviders');
         if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchProviders();
       } else if (view === 'graft') {
         document.getElementById('viewGraft').classList.remove('hidden');
-        document.getElementById('tabGraftBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         const mob = document.getElementById('mobTabGraft');
         if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchGraftMap();
+      } else if (view === 'files') {
+        document.getElementById('viewFiles').classList.remove('hidden');
+        refreshWorkspaceFiles();
+      } else if (view === 'logs') {
+        document.getElementById('viewLogs').classList.remove('hidden');
+        renderLogs();
       } else if (view === 'memory') {
         document.getElementById('viewMemory').classList.remove('hidden');
-        document.getElementById('tabMemoryBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         const mob = document.getElementById('mobTabMemory');
         if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchActiveDoc();
       } else if (view === 'skills') {
         document.getElementById('viewSkills').classList.remove('hidden');
-        document.getElementById('tabSkillsBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         fetchSkillsAndPrompts();
       } else if (view === 'tree') {
         document.getElementById('viewTree').classList.remove('hidden');
-        document.getElementById('tabTreeBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         refreshBranchTree();
-      } else if (view === 'logs') {
-        document.getElementById('viewLogs').classList.remove('hidden');
-        document.getElementById('tabLogsBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
-        renderLogs();
-      } else if (view === 'files') {
-        document.getElementById('viewFiles').classList.remove('hidden');
-        document.getElementById('tabFilesBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
-        refreshWorkspaceFiles();
       } else if (view === 'apikeys') {
         document.getElementById('viewApiKeys').classList.remove('hidden');
-        document.getElementById('tabApiKeysBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         const mob = document.getElementById('mobTabApiKeys');
         if (mob) mob.className = 'flex flex-col items-center justify-center w-14 h-full text-brand-400 font-medium text-[10px] transition-colors';
         fetchApiKeys();
       } else if (view === 'users') {
         document.getElementById('viewUsers').classList.remove('hidden');
-        document.getElementById('tabUsersBtn').className = 'px-2.5 py-1 rounded-md font-medium text-white bg-brand-600 shadow-sm flex items-center gap-1.5 transition-all whitespace-nowrap shrink-0';
         fetchUsersList();
       }
       
@@ -2017,6 +2080,7 @@ for chunk in response:
       if (window.innerWidth < 768) {
         toggleSidebar(false);
       }
+      setTimeout(updateNavScrollButtons, 100);
       lucide.createIcons();
     }
 
