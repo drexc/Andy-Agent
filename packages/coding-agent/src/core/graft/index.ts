@@ -54,6 +54,26 @@ export class GraftEngine {
 		return this.graph.getBlastRadius(target);
 	}
 
+	public async graphData() {
+		await this.graph.ensureIndexed();
+		return this.graph.getGraphData();
+	}
+
+	public async circularDependencies() {
+		await this.graph.ensureIndexed();
+		return this.graph.getCircularDependencies();
+	}
+
+	public async deadCode() {
+		await this.graph.ensureIndexed();
+		return this.graph.getDeadCode();
+	}
+
+	public async callChain(symbolName: string) {
+		await this.graph.ensureIndexed();
+		return this.graph.getCallChain(symbolName);
+	}
+
 	public async grep(
 		query: string,
 		options: { caseSensitive?: boolean; maxResults?: number } = {},

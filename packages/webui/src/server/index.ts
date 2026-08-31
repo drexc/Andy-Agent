@@ -1521,6 +1521,40 @@ ${prompt || ""}`;
 				return;
 			}
 
+			if (method === "GET" && (url === "/v1/graft/graph" || url === "/api/graft/graph")) {
+				const activeProj = this.pool.getProject(targetProjectId || "") || this.pool.getActiveProject();
+				this.addLog("TOOL", "Graft", `Exporting Code Graph Data for project "${activeProj.name}"`);
+				const graphData = await graft.graphData();
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(graphData, null, 2));
+				return;
+			}
+
+			if (method === "GET" && (url === "/v1/graft/cycles" || url === "/api/graft/cycles")) {
+				this.addLog("TOOL", "Graft", `Detecting Circular Dependencies`);
+				const cycles = await graft.circularDependencies();
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ cycles, total: cycles.length }, null, 2));
+				return;
+			}
+
+			if (method === "GET" && (url === "/v1/graft/dead-code" || url === "/api/graft/dead-code")) {
+				this.addLog("TOOL", "Graft", `Detecting Unreferenced Dead Code`);
+				const dead = await graft.deadCode();
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ dead, total: dead.length }, null, 2));
+				return;
+			}
+
+			if (method === "GET" && (url === "/v1/graft/call-chain" || url === "/api/graft/call-chain")) {
+				const symbol = parsedUrl.searchParams.get("symbol") || "";
+				this.addLog("TOOL", "Graft", `Tracing Call Chain for "${symbol}"`);
+				const chain = await graft.callChain(symbol);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(chain, null, 2));
+				return;
+			}
+
 			if (method === "GET" && (url === "/v1/graft/grep" || url === "/api/graft/grep")) {
 				const q = parsedUrl.searchParams.get("q") || "";
 				const grepResult = await graft.grep(q);

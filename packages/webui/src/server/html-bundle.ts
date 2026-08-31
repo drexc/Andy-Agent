@@ -650,76 +650,219 @@ export function getWebUiHtml(): string {
     </div>
 
     <!-- ======================================================================= -->
-    <!-- VIEW: GRAFT STUDIO -->
+    <!-- VIEW: GRAFT STUDIO (GRAPH ENGINEERING & CODE KNOWLEDGE GRAPH) -->
     <!-- ======================================================================= -->
-    <div id="viewGraft" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4 sm:space-y-6">
-      <div class="flex items-center justify-between">
+    <div id="viewGraft" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+      <!-- Header with sub-tabs -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-750 pb-3">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
             <i data-lucide="git-fork" class="w-5 h-5 text-cyan-400"></i>
-            Graft Context Studio
+            Graft Studio 2.0
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono font-normal">Graph Engineering</span>
           </h2>
-          <p class="text-xs text-slate-400 mt-0.5">Exploración estructural sin coste de tokens.</p>
+          <p class="text-xs text-slate-400 mt-0.5">Exploración estructural del proyecto, AST y grafo de conocimiento.</p>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button onclick="fetchGraftMap()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-sm transition-colors">
-            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-            Actualizar Mapa
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Sub-Tab switcher -->
+          <div class="bg-surface-800 p-1 rounded-xl border border-surface-700 flex items-center text-xs">
+            <button id="graftSubTabVisualBtn" onclick="switchGraftSubTab('visual')" class="px-3 py-1.5 rounded-lg font-semibold bg-cyan-600 text-white shadow-sm transition-all flex items-center gap-1.5">
+              <i data-lucide="network" class="w-3.5 h-3.5"></i>
+              Grafo 2D
+            </button>
+            <button id="graftSubTabAuditBtn" onclick="switchGraftSubTab('audit')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+              <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+              Auditoría & Ciclos
+            </button>
+            <button id="graftSubTabToolsBtn" onclick="switchGraftSubTab('tools')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+              <i data-lucide="wrench" class="w-3.5 h-3.5"></i>
+              Herramientas
+            </button>
+          </div>
+
+          <button onclick="refreshGraftData()" title="Reindexar grafo" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 text-xs font-medium px-3 py-2 rounded-xl text-slate-200 hover:text-white flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span class="hidden sm:inline">Actualizar</span>
           </button>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-        <div class="bg-surface-800 border border-surface-700 rounded-xl p-3.5 space-y-2.5">
-          <div class="flex items-center gap-2 text-xs font-semibold text-slate-200">
-            <i data-lucide="file-code" class="w-4 h-4 text-brand-400"></i>
-            Esqueleto de Archivo
+      <!-- SUBTAB 1: 2D VISUAL CODE GRAPH CANVAS -->
+      <div id="graftSubTabVisual" class="flex flex-col flex-1 min-h-[500px] space-y-3">
+        <!-- Controls Bar -->
+        <div class="bg-surface-850 border border-surface-750 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+            <div class="relative flex-1">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i>
+              <input id="graftNodeSearchInput" type="text" placeholder="Buscar archivo o símbolo en el grafo..." oninput="filterGraphNodes(this.value)" class="w-full bg-surface-750 border border-surface-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500">
+            </div>
+            <select id="graftClusterSelect" onchange="filterGraphByCluster(this.value)" class="bg-surface-750 border border-surface-700 text-xs text-slate-200 px-2.5 py-1.5 rounded-lg focus:outline-none focus:border-cyan-500">
+              <option value="ALL">Todos los Clusters</option>
+            </select>
           </div>
-          <p class="text-[11px] text-slate-400">Extraer firmas y tipos.</p>
-          <div class="flex gap-1.5">
-            <input id="graftSkeletonInput" type="text" placeholder="packages/openai-bridge/src/server.ts" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
-            <button onclick="fetchGraftSkeleton()" class="bg-brand-600 hover:bg-brand-500 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors">Ver</button>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <span id="graftMetricsBadge" class="text-[11px] font-mono text-slate-400 bg-surface-800 px-2.5 py-1 rounded-lg border border-surface-700">0 nodos | 0 conexiones</span>
+            <button onclick="resetGraphZoom()" title="Centrar grafo" class="p-1.5 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 hover:text-white border border-surface-700 cursor-pointer">
+              <i data-lucide="maximize-2" class="w-4 h-4"></i>
+            </button>
           </div>
         </div>
 
-        <div class="bg-surface-800 border border-surface-700 rounded-xl p-3.5 space-y-2.5">
-          <div class="flex items-center gap-2 text-xs font-semibold text-slate-200">
-            <i data-lucide="phone-call" class="w-4 h-4 text-emerald-400"></i>
-            Búsqueda de Callers
+        <!-- Main Graph Area & Side Inspector -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 min-h-[440px]">
+          <!-- Interactive Canvas Container -->
+          <div class="lg:col-span-2 bg-surface-950 border border-surface-750 rounded-2xl relative overflow-hidden flex flex-col min-h-[380px]">
+            <canvas id="graftCanvas" class="w-full h-full cursor-grab active:cursor-grabbing block"></canvas>
+            <div class="absolute bottom-3 left-3 bg-surface-900/90 backdrop-blur border border-surface-750 rounded-xl p-2 text-[10px] text-slate-400 flex items-center gap-3">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span> TypeScript</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Python</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-purple-500"></span> C#</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-500"></span> Go</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Rust</span>
+            </div>
           </div>
-          <p class="text-[11px] text-slate-400">Módulos que llaman a una función.</p>
-          <div class="flex gap-1.5">
-            <input id="graftCallersInput" type="text" placeholder="createAgentSession" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
-            <button onclick="fetchGraftCallers()" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors">Buscar</button>
-          </div>
-        </div>
 
-        <div class="bg-surface-800 border border-surface-700 rounded-xl p-3.5 space-y-2.5">
-          <div class="flex items-center gap-2 text-xs font-semibold text-slate-200">
-            <i data-lucide="target" class="w-4 h-4 text-amber-400"></i>
-            Radio de Impacto (Blast)
-          </div>
-          <p class="text-[11px] text-slate-400">Impacto en cascada.</p>
-          <div class="flex gap-1.5">
-            <input id="graftBlastInput" type="text" placeholder="packages/openai-bridge/src/types.ts" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
-            <button onclick="fetchGraftBlast()" class="bg-amber-600 hover:bg-amber-500 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors">Evaluar</button>
+          <!-- Node Inspector Card -->
+          <div id="graftNodeInspector" class="bg-surface-850 border border-surface-750 rounded-2xl p-4 flex flex-col space-y-3 overflow-y-auto max-h-[500px]">
+            <div class="flex items-center justify-between border-b border-surface-750 pb-2">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i>
+                Inspector de Nodo
+              </span>
+              <span id="inspectorLangBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-surface-750 text-cyan-300">Selecciona un nodo</span>
+            </div>
+
+            <div id="inspectorEmptyState" class="text-center text-slate-500 text-xs py-12 italic">
+              Haz clic en cualquier nodo del grafo interactivo para inspeccionar sus llamadas, tipos, esqueleto y radio de impacto.
+            </div>
+
+            <div id="inspectorContent" class="hidden space-y-3 text-xs">
+              <div>
+                <label class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Ruta del Archivo</label>
+                <div id="inspectorFilePath" class="font-mono text-white text-[11px] break-all bg-surface-800 p-2 rounded-lg border border-surface-700 mt-1 select-all"></div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2 text-center text-[10px]">
+                <div class="bg-surface-800 p-2 rounded-lg border border-surface-700">
+                  <div class="text-slate-400">Líneas</div>
+                  <div id="inspectorLineCount" class="font-mono font-bold text-white text-xs mt-0.5">0</div>
+                </div>
+                <div class="bg-surface-800 p-2 rounded-lg border border-surface-700">
+                  <div class="text-slate-400">Dependientes (Fan-In)</div>
+                  <div id="inspectorFanIn" class="font-mono font-bold text-emerald-400 text-xs mt-0.5">0</div>
+                </div>
+                <div class="bg-surface-800 p-2 rounded-lg border border-surface-700">
+                  <div class="text-slate-400">Dependencias (Fan-Out)</div>
+                  <div id="inspectorFanOut" class="font-mono font-bold text-amber-400 text-xs mt-0.5">0</div>
+                </div>
+              </div>
+
+              <div>
+                <label class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Símbolos Exportados (<span id="inspectorSymbolCount">0</span>)</label>
+                <div id="inspectorSymbolsList" class="space-y-1 mt-1 max-h-36 overflow-y-auto"></div>
+              </div>
+
+              <div class="pt-2 flex gap-2">
+                <button onclick="inspectSelectedNodeSkeleton()" class="flex-1 bg-brand-600 hover:bg-brand-500 text-white font-medium py-1.5 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer">
+                  <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+                  Ver Esqueleto
+                </button>
+                <button onclick="inspectSelectedNodeBlast()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-medium py-1.5 rounded-lg text-xs transition-colors flex items-center justify-center gap-1 cursor-pointer">
+                  <i data-lucide="target" class="w-3.5 h-3.5"></i>
+                  Radio de Impacto
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="flex-1 min-h-[250px] bg-surface-850 border border-surface-750 rounded-xl overflow-hidden flex flex-col">
-        <div class="p-3 bg-surface-800 border-b border-surface-750 flex items-center justify-between text-xs text-slate-300 font-medium">
-          <span id="graftResultsTitle" class="flex items-center gap-1.5">
-            <i data-lucide="terminal" class="w-4 h-4 text-cyan-400"></i>
-            Visor de Resultados
-          </span>
-          <button onclick="copyGraftResult()" class="text-slate-400 hover:text-white flex items-center gap-1">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-            Copiar
-          </button>
+      <!-- SUBTAB 2: AUDIT & CYCLES -->
+      <div id="graftSubTabAudit" class="hidden flex flex-col flex-1 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Circular Dependencies Card -->
+          <div class="bg-surface-850 border border-surface-750 rounded-2xl p-4 flex flex-col space-y-3 min-h-[350px]">
+            <div class="flex items-center justify-between border-b border-surface-750 pb-2">
+              <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                <i data-lucide="repeat" class="w-4 h-4 text-rose-400"></i>
+                Dependencias Circulares
+              </h3>
+              <span id="auditCyclesCountBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300">0 ciclos</span>
+            </div>
+            <p class="text-[11px] text-slate-400">Los ciclos de importación generan acoplamiento indeseado y posibles errores de inicialización.</p>
+            <div id="auditCyclesList" class="flex-1 overflow-y-auto space-y-2 text-xs font-mono"></div>
+          </div>
+
+          <!-- Dead Code Card -->
+          <div class="bg-surface-850 border border-surface-750 rounded-2xl p-4 flex flex-col space-y-3 min-h-[350px]">
+            <div class="flex items-center justify-between border-b border-surface-750 pb-2">
+              <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                <i data-lucide="ghost" class="w-4 h-4 text-amber-400"></i>
+                Código Muerto / Símbolos Huérfanos
+              </h3>
+              <span id="auditDeadCodeCountBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">0 símbolos</span>
+            </div>
+            <p class="text-[11px] text-slate-400">Funciones y tipos exportados que no reciben invocaciones directas ni referencias en el código.</p>
+            <div id="auditDeadCodeList" class="flex-1 overflow-y-auto space-y-2 text-xs font-mono"></div>
+          </div>
         </div>
-        <pre id="graftResultContent" class="flex-1 p-3 sm:p-4 overflow-auto text-xs font-mono text-slate-200 leading-relaxed bg-surface-900/60 select-text min-h-[200px]"></pre>
+      </div>
+
+      <!-- SUBTAB 3: STRUCTURAL TOOLS (Skeleton, Callers, Blast, Grep) -->
+      <div id="graftSubTabTools" class="hidden flex flex-col flex-1 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+          <div class="bg-surface-800 border border-surface-700 rounded-xl p-3.5 space-y-2.5">
+            <div class="flex items-center gap-2 text-xs font-semibold text-slate-200">
+              <i data-lucide="file-code" class="w-4 h-4 text-brand-400"></i>
+              Esqueleto de Archivo
+            </div>
+            <p class="text-[11px] text-slate-400">Extraer firmas y tipos sin coste de tokens.</p>
+            <div class="flex gap-1.5">
+              <input id="graftSkeletonInput" type="text" placeholder="ej: src/server.ts o Comandos.cs" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500">
+              <button onclick="fetchGraftSkeleton()" class="bg-brand-600 hover:bg-brand-500 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors cursor-pointer">Ver</button>
+            </div>
+          </div>
+
+          <div class="bg-surface-800 border border-surface-700 rounded-xl p-3.5 space-y-2.5">
+            <div class="flex items-center gap-2 text-xs font-semibold text-slate-200">
+              <i data-lucide="phone-call" class="w-4 h-4 text-emerald-400"></i>
+              Búsqueda de Callers / Cadena
+            </div>
+            <p class="text-[11px] text-slate-400">Módulos que invocan una función o método.</p>
+            <div class="flex gap-1.5">
+              <input id="graftCallersInput" type="text" placeholder="ej: CrearTrama o switchView" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500">
+              <button onclick="fetchGraftCallers()" class="bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors cursor-pointer">Buscar</button>
+            </div>
+          </div>
+
+          <div class="bg-surface-800 border border-surface-700 rounded-xl p-3.5 space-y-2.5">
+            <div class="flex items-center gap-2 text-xs font-semibold text-slate-200">
+              <i data-lucide="target" class="w-4 h-4 text-amber-400"></i>
+              Radio de Impacto (Blast Radius)
+            </div>
+            <p class="text-[11px] text-slate-400">Impacto en cascada pre-edición.</p>
+            <div class="flex gap-1.5">
+              <input id="graftBlastInput" type="text" placeholder="ej: Comandos.cs o tipos" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
+              <button onclick="fetchGraftBlast()" class="bg-amber-600 hover:bg-amber-500 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors cursor-pointer">Evaluar</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex-1 min-h-[250px] bg-surface-850 border border-surface-750 rounded-xl overflow-hidden flex flex-col">
+          <div class="p-3 bg-surface-800 border-b border-surface-750 flex items-center justify-between text-xs text-slate-300 font-medium">
+            <span id="graftResultsTitle" class="flex items-center gap-1.5">
+              <i data-lucide="terminal" class="w-4 h-4 text-cyan-400"></i>
+              Visor de Resultados Estructurales
+            </span>
+            <button onclick="copyGraftResult()" class="text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              Copiar
+            </button>
+          </div>
+          <pre id="graftResultContent" class="flex-1 p-3 sm:p-4 overflow-auto text-xs font-mono text-slate-200 leading-relaxed bg-surface-900/60 select-text min-h-[200px]"></pre>
+        </div>
       </div>
     </div>
 
@@ -2083,7 +2226,7 @@ for chunk in response:
         fetchProviders();
       } else if (view === 'graft') {
         document.getElementById('viewGraft').classList.remove('hidden');
-        fetchGraftMap();
+        initGraftStudio();
       } else if (view === 'files') {
         document.getElementById('viewFiles').classList.remove('hidden');
         refreshWorkspaceFiles();
@@ -3388,7 +3531,576 @@ for chunk in response:
       document.getElementById('logsConsole').innerHTML = '<div class="text-slate-400">Consola limpiada.</div>';
     }
 
-    // --- GRAFT STUDIO API ---
+    // =======================================================================
+    // --- GRAFT STUDIO 2.0 (GRAPH ENGINEERING ENGINE) ---
+    // =======================================================================
+    const LANG_COLORS = {
+      typescript: '#3b82f6',
+      tsx: '#60a5fa',
+      javascript: '#eab308',
+      jsx: '#facc15',
+      python: '#10b981',
+      csharp: '#a855f7',
+      go: '#06b6d4',
+      rust: '#f97316',
+      java: '#ef4444',
+      c: '#64748b',
+      cpp: '#475569',
+      json: '#6366f1',
+      markdown: '#8b5cf6',
+      default: '#94a3b8'
+    };
+
+    let graftState = {
+      activeSubTab: 'visual',
+      graphData: null,
+      nodes: [],
+      edges: [],
+      selectedNode: null,
+      hoveredNode: null,
+      blastRadiusSet: new Set(),
+      searchQuery: '',
+      selectedCluster: 'ALL',
+      camera: { x: 0, y: 0, zoom: 1 },
+      isDragging: false,
+      isPanning: false,
+      draggedNode: null,
+      lastMousePos: { x: 0, y: 0 },
+      animFrameId: null
+    };
+
+    function switchGraftSubTab(tab) {
+      graftState.activeSubTab = tab;
+      const subTabs = ['visual', 'audit', 'tools'];
+      subTabs.forEach(t => {
+        const panel = document.getElementById('graftSubTab' + t.charAt(0).toUpperCase() + t.slice(1));
+        const btn = document.getElementById('graftSubTab' + t.charAt(0).toUpperCase() + t.slice(1) + 'Btn');
+        if (t === tab) {
+          if (panel) panel.classList.remove('hidden');
+          if (btn) btn.className = 'px-3 py-1.5 rounded-lg font-semibold bg-cyan-600 text-white shadow-sm transition-all flex items-center gap-1.5';
+        } else {
+          if (panel) panel.classList.add('hidden');
+          if (btn) btn.className = 'px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5';
+        }
+      });
+
+      if (tab === 'visual') {
+        setTimeout(initGraphCanvas, 50);
+      } else if (tab === 'audit') {
+        loadGraftAudit();
+      }
+      lucide.createIcons();
+    }
+
+    async function initGraftStudio() {
+      await loadGraftGraphData();
+      if (graftState.activeSubTab === 'visual') {
+        initGraphCanvas();
+      } else if (graftState.activeSubTab === 'audit') {
+        loadGraftAudit();
+      }
+    }
+
+    async function refreshGraftData() {
+      await loadGraftGraphData();
+      if (graftState.activeSubTab === 'visual') {
+        initGraphCanvas();
+      } else if (graftState.activeSubTab === 'audit') {
+        loadGraftAudit();
+      } else if (graftState.activeSubTab === 'tools') {
+        fetchGraftMap();
+      }
+    }
+
+    async function loadGraftGraphData() {
+      const metricsBadge = document.getElementById('graftMetricsBadge');
+      if (metricsBadge) metricsBadge.innerText = 'Indexando grafo...';
+      try {
+        const res = await fetch(\`/v1/graft/graph?projectId=\${encodeURIComponent(currentProjectId)}\`);
+        const data = await res.json();
+        graftState.graphData = data;
+
+        if (metricsBadge) {
+          metricsBadge.innerText = \`\${data.metrics.totalFiles} archivos | \${data.metrics.totalEdges} conexiones | \${data.metrics.totalSymbols} símbolos\`;
+        }
+
+        // Populate cluster select
+        const clusterSelect = document.getElementById('graftClusterSelect');
+        if (clusterSelect && data.clusters) {
+          clusterSelect.innerHTML = '<option value="ALL">Todos los Clusters</option>';
+          data.clusters.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.id;
+            opt.innerText = \`\${c.name} (\${c.nodeCount} archivos)\`;
+            clusterSelect.appendChild(opt);
+          });
+        }
+
+        // Setup simulation nodes & edges
+        setupGraphSimulation(data);
+      } catch (err) {
+        if (metricsBadge) metricsBadge.innerText = 'Error al cargar grafo';
+        console.error('Error loading graft graph data:', err);
+      }
+    }
+
+    function setupGraphSimulation(data) {
+      const canvas = document.getElementById('graftCanvas');
+      const width = (canvas && canvas.clientWidth) || 800;
+      const height = (canvas && canvas.clientHeight) || 500;
+
+      const nodeMap = new Map();
+      const nodeCount = data.nodes.length;
+      const radius = Math.min(width, height) * 0.38;
+
+      graftState.nodes = data.nodes.map((n, i) => {
+        const angle = (i / Math.max(1, nodeCount)) * 2 * Math.PI;
+        const dist = radius * (0.4 + 0.6 * Math.random());
+        const x = width / 2 + dist * Math.cos(angle);
+        const y = height / 2 + dist * Math.sin(angle);
+        const size = Math.max(6, Math.min(18, 6 + Math.log2(Math.max(1, n.lines / 10))));
+
+        const simNode = {
+          ...n,
+          x,
+          y,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 2,
+          radius: size,
+          color: LANG_COLORS[n.language] || LANG_COLORS.default
+        };
+        nodeMap.set(n.id, simNode);
+        return simNode;
+      });
+
+      graftState.edges = data.edges.map(e => ({
+        source: nodeMap.get(e.source),
+        target: nodeMap.get(e.target),
+        type: e.type,
+        symbols: e.symbols
+      })).filter(e => e.source && e.target);
+    }
+
+    function initGraphCanvas() {
+      const canvas = document.getElementById('graftCanvas');
+      if (!canvas) return;
+
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+
+      // Event Listeners
+      canvas.onmousedown = handleCanvasMouseDown;
+      canvas.onmousemove = handleCanvasMouseMove;
+      canvas.onmouseup = handleCanvasMouseUp;
+      canvas.onwheel = handleCanvasWheel;
+      canvas.ondblclick = handleCanvasDblClick;
+
+      if (!graftState.animFrameId) {
+        runGraphSimulation();
+      }
+    }
+
+    function runGraphSimulation() {
+      const canvas = document.getElementById('graftCanvas');
+      if (!canvas) {
+        graftState.animFrameId = null;
+        return;
+      }
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+
+      // Physics update step
+      const nodes = graftState.nodes;
+      const edges = graftState.edges;
+      const kRepel = 2400;
+      const kSpring = 0.04;
+      const restLen = 80;
+      const centerGravity = 0.015;
+
+      // 1. Repulsion between nodes
+      for (let i = 0; i < nodes.length; i++) {
+        const n1 = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const n2 = nodes[j];
+          const dx = n2.x - n1.x;
+          const dy = n2.y - n1.y;
+          const distSq = dx * dx + dy * dy + 100;
+          const dist = Math.sqrt(distSq);
+          const force = kRepel / distSq;
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+
+          if (n1 !== graftState.draggedNode) {
+            n1.vx -= fx;
+            n1.vy -= fy;
+          }
+          if (n2 !== graftState.draggedNode) {
+            n2.vx += fx;
+            n2.vy += fy;
+          }
+        }
+      }
+
+      // 2. Spring force along edges
+      for (let i = 0; i < edges.length; i++) {
+        const e = edges[i];
+        const dx = e.target.x - e.source.x;
+        const dy = e.target.y - e.source.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = (dist - restLen) * kSpring;
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+
+        if (e.source !== graftState.draggedNode) {
+          e.source.vx += fx;
+          e.source.vy += fy;
+        }
+        if (e.target !== graftState.draggedNode) {
+          e.target.vx -= fx;
+          e.target.vy -= fy;
+        }
+      }
+
+      // 3. Center gravity & integrate positions
+      const cx = width / 2;
+      const cy = height / 2;
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        if (n === graftState.draggedNode) continue;
+
+        n.vx += (cx - n.x) * centerGravity;
+        n.vy += (cy - n.y) * centerGravity;
+
+        n.vx *= 0.86;
+        n.vy *= 0.86;
+
+        n.x += n.vx;
+        n.y += n.vy;
+      }
+
+      // Render step
+      ctx.clearRect(0, 0, width, height);
+      ctx.save();
+
+      // Apply camera pan & zoom
+      ctx.translate(width / 2 + graftState.camera.x, height / 2 + graftState.camera.y);
+      ctx.scale(graftState.camera.zoom, graftState.camera.zoom);
+      ctx.translate(-width / 2, -height / 2);
+
+      // Draw Edges
+      for (let i = 0; i < edges.length; i++) {
+        const e = edges[i];
+        const isConnectedToHover = graftState.hoveredNode && (e.source === graftState.hoveredNode || e.target === graftState.hoveredNode);
+        const isConnectedToSelected = graftState.selectedNode && (e.source === graftState.selectedNode || e.target === graftState.selectedNode);
+        const isHighlighted = isConnectedToHover || isConnectedToSelected;
+
+        ctx.beginPath();
+        ctx.moveTo(e.source.x, e.source.y);
+        ctx.lineTo(e.target.x, e.target.y);
+
+        if (isHighlighted) {
+          ctx.strokeStyle = e.type === 'inheritance' ? '#ec4899' : '#06b6d4';
+          ctx.lineWidth = 2.5;
+        } else {
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
+          ctx.lineWidth = 1;
+        }
+        ctx.stroke();
+
+        // Draw small direction arrow
+        if (isHighlighted) {
+          const midX = (e.source.x + e.target.x) / 2;
+          const midY = (e.source.y + e.target.y) / 2;
+          const angle = Math.atan2(e.target.y - e.source.y, e.target.x - e.source.x);
+          ctx.beginPath();
+          ctx.arc(midX, midY, 3, 0, 2 * Math.PI);
+          ctx.fillStyle = ctx.strokeStyle;
+          ctx.fill();
+        }
+      }
+
+      // Draw Nodes
+      const query = graftState.searchQuery.toLowerCase();
+      const cluster = graftState.selectedCluster;
+
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const isHovered = n === graftState.hoveredNode;
+        const isSelected = n === graftState.selectedNode;
+        const isInBlast = graftState.blastRadiusSet.has(n.id);
+        const matchesSearch = !query || n.id.toLowerCase().includes(query) || (n.symbols && n.symbols.some(s => s.name.toLowerCase().includes(query)));
+        const matchesCluster = cluster === 'ALL' || n.cluster === cluster;
+
+        const opacity = matchesSearch && matchesCluster ? 1 : 0.2;
+
+        ctx.globalAlpha = opacity;
+
+        // Outer glow
+        if (isSelected || isInBlast || isHovered) {
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.radius + 6, 0, 2 * Math.PI);
+          ctx.fillStyle = isSelected ? 'rgba(6, 182, 212, 0.35)' : isInBlast ? 'rgba(245, 158, 11, 0.35)' : 'rgba(255, 255, 255, 0.2)';
+          ctx.fill();
+        }
+
+        // Main circle
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.radius, 0, 2 * Math.PI);
+        ctx.fillStyle = isInBlast ? '#f59e0b' : isSelected ? '#22d3ee' : n.color;
+        ctx.fill();
+        ctx.strokeStyle = isSelected ? '#ffffff' : 'rgba(15, 23, 42, 0.8)';
+        ctx.lineWidth = isSelected ? 2 : 1.5;
+        ctx.stroke();
+
+        // Label
+        if (matchesSearch && (isHovered || isSelected || graftState.camera.zoom >= 0.8 || n.fanIn > 2)) {
+          ctx.font = isSelected || isHovered ? 'bold 11px monospace' : '9px monospace';
+          ctx.fillStyle = isSelected ? '#ffffff' : '#cbd5e1';
+          ctx.textAlign = 'center';
+          ctx.fillText(n.label, n.x, n.y + n.radius + 12);
+        }
+
+        ctx.globalAlpha = 1.0;
+      }
+
+      ctx.restore();
+
+      graftState.animFrameId = requestAnimationFrame(runGraphSimulation);
+    }
+
+    function getCanvasPointerPos(e) {
+      const canvas = document.getElementById('graftCanvas');
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.clientX - rect.left;
+      const clientY = e.clientY - rect.top;
+      const width = canvas.width;
+      const height = canvas.height;
+
+      // Reverse camera transforms
+      const x = (clientX - width / 2 - graftState.camera.x) / graftState.camera.zoom + width / 2;
+      const y = (clientY - height / 2 - graftState.camera.y) / graftState.camera.zoom + height / 2;
+      return { x, y, screenX: clientX, screenY: clientY };
+    }
+
+    function findNodeAt(x, y) {
+      for (let i = graftState.nodes.length - 1; i >= 0; i--) {
+        const n = graftState.nodes[i];
+        const dx = n.x - x;
+        const dy = n.y - y;
+        if (dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6)) {
+          return n;
+        }
+      }
+      return null;
+    }
+
+    function handleCanvasMouseDown(e) {
+      const pos = getCanvasPointerPos(e);
+      const node = findNodeAt(pos.x, pos.y);
+
+      if (node) {
+        graftState.isDragging = true;
+        graftState.draggedNode = node;
+        selectGraftNode(node);
+      } else {
+        graftState.isPanning = true;
+        graftState.lastMousePos = { x: e.clientX, y: e.clientY };
+      }
+    }
+
+    function handleCanvasMouseMove(e) {
+      const pos = getCanvasPointerPos(e);
+
+      if (graftState.isDragging && graftState.draggedNode) {
+        graftState.draggedNode.x = pos.x;
+        graftState.draggedNode.y = pos.y;
+        graftState.draggedNode.vx = 0;
+        graftState.draggedNode.vy = 0;
+      } else if (graftState.isPanning) {
+        const dx = e.clientX - graftState.lastMousePos.x;
+        const dy = e.clientY - graftState.lastMousePos.y;
+        graftState.camera.x += dx;
+        graftState.camera.y += dy;
+        graftState.lastMousePos = { x: e.clientX, y: e.clientY };
+      } else {
+        const node = findNodeAt(pos.x, pos.y);
+        graftState.hoveredNode = node;
+        const canvas = document.getElementById('graftCanvas');
+        if (canvas) canvas.style.cursor = node ? 'pointer' : 'grab';
+      }
+    }
+
+    function handleCanvasMouseUp() {
+      graftState.isDragging = false;
+      graftState.draggedNode = null;
+      graftState.isPanning = false;
+      const canvas = document.getElementById('graftCanvas');
+      if (canvas) canvas.style.cursor = 'grab';
+    }
+
+    function handleCanvasWheel(e) {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+      graftState.camera.zoom = Math.max(0.2, Math.min(3.5, graftState.camera.zoom * zoomFactor));
+    }
+
+    function handleCanvasDblClick(e) {
+      const pos = getCanvasPointerPos(e);
+      const node = findNodeAt(pos.x, pos.y);
+      if (node) {
+        selectGraftNode(node);
+        inspectSelectedNodeSkeleton();
+      }
+    }
+
+    async function selectGraftNode(node) {
+      graftState.selectedNode = node;
+      graftState.blastRadiusSet.clear();
+
+      const emptyEl = document.getElementById('inspectorEmptyState');
+      const contentEl = document.getElementById('inspectorContent');
+      const langBadge = document.getElementById('inspectorLangBadge');
+
+      if (emptyEl) emptyEl.classList.add('hidden');
+      if (contentEl) contentEl.classList.remove('hidden');
+
+      if (langBadge) {
+        langBadge.innerText = node.language.toUpperCase();
+        langBadge.style.color = node.color;
+      }
+
+      document.getElementById('inspectorFilePath').innerText = node.id;
+      document.getElementById('inspectorLineCount').innerText = node.lines || 1;
+      document.getElementById('inspectorFanIn').innerText = node.fanIn || 0;
+      document.getElementById('inspectorFanOut').innerText = node.fanOut || 0;
+      document.getElementById('inspectorSymbolCount').innerText = node.symbolCount || 0;
+
+      // Populate symbols list
+      const symbolsListEl = document.getElementById('inspectorSymbolsList');
+      symbolsListEl.innerHTML = '';
+      if (node.symbols && node.symbols.length > 0) {
+        node.symbols.forEach(s => {
+          const symDiv = document.createElement('div');
+          symDiv.className = 'flex items-center justify-between p-1.5 rounded bg-surface-800 border border-surface-750 text-[11px] font-mono hover:bg-surface-750 cursor-pointer';
+          symDiv.onclick = () => {
+            document.getElementById('graftCallersInput').value = s.name;
+            switchGraftSubTab('tools');
+            fetchGraftCallers();
+          };
+          symDiv.innerHTML = \`
+            <span class="text-white truncate" title="\${s.signature}">\${s.name}</span>
+            <span class="text-[10px] text-cyan-400 font-sans px-1.5 py-0.2 rounded bg-cyan-500/15">\${s.kind}</span>
+          \`;
+          symbolsListEl.appendChild(symDiv);
+        });
+      } else {
+        symbolsListEl.innerHTML = '<div class="text-slate-500 text-[11px] italic p-1">Sin símbolos exportados directos.</div>';
+      }
+
+      // Calculate blast radius for highlight
+      try {
+        const res = await fetch(\`/v1/graft/blast?target=\${encodeURIComponent(node.id)}&projectId=\${encodeURIComponent(currentProjectId)}\`);
+        const blastData = await res.json();
+        (blastData.directDependents || []).forEach(d => graftState.blastRadiusSet.add(d));
+        (blastData.indirectDependents || []).forEach(d => graftState.blastRadiusSet.add(d));
+      } catch {}
+      lucide.createIcons();
+    }
+
+    function inspectSelectedNodeSkeleton() {
+      if (!graftState.selectedNode) return;
+      document.getElementById('graftSkeletonInput').value = graftState.selectedNode.id;
+      switchGraftSubTab('tools');
+      fetchGraftSkeleton();
+    }
+
+    function inspectSelectedNodeBlast() {
+      if (!graftState.selectedNode) return;
+      document.getElementById('graftBlastInput').value = graftState.selectedNode.id;
+      switchGraftSubTab('tools');
+      fetchGraftBlast();
+    }
+
+    function filterGraphNodes(query) {
+      graftState.searchQuery = query || '';
+    }
+
+    function filterGraphByCluster(cluster) {
+      graftState.selectedCluster = cluster || 'ALL';
+    }
+
+    function resetGraphZoom() {
+      graftState.camera = { x: 0, y: 0, zoom: 1 };
+    }
+
+    // --- AUDIT & CYCLES TAB ---
+    async function loadGraftAudit() {
+      const cyclesListEl = document.getElementById('auditCyclesList');
+      const deadCodeListEl = document.getElementById('auditDeadCodeList');
+      const cyclesBadge = document.getElementById('auditCyclesCountBadge');
+      const deadBadge = document.getElementById('auditDeadCodeCountBadge');
+
+      if (cyclesListEl) cyclesListEl.innerHTML = '<div class="p-3 text-slate-400">Buscando ciclos de importación...</div>';
+      if (deadCodeListEl) deadCodeListEl.innerHTML = '<div class="p-3 text-slate-400">Analizando código muerto...</div>';
+
+      try {
+        const [cyclesRes, deadRes] = await Promise.all([
+          fetch(\`/v1/graft/cycles?projectId=\${encodeURIComponent(currentProjectId)}\`).then(r => r.json()),
+          fetch(\`/v1/graft/dead-code?projectId=\${encodeURIComponent(currentProjectId)}\`).then(r => r.json())
+        ]);
+
+        // Render cycles
+        if (cyclesBadge) cyclesBadge.innerText = \`\${cyclesRes.total || 0} ciclos\`;
+        if (cyclesListEl) {
+          cyclesListEl.innerHTML = '';
+          if (cyclesRes.cycles && cyclesRes.cycles.length > 0) {
+            cyclesRes.cycles.forEach((c, idx) => {
+              const div = document.createElement('div');
+              div.className = 'p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-200 text-xs space-y-1.5';
+              div.innerHTML = \`
+                <div class="font-bold flex items-center gap-1.5">
+                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-400"></i>
+                  Ciclo #\${idx + 1} (Longitud: \${c.length})
+                </div>
+                <div class="text-[11px] text-slate-300 break-all leading-relaxed">\${c.cycle.map(p => \`<span class="px-1.5 py-0.5 rounded bg-surface-800 text-white font-mono">\${p}</span>\`).join(' ➔ ')}</div>
+              \`;
+              cyclesListEl.appendChild(div);
+            });
+          } else {
+            cyclesListEl.innerHTML = '<div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-center">✅ No se detectaron dependencias circulares. Excelente modularidad.</div>';
+          }
+        }
+
+        // Render dead code
+        if (deadBadge) deadBadge.innerText = \`\${deadRes.total || 0} símbolos\`;
+        if (deadCodeListEl) {
+          deadCodeListEl.innerHTML = '';
+          if (deadRes.dead && deadRes.dead.length > 0) {
+            deadRes.dead.slice(0, 30).forEach(d => {
+              const div = document.createElement('div');
+              div.className = 'p-2 rounded-lg bg-surface-800 border border-surface-700 flex items-center justify-between text-xs hover:bg-surface-750';
+              div.innerHTML = \`
+                <div class="truncate mr-2">
+                  <div class="font-bold text-slate-200 truncate">\${d.symbolName} <span class="text-[10px] font-normal text-amber-400 font-sans">(\${d.kind})</span></div>
+                  <div class="text-[10px] text-slate-400 truncate">\${d.file}:L\${d.line}</div>
+                </div>
+                <button onclick="document.getElementById('graftSkeletonInput').value='\${d.file}'; switchGraftSubTab('tools'); fetchGraftSkeleton();" class="px-2 py-1 rounded bg-surface-700 hover:bg-surface-650 text-[10px] text-slate-200 shrink-0">Ver</button>
+              \`;
+              deadCodeListEl.appendChild(div);
+            });
+          } else {
+            deadCodeListEl.innerHTML = '<div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-center">✅ No se detectaron símbolos exportados sin uso.</div>';
+          }
+        }
+        lucide.createIcons();
+      } catch (err) {
+        console.error('Error loading audit data:', err);
+      }
+    }
+
+    // --- STRUCTURAL TOOLS CALLS ---
     async function fetchGraftMap() {
       const out = document.getElementById('graftResultContent');
       out.innerText = 'Indexando repositorio con Graft Engine...';
@@ -3419,9 +4131,9 @@ for chunk in response:
       const symbol = document.getElementById('graftCallersInput').value.trim();
       if (!symbol) return alert('Ingresa un nombre de función o símbolo');
       const out = document.getElementById('graftResultContent');
-      out.innerText = \`Buscando callers de \${symbol}...\`;
+      out.innerText = \`Buscando callers y cadena para \${symbol}...\`;
       try {
-        const res = await fetch(\`/v1/graft/callers?symbol=\${encodeURIComponent(symbol)}&projectId=\${encodeURIComponent(currentProjectId)}\`);
+        const res = await fetch(\`/v1/graft/call-chain?symbol=\${encodeURIComponent(symbol)}&projectId=\${encodeURIComponent(currentProjectId)}\`);
         const data = await res.json();
         out.innerText = JSON.stringify(data, null, 2);
       } catch (e) {

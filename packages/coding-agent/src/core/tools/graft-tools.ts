@@ -39,6 +39,20 @@ const GraftAskSchema = Type.Object({
 	question: Type.String({ description: "The architectural or code-related question to find context for." }),
 });
 
+const GraftGraphSchema = Type.Object({
+	filterCluster: Type.Optional(Type.String({ description: "Filter nodes by folder cluster name (optional)." })),
+});
+
+const GraftCyclesSchema = Type.Object({});
+
+const GraftDeadCodeSchema = Type.Object({
+	limit: Type.Optional(Type.Number({ description: "Maximum number of dead code symbols to return. Default 20." })),
+});
+
+const GraftCallChainSchema = Type.Object({
+	symbolName: Type.String({ description: "The symbol name to trace full upstream and downstream call chains for." }),
+});
+
 export function createGraftTools(cwd: string = process.cwd()): ToolDefinition<any, any, any>[] {
 	const engine = getGraftEngine(cwd);
 
@@ -157,5 +171,135 @@ export function createGraftTools(cwd: string = process.cwd()): ToolDefinition<an
 		},
 	};
 
-	return [graftMapTool, graftSkeletonTool, graftCallersTool, graftGrepTool, graftBlastTool, graftAskTool];
+	const graftGraphTool: ToolDefinition<typeof GraftGraphSchema, any> = {
+		name: "graft_graph",
+		label: "graft_graph",
+		description:
+			"Query the Code Knowledge Graph to view high-level architecture clusters, file relationships, and complexity metrics.",
+		parameters: GraftGraphSchema,
+		execute: async (_toolCallId, params) => {
+			const gdata = await engine.graphData();
+			let nodes = gdata.nodes;
+			if (params.filterCluster) {
+				const filter = params.filterCluster.toLowerCase();
+				nodes = nodes.filter((n) => n.cluster.toLowerCase() === filter);
+			}
+
+			const out = [
+				`🌐 **Code Knowledge Graph Summary**`,
+				`- **Total Files**: ${gdata.metrics.totalFiles}`,
+				`- **Total Symbols**: ${gdata.metrics.totalSymbols}`,
+				`- **Total Edges**: ${gdata.metrics.totalEdges}`,
+				`- **Clusters (${gdata.clusters.length})**: ${gdata.clusters.map((c) => `\`${c.id}\` (${c.nodeCount} files)`).join(", ")}`,
+				`- **Top Modules**:`,
+				...nodes
+					.slice(0, 15)
+					.map(
+						(n) =>
+							`  - \`${n.id}\` (${n.language}, ${n.symbolCount} symbols, fanIn: ${n.fanIn}, fanOut: ${n.fanOut})`,
+					),
+			];
+
+			return {
+				content: [{ type: "text", text: out.join("\n") }],
+				details: gdata.metrics,
+			};
+		},
+	};
+
+	const graftCyclesTool: ToolDefinition<typeof GraftCyclesSchema, any> = {
+		name: "graft_cycles",
+		label: "graft_cycles",
+		description: "Detect circular dependencies and import loops across the codebase.",
+		parameters: GraftCyclesSchema,
+		execute: async () => {
+			const cycles = await engine.circularDependencies();
+			if (cycles.length === 0) {
+				return {
+					content: [{ type: "text", text: "✅ No circular dependencies detected in the codebase." }],
+					details: { totalCycles: 0 },
+				};
+			}
+
+			const out = [
+				`⚠️ **Detected ${cycles.length} Circular Dependencies:**\n`,
+				...cycles.map((c, i) => `${i + 1}. ${c.cycle.map((p) => `\`${p}\``).join(" ➔ ")} (length: ${c.length})`),
+			];
+
+			return {
+				content: [{ type: "text", text: out.join("\n") }],
+				details: { totalCycles: cycles.length, cycles },
+			};
+		},
+	};
+
+	const graftDeadCodeTool: ToolDefinition<typeof GraftDeadCodeSchema, any> = {
+		name: "graft_dead_code",
+		label: "graft_dead_code",
+		description:
+			"Find exported functions, classes, or types that have no external callers or references in the project.",
+		parameters: GraftDeadCodeSchema,
+		execute: async (_toolCallId, params) => {
+			const dead = await engine.deadCode();
+			const limit = params.limit || 20;
+			if (dead.length === 0) {
+				return {
+					content: [{ type: "text", text: "✅ No unreferenced exported dead code found." }],
+					details: { totalDeadCode: 0 },
+				};
+			}
+
+			const out = [
+				`🔍 **Unreferenced Exported Symbols (${dead.length} total, showing top ${Math.min(dead.length, limit)}):**\n`,
+				...dead.slice(0, limit).map((d) => `- \`${d.file}\`:L${d.line} \`${d.symbolName}\` (${d.kind})`),
+			];
+
+			return {
+				content: [{ type: "text", text: out.join("\n") }],
+				details: { totalDeadCode: dead.length, dead },
+			};
+		},
+	};
+
+	const graftCallChainTool: ToolDefinition<typeof GraftCallChainSchema, any> = {
+		name: "graft_call_chain",
+		label: "graft_call_chain",
+		description:
+			"Trace complete upstream callers (who invokes this) and downstream callees (what this invokes) for a symbol.",
+		parameters: GraftCallChainSchema,
+		execute: async (_toolCallId, params) => {
+			const chain = await engine.callChain(params.symbolName);
+			const out = [
+				`🔗 **Call Chain for \`${params.symbolName}\` in \`${chain.file}\`:L${chain.line}**`,
+				`\n**Upstream Invocations (${chain.upstreamCallers.length} callers):**`,
+				chain.upstreamCallers.length > 0
+					? chain.upstreamCallers.map((u) => `- \`${u.file}\`:L${u.line} via \`${u.symbol}\``).join("\n")
+					: "  (None / Root entrypoint)",
+				`\n**Downstream Dependencies (${chain.downstreamCalls.length} calls):**`,
+				chain.downstreamCalls.length > 0
+					? chain.downstreamCalls
+							.map((d) => `- \`${d.symbol}\`${d.file ? ` in \`${d.file}\`:L${d.line}` : ""}`)
+							.join("\n")
+					: "  (None / Leaf function)",
+			];
+
+			return {
+				content: [{ type: "text", text: out.join("\n") }],
+				details: chain,
+			};
+		},
+	};
+
+	return [
+		graftMapTool,
+		graftSkeletonTool,
+		graftCallersTool,
+		graftGrepTool,
+		graftBlastTool,
+		graftAskTool,
+		graftGraphTool,
+		graftCyclesTool,
+		graftDeadCodeTool,
+		graftCallChainTool,
+	];
 }

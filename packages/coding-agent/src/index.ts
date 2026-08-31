@@ -140,6 +140,8 @@ export {
 } from "./core/extensions/index.js";
 // Footer data provider (git branch + extension statuses - data not otherwise available to extensions)
 export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.js";
+// Graft Context Engine & Graph Engineering
+export * from "./core/graft/index.js";
 // Graft Engine
 export {
 	CodeGraph,

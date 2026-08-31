@@ -6,11 +6,11 @@ import {
 	type AgentSession,
 	AuthStorage,
 	createAgentSession,
+	GraftEngine,
 	ModelRegistry,
 	SessionManager as PiSessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { GraftEngine } from "../../../coding-agent/src/core/graft/index.js";
 
 export interface ProjectItem {
 	id: string;
