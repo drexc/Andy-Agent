@@ -1777,6 +1777,32 @@ ${prompt || ""}`;
 		}
 	}
 
+	private isRepetitionLoop(text: string): boolean {
+		if (!text || text.length < 100) return false;
+		const tail = text.slice(-600);
+		for (let len = 12; len <= 120; len++) {
+			const chunk = tail.slice(-len);
+			let count = 0;
+			let pos = tail.length - len;
+			while (pos >= 0 && tail.slice(pos, pos + len) === chunk) {
+				count++;
+				pos -= len;
+				if (count >= 4) return true;
+			}
+		}
+		// Also detect repeated <unk> tokens
+		if (/<unk>(?:\s*<unk>){3,}/.test(tail)) return true;
+		return false;
+	}
+
+	private sanitizeAssistantText(text: string): string {
+		if (!text) return text;
+		return text
+			.replace(/(?:<unk>)+/g, "")
+			.replace(/<\/parameter>\s*<\/function>\s*<\/tool_call>/g, "")
+			.trim();
+	}
+
 	private async handleOpenAiChatCompletions(req: IncomingMessage, res: ServerResponse): Promise<void> {
 		// Validar API Key
 		const authHeader = (req.headers.authorization as string) || (req.headers["x-api-key"] as string) || "";
@@ -2061,7 +2087,7 @@ ${prompt || ""}`;
 		const streamOptions: any = {
 			apiKey,
 			signal: abortCtrl.signal,
-			temperature: isConsolidationRequest ? 0 : body.temperature,
+			temperature: isConsolidationRequest ? 0 : (body.temperature ?? 0.2),
 			maxTokens: body.max_tokens || body.max_completion_tokens,
 		};
 
@@ -2095,6 +2121,19 @@ ${prompt || ""}`;
 					if (isAborted || res.writableEnded) break;
 					if (event.type === "text_delta") {
 						accumulatedText += event.delta;
+
+						// Anti-repetition & Model Collapse Guard
+						if (this.isRepetitionLoop(accumulatedText)) {
+							this.addLog(
+								"WARN",
+								"OpenAI Bridge",
+								`Repetition loop / model collapse detected for session "${sessionId}". Aborting stream gracefully.`,
+							);
+							finishReason = "stop";
+							abortCtrl.abort();
+							break;
+						}
+
 						const chunk = {
 							id: reqId,
 							object: "chat.completion.chunk",
@@ -2212,11 +2251,13 @@ ${prompt || ""}`;
 						? lastUser.content
 						: JSON.stringify(lastUser.content)
 					: "";
+				const cleanText = this.sanitizeAssistantText(accumulatedText);
+
 				this.autoLearner
 					.processTurn({
 						sessionId,
 						prompt: lastUserText,
-						assistantResponse: accumulatedText,
+						assistantResponse: cleanText,
 						modelId,
 					})
 					.catch((err) => this.addLog("WARN", "AutoLearn", `Error: ${err.message}`));
@@ -2224,8 +2265,8 @@ ${prompt || ""}`;
 				// Persist chat session with full context and assistant response for WebUI visibility
 				try {
 					const assistantContent: (TextContent | ThinkingContent | ToolCall)[] = [];
-					if (accumulatedText) {
-						assistantContent.push({ type: "text", text: accumulatedText });
+					if (cleanText) {
+						assistantContent.push({ type: "text", text: cleanText });
 					}
 					const finalAssistantMessage: AssistantMessage = {
 						role: "assistant",
