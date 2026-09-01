@@ -807,6 +807,26 @@ export function getWebUiHtml(): string {
             <p class="text-[11px] text-slate-400">Funciones y tipos exportados que no reciben invocaciones directas ni referencias en el código.</p>
             <div id="auditDeadCodeList" class="flex-1 overflow-y-auto space-y-2 text-xs font-mono"></div>
           </div>
+
+          <!-- Static Diagnostics Card -->
+          <div class="col-span-1 md:col-span-2 bg-surface-850 border border-surface-750 rounded-2xl p-4 flex flex-col space-y-3">
+            <div class="flex items-center justify-between border-b border-surface-750 pb-2">
+              <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                <i data-lucide="stethoscope" class="w-4 h-4 text-emerald-400"></i>
+                Diagnósticos Estáticos en Tiempo Real (Sintaxis, JSON, Python, Brackets)
+              </h3>
+              <div class="flex items-center gap-2">
+                <span id="auditDiagErrorsBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300">0 errores</span>
+                <span id="auditDiagWarningsBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">0 advertencias</span>
+                <button onclick="loadGraftDiagnostics()" class="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-medium cursor-pointer">
+                  <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                  Escanear
+                </button>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400">Verifica la integridad de llaves no balanceadas, sintaxis JSON, colons en Python y marcadores de conflicto Git.</p>
+            <div id="auditDiagList" class="overflow-y-auto space-y-2 text-xs font-mono max-h-60"></div>
+          </div>
         </div>
       </div>
 
@@ -1328,6 +1348,106 @@ for chunk in response:
       </div>
     </div>
 
+    <!-- ======================================================================= -->
+    <!-- VIEW: INTERACTIVE WEB TERMINAL & SHELL -->
+    <!-- ======================================================================= -->
+    <div id="viewTerminal" class="hidden flex-1 flex flex-col min-h-0 overflow-hidden p-3 sm:p-5 max-w-7xl w-full mx-auto space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div>
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+            <i data-lucide="terminal" class="w-5 h-5 text-emerald-400"></i>
+            Terminal Web Interactiva
+            <span id="terminalCwdBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-normal">CWD: ./</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Ejecuta comandos de consola en el entorno del proyecto activo con streaming de salida en tiempo real.</p>
+        </div>
+
+        <!-- Quick Action Preset Buttons -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-wrap">
+          <button onclick="runTerminalPreset('npm run check')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors cursor-pointer">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i>
+            npm check
+          </button>
+          <button onclick="runTerminalPreset('npm run build')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors cursor-pointer">
+            <i data-lucide="package" class="w-3.5 h-3.5 text-cyan-400"></i>
+            npm build
+          </button>
+          <button onclick="runTerminalPreset('git status')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors cursor-pointer">
+            <i data-lucide="git-commit" class="w-3.5 h-3.5 text-amber-400"></i>
+            git status
+          </button>
+          <button onclick="runTerminalPreset('git log -n 5 --oneline')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors cursor-pointer">
+            <i data-lucide="git-pull-request" class="w-3.5 h-3.5 text-purple-400"></i>
+            git log
+          </button>
+          <button onclick="clearTerminalScreen()" class="p-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer" title="Limpiar pantalla">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Terminal Output Screen -->
+      <div id="terminalScreen" class="flex-1 bg-surface-950 border border-surface-750 rounded-2xl p-3 sm:p-4 overflow-y-auto font-mono text-xs text-slate-200 space-y-1 select-text min-h-[320px] shadow-2xl leading-relaxed">
+        <div class="text-slate-500 italic pb-2 border-b border-surface-800">Andy Agent Web Terminal v0.8 • Escribe un comando abajo o selecciona un preset rápido.</div>
+      </div>
+
+      <!-- Terminal Input Line -->
+      <div class="bg-surface-850 border border-surface-700 rounded-xl p-2 flex items-center gap-2 shadow-lg shrink-0">
+        <span class="text-emerald-400 font-mono font-bold text-xs pl-2 select-none">$</span>
+        <input id="terminalCommandInput" type="text" placeholder="Escribe un comando de consola (ej: npm run build, dir, git status)..." onkeydown="handleTerminalKeyDown(event)" autocomplete="off" class="flex-1 bg-transparent font-mono text-xs text-white placeholder-slate-500 focus:outline-none">
+        <button id="terminalRunBtn" onclick="submitTerminalCommand()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all cursor-pointer">
+          <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+          Ejecutar
+        </button>
+      </div>
+    </div>
+
+    <!-- CYCLE AUTO-FIX REFACTOR MODAL -->
+    <div id="cycleAutoFixModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+          <h3 class="font-bold text-sm text-white flex items-center gap-2">
+            <i data-lucide="wrench" class="w-4 h-4 text-rose-400"></i>
+            Auto-Fix: Propuesta de Refactorización de Ciclo
+          </h3>
+          <button onclick="closeCycleAutoFixModal()" class="text-slate-400 hover:text-white p-1 rounded">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Estrategia Recomendada</label>
+            <div id="autoFixStrategy" class="font-semibold text-white bg-surface-800 p-2.5 rounded-xl border border-surface-700 mt-1"></div>
+          </div>
+
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Justificación Arquitectónica</label>
+            <p id="autoFixRationale" class="text-slate-300 leading-relaxed bg-surface-800/60 p-2.5 rounded-xl border border-surface-700 mt-1"></p>
+          </div>
+
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Pasos de Refactorización</label>
+            <div id="autoFixSteps" class="space-y-1 mt-1 font-mono text-[11px] bg-surface-900 p-3 rounded-xl border border-surface-750 text-cyan-300"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-surface-750">
+          <button onclick="copyAutoFixPlan()" class="px-3 py-2 rounded-xl bg-surface-750 hover:bg-surface-700 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            Copiar Pasos
+          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="closeCycleAutoFixModal()" class="px-3 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cerrar</button>
+            <button onclick="sendAutoFixToChat()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md shadow-brand-600/20 flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+              Refactorizar con Andy
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- CREATE API KEY MODAL -->
     <div id="createApiKeyModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
@@ -1379,6 +1499,10 @@ for chunk in response:
         <button id="tabChatBtn" onclick="switchView('chat')" class="px-3 py-1.5 rounded-xl font-semibold text-xs text-white bg-brand-600 shadow-md shadow-brand-500/25 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
           <i data-lucide="message-square" class="w-4 h-4"></i>
           <span>Chat & RLM</span>
+        </button>
+        <button id="tabTerminalBtn" onclick="switchView('terminal')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+          <span>Terminal</span>
         </button>
         <button id="tabProvidersBtn" onclick="switchView('providers')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
           <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
@@ -2128,6 +2252,7 @@ for chunk in response:
     // --- NAVIGATION & VIEWS ---
     const TAB_BUTTON_MAP = {
       chat: 'tabChatBtn',
+      terminal: 'tabTerminalBtn',
       providers: 'tabProvidersBtn',
       graft: 'tabGraftBtn',
       files: 'tabFilesBtn',
@@ -2200,12 +2325,12 @@ for chunk in response:
     }
 
     function switchView(view) {
-      ['viewChat', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys', 'viewUsers'].forEach(v => {
+      ['viewChat', 'viewTerminal', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys', 'viewUsers'].forEach(v => {
         const el = document.getElementById(v);
         if (el) el.classList.add('hidden');
       });
 
-      ['tabChatBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn', 'tabApiKeysBtn', 'tabUsersBtn'].forEach(t => {
+      ['tabChatBtn', 'tabTerminalBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn', 'tabApiKeysBtn', 'tabUsersBtn'].forEach(t => {
         const el = document.getElementById(t);
         if (el) el.className = 'px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0';
       });
@@ -2221,6 +2346,11 @@ for chunk in response:
 
       if (view === 'chat') {
         document.getElementById('viewChat').classList.remove('hidden');
+      } else if (view === 'terminal') {
+        document.getElementById('viewTerminal').classList.remove('hidden');
+        updateTerminalCwdBadge();
+        const input = document.getElementById('terminalCommandInput');
+        if (input) input.focus();
       } else if (view === 'providers') {
         document.getElementById('viewProviders').classList.remove('hidden');
         fetchProviders();
@@ -4053,16 +4183,23 @@ for chunk in response:
 
         // Render cycles
         if (cyclesBadge) cyclesBadge.innerText = \`\${cyclesRes.total || 0} ciclos\`;
+        graftState.cachedCycles = cyclesRes.cycles || [];
         if (cyclesListEl) {
           cyclesListEl.innerHTML = '';
           if (cyclesRes.cycles && cyclesRes.cycles.length > 0) {
             cyclesRes.cycles.forEach((c, idx) => {
               const div = document.createElement('div');
-              div.className = 'p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-200 text-xs space-y-1.5';
+              div.className = 'p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-200 text-xs space-y-2';
               div.innerHTML = \`
-                <div class="font-bold flex items-center gap-1.5">
-                  <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-400"></i>
-                  Ciclo #\${idx + 1} (Longitud: \${c.length})
+                <div class="flex items-center justify-between">
+                  <div class="font-bold flex items-center gap-1.5">
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-400"></i>
+                    Ciclo #\${idx + 1} (Longitud: \${c.length})
+                  </div>
+                  <button onclick="openCycleAutoFixModal(\${idx})" class="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white font-medium text-[11px] flex items-center gap-1 shadow-sm transition-colors cursor-pointer">
+                    <i data-lucide="wrench" class="w-3 h-3"></i>
+                    Auto-Fix
+                  </button>
                 </div>
                 <div class="text-[11px] text-slate-300 break-all leading-relaxed">\${c.cycle.map(p => \`<span class="px-1.5 py-0.5 rounded bg-surface-800 text-white font-mono">\${p}</span>\`).join(' ➔ ')}</div>
               \`;
@@ -4094,11 +4231,275 @@ for chunk in response:
             deadCodeListEl.innerHTML = '<div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-center">✅ No se detectaron símbolos exportados sin uso.</div>';
           }
         }
+
+        // Load Static Diagnostics
+        loadGraftDiagnostics();
+
         lucide.createIcons();
       } catch (err) {
         console.error('Error loading audit data:', err);
       }
     }
+
+    // --- STATIC DIAGNOSTICS LOADER ---
+    async function loadGraftDiagnostics() {
+      const diagListEl = document.getElementById('auditDiagList');
+      const errBadge = document.getElementById('auditDiagErrorsBadge');
+      const warnBadge = document.getElementById('auditDiagWarningsBadge');
+
+      if (diagListEl) diagListEl.innerHTML = '<div class="p-3 text-slate-400">Analizando sintaxis y estructura estática...</div>';
+
+      try {
+        const res = await fetch(\`/v1/graft/diagnostics?projectId=\${encodeURIComponent(currentProjectId)}\`);
+        const data = await res.json();
+
+        if (errBadge) errBadge.innerText = \`\${data.errorCount || 0} errores\`;
+        if (warnBadge) warnBadge.innerText = \`\${data.warningCount || 0} advertencias\`;
+
+        if (diagListEl) {
+          diagListEl.innerHTML = '';
+          if (data.diagnostics && data.diagnostics.length > 0) {
+            data.diagnostics.slice(0, 40).forEach(d => {
+              const isErr = d.severity === 'error';
+              const div = document.createElement('div');
+              div.className = \`p-2 rounded-lg \${isErr ? 'bg-rose-500/10 border-rose-500/30 text-rose-200' : 'bg-amber-500/10 border-amber-500/30 text-amber-200'} border text-xs flex items-start justify-between gap-2\`;
+              div.innerHTML = \`
+                <div class="space-y-0.5 min-w-0">
+                  <div class="flex items-center gap-1.5 font-bold">
+                    <span class="px-1.5 py-0.2 rounded text-[9px] \${isErr ? 'bg-rose-500/30 text-rose-300' : 'bg-amber-500/30 text-amber-300'} uppercase font-mono">\${d.severity}</span>
+                    <span class="text-white truncate">\${d.file}:L\${d.line}:C\${d.column}</span>
+                  </div>
+                  <div class="text-slate-300 text-[11px]">\${d.message}</div>
+                  \${d.fixSuggestion ? \`<div class="text-[10px] text-emerald-300 italic font-sans">💡 Sugerencia: \${d.fixSuggestion}</div>\` : ''}
+                </div>
+                <button onclick="document.getElementById('graftSkeletonInput').value='\${d.file}'; switchGraftSubTab('tools'); fetchGraftSkeleton();" class="px-2 py-1 rounded bg-surface-800 hover:bg-surface-700 text-[10px] text-slate-200 shrink-0 font-sans">Inspeccionar</button>
+              \`;
+              diagListEl.appendChild(div);
+            });
+          } else {
+            diagListEl.innerHTML = \`<div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-center font-sans text-xs">✅ Todo limpio (\${data.totalFilesChecked} archivos analizados). Cero errores de sintaxis o llaves desbalanceadas.</div>\`;
+          }
+        }
+        lucide.createIcons();
+      } catch (e) {
+        if (diagListEl) diagListEl.innerHTML = '<div class="p-3 text-rose-400">Error al escanear diagnósticos: ' + e.message + '</div>';
+      }
+    }
+
+    // --- AUTO-FIX CYCLE MODAL LOGIC ---
+    let activeCycleProposal = null;
+
+    async function openCycleAutoFixModal(cycleIdx) {
+      const cycleObj = (graftState.cachedCycles || [])[cycleIdx];
+      if (!cycleObj) return;
+
+      const modal = document.getElementById('cycleAutoFixModal');
+      const stratEl = document.getElementById('autoFixStrategy');
+      const ratEl = document.getElementById('autoFixRationale');
+      const stepsEl = document.getElementById('autoFixSteps');
+
+      stratEl.innerText = 'Analizando estrategia de desacoplamiento...';
+      ratEl.innerText = '';
+      stepsEl.innerHTML = '';
+      modal.classList.remove('hidden');
+
+      try {
+        const res = await fetch(\`/v1/graft/fix-cycle?projectId=\${encodeURIComponent(currentProjectId)}\`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cycle: cycleObj.cycle })
+        });
+        const proposal = await res.json();
+        activeCycleProposal = proposal;
+
+        stratEl.innerText = proposal.strategy || 'Inversión de Dependencias (DIP)';
+        ratEl.innerText = proposal.rationale || '';
+        stepsEl.innerHTML = (proposal.steps || []).map(s => \`<div class="p-1">\${s}</div>\`).join('');
+      } catch (err) {
+        stratEl.innerText = 'Error al generar propuesta: ' + err.message;
+      }
+      lucide.createIcons();
+    }
+
+    function closeCycleAutoFixModal() {
+      document.getElementById('cycleAutoFixModal').classList.add('hidden');
+    }
+
+    function copyAutoFixPlan() {
+      if (!activeCycleProposal) return;
+      const text = \`Estrategia: \${activeCycleProposal.strategy}\\n\\n\${activeCycleProposal.rationale}\\n\\nPasos:\\n\${(activeCycleProposal.steps || []).join('\\n')}\`;
+      copyToClipboard(text);
+    }
+
+    function sendAutoFixToChat() {
+      if (!activeCycleProposal) return;
+      closeCycleAutoFixModal();
+      switchView('chat');
+      const prompt = \`Andy, por favor resuelve la siguiente dependencia circular siguiendo esta estrategia:\\n\\n**Estrategia:** \${activeCycleProposal.strategy}\\n**Justificación:** \${activeCycleProposal.rationale}\\n\\n**Pasos recomendados:**\\n\${(activeCycleProposal.steps || []).join('\\n')}\\n\\nEjecuta los cambios necesarios directamente y verifica que el ciclo quede eliminado.\`;
+      const input = document.getElementById('promptInput');
+      if (input) {
+        input.value = prompt;
+        autoExpandTextarea(input);
+        input.focus();
+      }
+    }
+
+    // --- INTERACTIVE WEB TERMINAL CLIENT ---
+    const terminalState = {
+      history: [],
+      historyIndex: -1,
+      isRunning: false
+    };
+
+    function updateTerminalCwdBadge() {
+      const badge = document.getElementById('terminalCwdBadge');
+      if (badge && activeProjectData) {
+        badge.innerText = \`CWD: \${activeProjectData.path || './'}\`;
+      }
+    }
+
+    function runTerminalPreset(command) {
+      const input = document.getElementById('terminalCommandInput');
+      if (input) input.value = command;
+      submitTerminalCommand();
+    }
+
+    function clearTerminalScreen() {
+      const screen = document.getElementById('terminalScreen');
+      if (screen) {
+        screen.innerHTML = '<div class="text-slate-500 italic pb-2 border-b border-surface-800">Andy Agent Web Terminal v0.8 • Pantalla limpia.</div>';
+      }
+    }
+
+    function handleTerminalKeyDown(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitTerminalCommand();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (terminalState.history.length > 0) {
+          if (terminalState.historyIndex < terminalState.history.length - 1) {
+            terminalState.historyIndex++;
+          }
+          const cmd = terminalState.history[terminalState.history.length - 1 - terminalState.historyIndex];
+          e.target.value = cmd || '';
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (terminalState.historyIndex > 0) {
+          terminalState.historyIndex--;
+          const cmd = terminalState.history[terminalState.history.length - 1 - terminalState.historyIndex];
+          e.target.value = cmd || '';
+        } else if (terminalState.historyIndex === 0) {
+          terminalState.historyIndex = -1;
+          e.target.value = '';
+        }
+      }
+    }
+
+    async function submitTerminalCommand() {
+      const input = document.getElementById('terminalCommandInput');
+      if (!input || terminalState.isRunning) return;
+      const command = input.value.trim();
+      if (!command) return;
+
+      terminalState.history.push(command);
+      terminalState.historyIndex = -1;
+      input.value = '';
+
+      const screen = document.getElementById('terminalScreen');
+      const runBtn = document.getElementById('terminalRunBtn');
+      terminalState.isRunning = true;
+      if (runBtn) {
+        runBtn.disabled = true;
+        runBtn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i> Ejecutando...';
+      }
+
+      // Append command entry to screen
+      const cmdBlock = document.createElement('div');
+      cmdBlock.className = 'pt-2 pb-1 border-t border-surface-800/80';
+      cmdBlock.innerHTML = \`
+        <div class="flex items-center gap-2 text-emerald-400 font-bold">
+          <span>$</span>
+          <span class="text-white">\${command}</span>
+          <span class="text-[10px] text-slate-500 font-normal ml-auto">\${new Date().toLocaleTimeString()}</span>
+        </div>
+        <pre class="mt-1 text-slate-300 font-mono text-[11px] whitespace-pre-wrap break-all leading-relaxed"></pre>
+        <div class="text-[10px] mt-1 font-sans text-slate-500 italic execution-status">Ejecutando proceso...</div>
+      \`;
+      screen.appendChild(cmdBlock);
+      screen.scrollTop = screen.scrollHeight;
+      lucide.createIcons();
+
+      const outputPre = cmdBlock.querySelector('pre');
+      const statusDiv = cmdBlock.querySelector('.execution-status');
+
+      try {
+        const response = await fetch('/api/terminal/exec', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            command,
+            projectId: currentProjectId,
+            stream: true
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          outputPre.innerText = errData.error || 'Error al ejecutar comando.';
+          statusDiv.innerHTML = '<span class="text-rose-400 font-semibold">✗ Error en la petición</span>';
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\\n\\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data:')) continue;
+            const dataStr = trimmed.slice(5).trim();
+            if (dataStr === '[DONE]') continue;
+
+            try {
+              const event = JSON.parse(dataStr);
+              if (event.type === 'stdout' || event.type === 'stderr') {
+                outputPre.innerText += event.text;
+                screen.scrollTop = screen.scrollHeight;
+              } else if (event.type === 'exit') {
+                const code = event.code;
+                statusDiv.innerHTML = code === 0
+                  ? '<span class="text-emerald-400 font-semibold">✓ Proceso finalizado con éxito (código 0)</span>'
+                  : \`<span class="text-rose-400 font-semibold">✗ Proceso terminó con código \${code}</span>\`;
+              } else if (event.type === 'error') {
+                outputPre.innerText += \`\\nError del sistema: \${event.error}\`;
+                statusDiv.innerHTML = '<span class="text-rose-400 font-semibold">✗ Error del sistema</span>';
+              }
+            } catch (e) {}
+          }
+        }
+      } catch (err) {
+        outputPre.innerText += \`\\nFallo de conexión: \${err.message}\`;
+        statusDiv.innerHTML = '<span class="text-rose-400 font-semibold">✗ Conexión perdida</span>';
+      } finally {
+        terminalState.isRunning = false;
+        if (runBtn) {
+          runBtn.disabled = false;
+          runBtn.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i> Ejecutar';
+          lucide.createIcons();
+        }
+        screen.scrollTop = screen.scrollHeight;
+      }
+    }
+
 
     // --- STRUCTURAL TOOLS CALLS ---
     async function fetchGraftMap() {

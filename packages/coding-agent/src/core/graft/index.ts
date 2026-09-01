@@ -1,21 +1,25 @@
 import { CodeGraph } from "./code-graph.js";
+import { type CycleFixProposal, DiagnosticsEngine, type DiagnosticsSummary } from "./diagnostics.js";
 import { type GraftGrepResult, graftGrep } from "./graft-grep.js";
 import { generateRepoMap, type RepoMapOptions } from "./repo-map.js";
 import { generateFileSkeleton, renderSkeleton, type SkeletonOptions } from "./skeleton.js";
 
 export * from "./ast-parser.js";
 export * from "./code-graph.js";
+export * from "./diagnostics.js";
 export * from "./graft-grep.js";
 export * from "./repo-map.js";
 export * from "./skeleton.js";
 
 export class GraftEngine {
 	private graph: CodeGraph;
+	private diagnosticsEngine: DiagnosticsEngine;
 	private rootDir: string;
 
 	constructor(rootDir: string = process.cwd()) {
 		this.rootDir = rootDir;
 		this.graph = new CodeGraph(rootDir);
+		this.diagnosticsEngine = new DiagnosticsEngine(rootDir);
 	}
 
 	public get cwd(): string {
@@ -72,6 +76,14 @@ export class GraftEngine {
 	public async callChain(symbolName: string) {
 		await this.graph.ensureIndexed();
 		return this.graph.getCallChain(symbolName);
+	}
+
+	public async diagnostics(): Promise<DiagnosticsSummary> {
+		return this.diagnosticsEngine.analyzeProject();
+	}
+
+	public suggestCycleFix(cycle: string[]): CycleFixProposal {
+		return this.diagnosticsEngine.suggestCycleFix(cycle);
 	}
 
 	public async grep(

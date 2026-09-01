@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -1566,6 +1567,98 @@ ${prompt || ""}`;
 						2,
 					),
 				);
+				return;
+			}
+
+			if (method === "GET" && (url === "/v1/graft/diagnostics" || url === "/api/graft/diagnostics")) {
+				this.addLog("TOOL", "Graft", `Running Project Diagnostics for "${graft.cwd}"`);
+				const diag = await graft.diagnostics();
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(diag, null, 2));
+				return;
+			}
+
+			if (method === "POST" && (url === "/v1/graft/fix-cycle" || url === "/api/graft/fix-cycle")) {
+				const body = await this.readJsonBody<any>(req);
+				const cycle = body?.cycle || [];
+				this.addLog("TOOL", "Graft", `Generating Fix for Cycle [${cycle.join(" -> ")}]`);
+				const proposal = graft.suggestCycleFix(cycle);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(proposal, null, 2));
+				return;
+			}
+
+			// --- 13. INTERACTIVE WEB TERMINAL API ---
+			if (method === "POST" && (url === "/api/terminal/exec" || url === "/v1/terminal/exec")) {
+				const body = await this.readJsonBody<any>(req);
+				const command = (body?.command || "").trim();
+				const targetProjectId = body?.projectId || parsedUrl.searchParams.get("projectId") || undefined;
+				const activeProj = this.pool.getProject(targetProjectId || "") || this.pool.getActiveProject();
+				const targetCwd = activeProj.path || this.pool.cwd;
+
+				if (!command) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Command is required" }));
+					return;
+				}
+
+				this.addLog("INFO", "Terminal", `Executing: "${command}" in "${targetCwd}"`);
+
+				const isWindows = process.platform === "win32";
+				const shell = isWindows ? "powershell.exe" : "/bin/bash";
+				const shellArgs = isWindows ? ["-NoProfile", "-Command", command] : ["-c", command];
+
+				if (body?.stream === true) {
+					res.writeHead(200, {
+						"Content-Type": "text/event-stream; charset=utf-8",
+						"Cache-Control": "no-cache, no-transform",
+						Connection: "keep-alive",
+					});
+
+					const proc = spawn(shell, shellArgs, { cwd: targetCwd, env: process.env });
+					proc.stdout.on("data", (chunk) => {
+						res.write(`data: ${JSON.stringify({ type: "stdout", text: chunk.toString("utf-8") })}\n\n`);
+					});
+					proc.stderr.on("data", (chunk) => {
+						res.write(`data: ${JSON.stringify({ type: "stderr", text: chunk.toString("utf-8") })}\n\n`);
+					});
+					proc.on("close", (code) => {
+						res.write(`data: ${JSON.stringify({ type: "exit", code: code ?? 0 })}\n\n`);
+						res.write("data: [DONE]\n\n");
+						res.end();
+					});
+					proc.on("error", (err) => {
+						res.write(`data: ${JSON.stringify({ type: "error", error: err.message })}\n\n`);
+						res.end();
+					});
+				} else {
+					const proc = spawn(shell, shellArgs, { cwd: targetCwd, env: process.env });
+					let stdout = "";
+					let stderr = "";
+					proc.stdout.on("data", (chunk) => {
+						stdout += chunk.toString("utf-8");
+					});
+					proc.stderr.on("data", (chunk) => {
+						stderr += chunk.toString("utf-8");
+					});
+					proc.on("close", (code) => {
+						res.writeHead(200, { "Content-Type": "application/json" });
+						res.end(
+							JSON.stringify({
+								command,
+								cwd: targetCwd,
+								exitCode: code ?? 0,
+								stdout,
+								stderr,
+								success: (code ?? 0) === 0,
+							}),
+						);
+					});
+					proc.on("error", (err) => {
+						res.writeHead(500, { "Content-Type": "application/json" });
+						res.end(JSON.stringify({ error: err.message }));
+					});
+				}
 				return;
 			}
 

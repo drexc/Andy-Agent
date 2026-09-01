@@ -53,6 +53,12 @@ const GraftCallChainSchema = Type.Object({
 	symbolName: Type.String({ description: "The symbol name to trace full upstream and downstream call chains for." }),
 });
 
+const GraftDiagnosticsSchema = Type.Object({});
+
+const GraftSuggestFixSchema = Type.Object({
+	cycle: Type.Array(Type.String(), { description: "Array of file paths forming a circular dependency loop." }),
+});
+
 export function createGraftTools(cwd: string = process.cwd()): ToolDefinition<any, any, any>[] {
 	const engine = getGraftEngine(cwd);
 
@@ -290,6 +296,57 @@ export function createGraftTools(cwd: string = process.cwd()): ToolDefinition<an
 		},
 	};
 
+	const graftDiagnosticsTool: ToolDefinition<typeof GraftDiagnosticsSchema, any> = {
+		name: "graft_diagnostics",
+		label: "graft_diagnostics",
+		description:
+			"Run static syntax and structural diagnostics across the codebase (TS/JS, Python, C#, Go, Rust, JSON).",
+		parameters: GraftDiagnosticsSchema,
+		execute: async () => {
+			const res = await engine.diagnostics();
+			const out = [
+				`🩺 **Static Code Diagnostics Summary**`,
+				`- **Files Checked**: ${res.totalFilesChecked}`,
+				`- **Errors**: ${res.errorCount}`,
+				`- **Warnings**: ${res.warningCount}`,
+				res.diagnostics.length > 0
+					? `\n**Top Issues:**\n` +
+						res.diagnostics
+							.slice(0, 15)
+							.map((d) => `  - [${d.severity.toUpperCase()}] \`${d.file}\`:L${d.line}: ${d.message}`)
+							.join("\n")
+					: `\n✅ No syntax errors or structural anomalies detected. Codebase is clean.`,
+			];
+
+			return {
+				content: [{ type: "text", text: out.join("\n") }],
+				details: res,
+			};
+		},
+	};
+
+	const graftSuggestFixTool: ToolDefinition<typeof GraftSuggestFixSchema, any> = {
+		name: "graft_suggest_fix",
+		label: "graft_suggest_fix",
+		description: "Generate an architectural refactoring plan to resolve a circular dependency loop safely.",
+		parameters: GraftSuggestFixSchema,
+		execute: async (_toolCallId, params) => {
+			const proposal = engine.suggestCycleFix(params.cycle);
+			const out = [
+				`🛠️ **Refactoring Proposal for Cycle**`,
+				`**Strategy:** ${proposal.strategy}`,
+				`**Rationale:** ${proposal.rationale}`,
+				`\n**Actionable Steps:**`,
+				...proposal.steps.map((s) => `- ${s}`),
+			];
+
+			return {
+				content: [{ type: "text", text: out.join("\n") }],
+				details: proposal,
+			};
+		},
+	};
+
 	return [
 		graftMapTool,
 		graftSkeletonTool,
@@ -301,5 +358,7 @@ export function createGraftTools(cwd: string = process.cwd()): ToolDefinition<an
 		graftCyclesTool,
 		graftDeadCodeTool,
 		graftCallChainTool,
+		graftDiagnosticsTool,
+		graftSuggestFixTool,
 	];
 }

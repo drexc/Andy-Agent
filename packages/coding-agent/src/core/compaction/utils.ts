@@ -56,15 +56,18 @@ export function computeFileLists(fileOps: FileOperations): { readFiles: string[]
 }
 
 /**
- * Format file operations as XML tags for summary.
+ * Format file operations and code graph context as XML tags for summary.
  */
-export function formatFileOperations(readFiles: string[], modifiedFiles: string[]): string {
+export function formatFileOperations(readFiles: string[], modifiedFiles: string[], graphContext?: string): string {
 	const sections: string[] = [];
 	if (readFiles.length > 0) {
 		sections.push(`<read-files>\n${readFiles.join("\n")}\n</read-files>`);
 	}
 	if (modifiedFiles.length > 0) {
 		sections.push(`<modified-files>\n${modifiedFiles.join("\n")}\n</modified-files>`);
+	}
+	if (graphContext && graphContext.trim()) {
+		sections.push(`<code-graph-context>\n${graphContext.trim()}\n</code-graph-context>`);
 	}
 	if (sections.length === 0) return "";
 	return `\n\n${sections.join("\n\n")}`;
@@ -144,6 +147,10 @@ export function serializeConversation(messages: Message[]): string {
 
 	return parts.join("\n\n");
 }
-export const SUMMARIZATION_SYSTEM_PROMPT = `You are a context summarization assistant. Your task is to read a conversation between a user and an AI coding assistant, then produce a structured summary following the exact format specified.
+export const SUMMARIZATION_SYSTEM_PROMPT = `You are an expert context summarization and graph-compaction assistant for Andy Agent. Your task is to read a conversation between a user and an AI coding assistant, then produce a dense, highly technical, and structured summary.
 
-Do NOT continue the conversation. Do NOT respond to any questions in the conversation. ONLY output the structured summary.`;
+CRITICAL PRESERVATION RULES:
+1. Preserve all key technical decisions, user constraints, and exact file paths.
+2. Explicitly note modified functions, classes, interfaces, and exported symbols.
+3. Keep track of current task status, open problems, and pending next steps.
+4. Do NOT continue the conversation. Do NOT respond to questions. ONLY output the structured summary.`;
