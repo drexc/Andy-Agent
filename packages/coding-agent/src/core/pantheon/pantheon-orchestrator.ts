@@ -4,6 +4,8 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import path from "node:path";
 import { GraftEngine } from "../graft/index.js";
 import { PantheonRegistry } from "./pantheon-registry.js";
 import type {
@@ -13,6 +15,22 @@ import type {
 	PantheonSquad,
 	PantheonTaskDelegation,
 } from "./pantheon-types.js";
+
+export interface PantheonProjectInfo {
+	id?: string;
+	name?: string;
+	path?: string;
+	description?: string;
+}
+
+export interface PantheonProjectContext {
+	name: string;
+	path: string;
+	description?: string;
+	fileList: string;
+	memory?: string;
+	agentsMd?: string;
+}
 
 export interface PantheonExecutionEvent {
 	type: "agent_start" | "delta" | "agent_finish" | "delegation" | "graft_event" | "error" | "done";
@@ -37,9 +55,9 @@ export class PantheonOrchestrator {
 	private readonly roomStates: Map<string, PantheonRoomState> = new Map();
 
 	constructor(cwd: string = process.cwd()) {
-		this.cwd = cwd;
-		this.registry = new PantheonRegistry(cwd);
-		this.graft = new GraftEngine(cwd);
+		this.cwd = path.resolve(cwd);
+		this.registry = new PantheonRegistry(this.cwd);
+		this.graft = new GraftEngine(this.cwd);
 	}
 
 	public getRegistry(): PantheonRegistry {
@@ -68,6 +86,7 @@ export class PantheonOrchestrator {
 		onEvent: PantheonEventCallback,
 		options: {
 			targetAgentId?: string;
+			projectInfo?: PantheonProjectInfo;
 			llmCaller?: (messages: any[], model: string, temp: number) => Promise<AsyncIterable<string> | string>;
 		} = {},
 	): Promise<PantheonMessage[]> {
@@ -103,12 +122,16 @@ export class PantheonOrchestrator {
 		const activeAgentId = targetAgentId || squad.leaderId || "hermes";
 		const primaryAgent = this.registry.getAgent(activeAgentId) || this.registry.getAgents()[0];
 
+		// Load Project Context (MEMORY.md, AGENTS.md, Files, CWD)
+		const projectContext = this.loadProjectContext(options.projectInfo);
+
 		// Collect Graft Structural Context
 		let graftContextData: any;
 		try {
 			const graftMap = await this.graft.map();
 			const diags = await this.graft.diagnostics();
 			graftContextData = {
+				map: graftMap.slice(0, 3000),
 				mapSummary: graftMap.slice(0, 500),
 				diagnosticsCount: diags.errorCount + diags.warningCount,
 			};
@@ -120,7 +143,7 @@ export class PantheonOrchestrator {
 		} catch {}
 
 		// Build Context Prompt for the primary agent
-		const systemPrompt = this.buildAgentSystemPrompt(primaryAgent, squad, graftContextData);
+		const systemPrompt = this.buildAgentSystemPrompt(primaryAgent, squad, graftContextData, projectContext);
 
 		// Format conversation history
 		const historyContext = roomState.messages.slice(-8).map((m) => ({
@@ -162,7 +185,7 @@ export class PantheonOrchestrator {
 			}
 		} else {
 			// Fallback simulated multi-agent synthesis
-			fullResponseText = `[${primaryAgent.name}] He analizado la solicitud "${userPrompt}". El escuadrón ${squad.name} está listo para actuar con soporte de Graft y RLM.`;
+			fullResponseText = `[${primaryAgent.name}] He analizado la solicitud "${userPrompt}". El escuadrón ${squad.name} está listo para actuar con soporte de Graft y RLM sobre el proyecto activo "${projectContext.name}".`;
 			await onEvent({ type: "delta", agentId: primaryAgent.id, delta: fullResponseText });
 		}
 
@@ -201,12 +224,144 @@ export class PantheonOrchestrator {
 		return [userMsg, agentMsg];
 	}
 
-	private buildAgentSystemPrompt(agent: PantheonAgentProfile, squad: PantheonSquad, graftContext?: any): string {
+	private loadProjectContext(projectInfo?: PantheonProjectInfo): PantheonProjectContext {
+		const targetCwd = projectInfo?.path ? path.resolve(projectInfo.path) : this.cwd;
+		const name = projectInfo?.name || path.basename(targetCwd) || "Proyecto Principal";
+		const description = projectInfo?.description;
+
+		// 1. Read MEMORY.md
+		let memory: string | undefined;
+		const memoryCandidates = [
+			path.join(targetCwd, "MEMORY.md"),
+			path.join(targetCwd, ".andy", "MEMORY.md"),
+			path.join(targetCwd, ".prime", "MEMORY.md"),
+		];
+		for (const memPath of memoryCandidates) {
+			if (existsSync(memPath)) {
+				try {
+					memory = readFileSync(memPath, "utf-8").trim();
+					if (memory.length > 2500) {
+						memory = `${memory.slice(0, 2500)}\n... [truncado por longitud]`;
+					}
+					break;
+				} catch {}
+			}
+		}
+
+		// 2. Read AGENTS.md
+		let agentsMd: string | undefined;
+		const agentsCandidates = [
+			path.join(targetCwd, "AGENTS.md"),
+			path.join(targetCwd, ".andy", "AGENTS.md"),
+			path.join(targetCwd, ".prime", "AGENTS.md"),
+		];
+		for (const agPath of agentsCandidates) {
+			if (existsSync(agPath)) {
+				try {
+					agentsMd = readFileSync(agPath, "utf-8").trim();
+					if (agentsMd.length > 2500) {
+						agentsMd = `${agentsMd.slice(0, 2500)}\n... [truncado por longitud]`;
+					}
+					break;
+				} catch {}
+			}
+		}
+
+		// 3. Scan workspace file structure
+		let fileList = "";
+		try {
+			const scanned: string[] = [];
+			const scanDir = (dir: string, depth = 0) => {
+				if (depth > 2 || scanned.length >= 40) return;
+				const entries = readdirSync(dir);
+				for (const entry of entries) {
+					if (
+						entry.startsWith(".") ||
+						entry === "node_modules" ||
+						entry === "dist" ||
+						entry === "build" ||
+						entry === "bin" ||
+						entry === "obj" ||
+						entry === "coverage"
+					) {
+						continue;
+					}
+					const fullPath = path.join(dir, entry);
+					const relPath = path.relative(targetCwd, fullPath).replace(/\\/g, "/");
+					try {
+						const stat = statSync(fullPath);
+						if (stat.isDirectory()) {
+							scanned.push(`📁 ${relPath}/`);
+							scanDir(fullPath, depth + 1);
+						} else {
+							scanned.push(`📄 ${relPath}`);
+						}
+					} catch {}
+				}
+			};
+
+			scanDir(targetCwd);
+			fileList = scanned.slice(0, 40).join("\n");
+			if (scanned.length === 0) {
+				fileList = "(Directorio vacío o recién inicializado)";
+			}
+		} catch {
+			fileList = "(No fue posible escanear los archivos del directorio)";
+		}
+
+		return {
+			name,
+			path: targetCwd.replace(/\\/g, "/"),
+			description,
+			fileList,
+			memory,
+			agentsMd,
+		};
+	}
+
+	private buildAgentSystemPrompt(
+		agent: PantheonAgentProfile,
+		squad: PantheonSquad,
+		graftContext?: any,
+		projectContext?: PantheonProjectContext,
+	): string {
 		const members = this.registry
 			.getAgents()
 			.filter((a) => squad.memberIds.includes(a.id))
 			.map((a) => `- **@${a.name}** (${a.role}): ${a.systemPrompt.slice(0, 100)}...`)
 			.join("\n");
+
+		const projectSection = projectContext
+			? `\n\n# ESPACIO DE TRABAJO Y PROYECTO ACTIVO
+- **Nombre del Proyecto**: ${projectContext.name}
+- **Directorio Raíz / Workspace CWD**: ${projectContext.path}
+${projectContext.description ? `- **Propósito/Descripción**: ${projectContext.description}\n` : ""}
+## Inventario de Archivos del Proyecto:
+\`\`\`
+${projectContext.fileList}
+\`\`\`
+${projectContext.memory ? `\n## Memoria Persistente del Proyecto (MEMORY.md):\n${projectContext.memory}\n` : ""}
+${projectContext.agentsMd ? `\n## Reglas y Directivas del Proyecto (AGENTS.md):\n${projectContext.agentsMd}\n` : ""}`
+			: `\n\n# ESPACIO DE TRABAJO
+- **Directorio Raíz (CWD)**: ${this.cwd.replace(/\\/g, "/")}`;
+
+		const graftSection = graftContext?.map
+			? `\n\n# GRAFT KNOWLEDGE GRAPH (ARQUITECTURA Y AST)
+\`\`\`
+${graftContext.map}
+\`\`\`
+- Diagnósticos estáticos pendientes: ${graftContext.diagnosticsCount || 0}`
+			: "";
+
+		const operationalRules = `\n\n# REGLAS CRÍTICAS DE EJECUCIÓN DEL PANTHEON
+1. **Conocimiento del Proyecto**: Ya estás situado dentro del espacio de trabajo del proyecto activo arriba especificado. Tienes acceso completo a la estructura de archivos, dependencias y reglas de memoria.
+2. **NUNCA PREGUNTES POR EL PROYECTO O RUTA**: No le preguntes al usuario "¿cuál es el proyecto?", "¿dónde está el código?" ni pidas que te indiquen rutas o módulos. Actúa directamente sobre el proyecto activo aquí expuesto.
+3. **Especialización Inmediata**:
+   - Si eres **@Pythia**: Realiza la investigación profunda RLM y síntesis analizando los módulos, dependencias (ej. package.json, csproj, imports) y arquitectura presentes en el proyecto activo.
+   - Si eres **@Athena**: Diseña la arquitectura, interfaces y evalúa el impacto estructural (Graft blast radius) sobre el proyecto activo.
+   - Si eres **@Hephaestus**: Desarrolla el código, refactoriza y edita los archivos directamente respetando la modularidad.
+   - Si eres **@Argos**: Audita el código, diagnostica errores y valida la calidad estática y dependencias.
+   - Si eres **@Hermes**: Orquesta el plan global y coordina las tareas entre los especialistas.`;
 
 		return `${agent.systemPrompt}
 
@@ -215,8 +370,7 @@ Otros agentes en tu escuadrón:
 ${members}
 
 Puedes delegar tareas mencionando a otro agente con @Nombre y describiendo la subtarea exacta que debe realizar.
-
-${graftContext ? `\n[Graft Context]\n- Mapa del proyecto activo disponible.\n- Diagnósticos de código pendientes: ${graftContext.diagnosticsCount || 0}` : ""}`;
+${projectSection}${graftSection}${operationalRules}`;
 	}
 
 	private detectPeerDelegations(text: string, fromAgentId: string): PantheonTaskDelegation[] {

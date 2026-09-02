@@ -1788,7 +1788,6 @@ ${prompt || ""}`;
 
 			// --- 15. PANTHEON MULTI-AGENT API ---
 			const pantheonRegistry = this.pool.getPantheonRegistry(targetProjectId);
-			const pantheonOrchestrator = this.pool.getPantheonOrchestrator(targetProjectId);
 
 			if (method === "GET" && (url === "/api/pantheon/agents" || url === "/v1/pantheon/agents")) {
 				const agents = pantheonRegistry.getAgents();
@@ -1850,6 +1849,9 @@ ${prompt || ""}`;
 				const squadId = body?.squadId || "fullstack-squad";
 				const prompt = (body?.prompt || "").trim();
 				const targetAgentId = body?.targetAgentId || undefined;
+				const projectId = body?.projectId || parsedUrl.searchParams.get("projectId") || undefined;
+				const activeProj = this.pool.getProject(projectId || "") || this.pool.getActiveProject();
+				const pantheonOrchestrator = this.pool.getPantheonOrchestrator(activeProj.id);
 
 				if (!prompt) {
 					res.writeHead(400, { "Content-Type": "application/json" });
@@ -1857,7 +1859,11 @@ ${prompt || ""}`;
 					return;
 				}
 
-				this.addLog("INFO", "Pantheon", `Squad "${squadId}" Turn Initiated: "${prompt.slice(0, 80)}..."`);
+				this.addLog(
+					"INFO",
+					"Pantheon",
+					`Squad "${squadId}" Turn Initiated on project "${activeProj.name}" (${activeProj.path}): "${prompt.slice(0, 80)}..."`,
+				);
 
 				res.writeHead(200, {
 					"Content-Type": "text/event-stream; charset=utf-8",
@@ -1908,7 +1914,16 @@ ${prompt || ""}`;
 					async (event) => {
 						res.write(`data: ${JSON.stringify(event)}\n\n`);
 					},
-					{ targetAgentId, llmCaller },
+					{
+						targetAgentId,
+						llmCaller,
+						projectInfo: {
+							id: activeProj.id,
+							name: activeProj.name,
+							path: activeProj.path,
+							description: activeProj.description,
+						},
+					},
 				);
 
 				res.write("data: [DONE]\n\n");

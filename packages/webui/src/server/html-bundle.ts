@@ -2634,6 +2634,7 @@ for chunk in response:
           fetchSkillsAndPrompts();
           refreshWorkspaceFiles();
           fetchGraftMap();
+          loadPantheonData();
         } else {
           alert('Error al cambiar de proyecto: ' + (data.error || 'Desconocido'));
         }
