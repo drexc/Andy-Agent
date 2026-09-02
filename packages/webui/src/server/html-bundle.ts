@@ -1813,9 +1813,38 @@ for chunk in response:
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-slate-300 font-medium mb-1">Modelo de IA Asignado</label>
-              <input id="pAgentModel" type="text" placeholder="auto/best-coding, gpt-4o, claude-3-5-sonnet..." value="auto/best-coding" required class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-purple-500">
+            <div class="relative">
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-slate-300 font-medium">Modelo de IA Asignado</label>
+                <span id="pAgentActiveProviderBadge" class="text-[10px] text-purple-300 font-mono">Auto</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <div class="relative flex-1">
+                  <input id="pAgentModel" list="pAgentModelDatalist" type="text" placeholder="Escribe para buscar o selecciona..." value="auto/best-coding" required class="w-full bg-surface-750 border border-surface-700 rounded-xl pl-3 pr-8 py-2 text-white font-mono text-xs focus:outline-none focus:border-purple-500">
+                  <datalist id="pAgentModelDatalist"></datalist>
+                  <button type="button" onclick="togglePantheonModelDropdown()" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1 rounded cursor-pointer" title="Ver catálogo de modelos">
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+                <button type="button" onclick="togglePantheonModelDropdown()" class="px-2.5 py-2 rounded-xl bg-surface-800 hover:bg-surface-750 border border-surface-700 text-purple-300 hover:text-white text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0" title="Explorar lista de modelos">
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5 text-purple-400"></i>
+                  <span>Modelos</span>
+                </button>
+              </div>
+
+              <!-- Searchable Dropdown Popover Container -->
+              <div id="pantheonModelDropdownMenu" class="hidden absolute left-0 right-0 top-full mt-1.5 z-50 bg-surface-850 border border-surface-700 rounded-2xl shadow-2xl p-2.5 space-y-2 max-h-64 flex flex-col">
+                <div class="flex items-center justify-between pb-1 border-b border-surface-750 text-[11px]">
+                  <span class="text-slate-300 font-medium">Catálogo de Modelos</span>
+                  <span id="pantheonModelCountBadge" class="text-[10px] text-purple-300 font-mono">0 modelos</span>
+                </div>
+                <div>
+                  <input id="pantheonModelSearchInput" type="text" placeholder="Buscar modelo o proveedor..." oninput="filterPantheonModelList(this.value)" class="w-full bg-surface-750 border border-surface-700 rounded-lg px-2.5 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-purple-500">
+                </div>
+                <div id="pantheonModelOptionsList" class="overflow-y-auto max-h-40 space-y-1 text-xs no-scrollbar pr-0.5">
+                  <!-- Injected via JS -->
+                </div>
+              </div>
             </div>
             <div>
               <label class="block text-slate-300 font-medium mb-1">Temperatura: <span id="pAgentTempLabel" class="font-mono text-purple-300">0.2</span></label>
@@ -5474,6 +5503,167 @@ for chunk in response:
       lucide.createIcons();
     }
 
+    function populatePantheonModelDatalist() {
+      const datalist = document.getElementById('pAgentModelDatalist');
+      const optionsContainer = document.getElementById('pantheonModelOptionsList');
+      const badge = document.getElementById('pAgentActiveProviderBadge');
+      const countBadge = document.getElementById('pantheonModelCountBadge');
+      if (!datalist) return;
+
+      const activeCat = providerCatalogs.find(c => c.providerId === currentProviderId) || { providerName: currentProviderId || 'Omniroute' };
+      if (badge) {
+        badge.innerText = \`Activo: \${activeCat.providerName.split(' ')[0]}\`;
+      }
+
+      datalist.innerHTML = '';
+      if (optionsContainer) optionsContainer.innerHTML = '';
+
+      let allModels = [];
+
+      // 1. Put Active Provider models first
+      if (activeCat && Array.isArray(activeCat.models)) {
+        activeCat.models.forEach(m => {
+          allModels.push({
+            model: m,
+            providerId: activeCat.providerId,
+            providerName: activeCat.providerName,
+            isActiveProvider: true
+          });
+        });
+      }
+
+      // 2. Add other providers
+      providerCatalogs.forEach(cat => {
+        if (cat.providerId === currentProviderId) return;
+        (cat.models || []).forEach(m => {
+          allModels.push({
+            model: m,
+            providerId: cat.providerId,
+            providerName: cat.providerName,
+            isActiveProvider: false
+          });
+        });
+      });
+
+      // Fallback defaults if catalogs not loaded
+      if (allModels.length === 0) {
+        ['auto/best-coding', 'gpt-4o', 'claude-3-5-sonnet', 'gemini-2.0-flash', 'deepseek-coder'].forEach(m => {
+          allModels.push({
+            model: m,
+            providerId: 'omniroute',
+            providerName: 'Omniroute',
+            isActiveProvider: true
+          });
+        });
+      }
+
+      if (countBadge) countBadge.innerText = \`\${allModels.length} modelos\`;
+
+      // Populate native datalist
+      allModels.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.model;
+        opt.label = \`\${item.providerName}\${item.isActiveProvider ? ' ★ (Activo)' : ''}\`;
+        datalist.appendChild(opt);
+      });
+
+      // Populate interactive options list
+      if (optionsContainer) {
+        renderPantheonModelOptionItems(allModels);
+      }
+    }
+
+    function renderPantheonModelOptionItems(items) {
+      const container = document.getElementById('pantheonModelOptionsList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (items.length === 0) {
+        container.innerHTML = '<div class="p-3 text-center text-slate-400 text-xs">No se encontraron modelos coincidentes.</div>';
+        return;
+      }
+
+      const currVal = (document.getElementById('pAgentModel')?.value || '').trim().toLowerCase();
+
+      items.forEach(item => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const isSelected = item.model.toLowerCase() === currVal;
+        btn.className = \`w-full text-left px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-colors cursor-pointer \${
+          isSelected ? 'bg-purple-600/25 text-purple-200 border border-purple-500/40 font-semibold' : 'text-slate-200 hover:bg-surface-750 hover:text-white'
+        }\`;
+        btn.onclick = () => selectPantheonAgentModel(item.model);
+
+        btn.innerHTML = \`
+          <div class="truncate flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full \${item.isActiveProvider ? 'bg-emerald-400' : 'bg-surface-600'} shrink-0"></span>
+            <span class="font-mono text-xs truncate">\${item.model}</span>
+          </div>
+          <span class="text-[10px] \${item.isActiveProvider ? 'text-emerald-400 font-semibold' : 'text-slate-400'} shrink-0 ml-1.5">\${item.providerName.split(' ')[0]}</span>
+        \`;
+        container.appendChild(btn);
+      });
+    }
+
+    function togglePantheonModelDropdown() {
+      const menu = document.getElementById('pantheonModelDropdownMenu');
+      if (!menu) return;
+      const isHidden = menu.classList.contains('hidden');
+      if (isHidden) {
+        populatePantheonModelDatalist();
+        menu.classList.remove('hidden');
+        const searchInput = document.getElementById('pantheonModelSearchInput');
+        if (searchInput) {
+          searchInput.value = '';
+          searchInput.focus();
+        }
+      } else {
+        menu.classList.add('hidden');
+      }
+    }
+
+    function filterPantheonModelList(query) {
+      const q = (query || '').toLowerCase().trim();
+      let allModels = [];
+
+      const activeCat = providerCatalogs.find(c => c.providerId === currentProviderId) || { providerName: currentProviderId || 'Omniroute' };
+      if (activeCat && Array.isArray(activeCat.models)) {
+        activeCat.models.forEach(m => {
+          allModels.push({ model: m, providerId: activeCat.providerId, providerName: activeCat.providerName, isActiveProvider: true });
+        });
+      }
+
+      providerCatalogs.forEach(cat => {
+        if (cat.providerId === currentProviderId) return;
+        (cat.models || []).forEach(m => {
+          allModels.push({ model: m, providerId: cat.providerId, providerName: cat.providerName, isActiveProvider: false });
+        });
+      });
+
+      if (allModels.length === 0) {
+        ['auto/best-coding', 'gpt-4o', 'claude-3-5-sonnet', 'gemini-2.0-flash', 'deepseek-coder'].forEach(m => {
+          allModels.push({ model: m, providerId: 'omniroute', providerName: 'Omniroute', isActiveProvider: true });
+        });
+      }
+
+      if (q) {
+        allModels = allModels.filter(i => i.model.toLowerCase().includes(q) || i.providerName.toLowerCase().includes(q));
+      }
+
+      renderPantheonModelOptionItems(allModels);
+    }
+
+    function selectPantheonAgentModel(modelId) {
+      const modelInput = document.getElementById('pAgentModel');
+      if (modelInput) {
+        modelInput.value = modelId;
+      }
+      const menu = document.getElementById('pantheonModelDropdownMenu');
+      if (menu) {
+        menu.classList.add('hidden');
+      }
+    }
+
     function openCreateAgentModal() {
       document.getElementById('pantheonAgentModalTitle').innerText = 'Crear Nuevo Agente Pantheon';
       document.getElementById('pAgentId').value = 'agent_' + Math.random().toString(36).substring(2, 7);
@@ -5482,7 +5672,7 @@ for chunk in response:
       document.getElementById('pAgentAvatar').value = '🤖';
       document.getElementById('pAgentRole').value = '';
       document.getElementById('pAgentColor').value = '#8B5CF6';
-      document.getElementById('pAgentModel').value = 'auto/best-coding';
+      document.getElementById('pAgentModel').value = currentModelId || 'auto/best-coding';
       document.getElementById('pAgentTemp').value = '0.2';
       document.getElementById('pAgentTempLabel').innerText = '0.2';
       document.getElementById('pAgentSystemPrompt').value = '';
@@ -5493,6 +5683,7 @@ for chunk in response:
       document.getElementById('pCapRlm').checked = true;
       document.getElementById('pCapWeb').checked = true;
       document.getElementById('pCapMcp').checked = true;
+      populatePantheonModelDatalist();
       document.getElementById('pantheonAgentModal').classList.remove('hidden');
     }
 
@@ -5517,10 +5708,13 @@ for chunk in response:
       document.getElementById('pCapRlm').checked = Boolean(agent.capabilities?.rlm);
       document.getElementById('pCapWeb').checked = Boolean(agent.capabilities?.web);
       document.getElementById('pCapMcp').checked = Boolean(agent.capabilities?.mcp);
+      populatePantheonModelDatalist();
       document.getElementById('pantheonAgentModal').classList.remove('hidden');
     }
 
     function closePantheonAgentModal() {
+      const menu = document.getElementById('pantheonModelDropdownMenu');
+      if (menu) menu.classList.add('hidden');
       document.getElementById('pantheonAgentModal').classList.add('hidden');
     }
 
@@ -6725,9 +6919,15 @@ for chunk in response:
       }
     }
 
-    function toggleTheme() {
-      document.documentElement.classList.toggle('dark');
-    }
+    document.addEventListener('click', (e) => {
+      const pMenu = document.getElementById('pantheonModelDropdownMenu');
+      if (pMenu && !pMenu.classList.contains('hidden')) {
+        const isClickInside = pMenu.contains(e.target) || e.target.closest('#pAgentModel') || e.target.closest('button[onclick*="togglePantheonModelDropdown"]');
+        if (!isClickInside) {
+          pMenu.classList.add('hidden');
+        }
+      }
+    });
   </script>
 </body>
 </html>`;
