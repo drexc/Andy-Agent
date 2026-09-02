@@ -127,13 +127,28 @@ export class PantheonOrchestrator {
 		roomState.messages.push(userMsg);
 
 		// Parse @mentions in user prompt
-		const mentionMatch = userPrompt.match(/@(\w+)/i);
+		const mentionMatch = userPrompt.match(/@([a-zA-Z0-9_-]+)/i);
 		let targetAgentId = options.targetAgentId;
 		if (!targetAgentId && mentionMatch) {
 			const mentionedName = mentionMatch[1].toLowerCase();
-			const found = this.registry
+			let found = this.registry
 				.getAgents()
 				.find((a) => a.id.toLowerCase() === mentionedName || a.name.toLowerCase() === mentionedName);
+
+			// Map common role aliases if not matched by exact name
+			if (!found) {
+				if (/developer|coder|programador|dev|backend|frontend/i.test(mentionedName)) {
+					found = this.registry.getAgent("hephaestus");
+				} else if (/architect|arquitecto|designer/i.test(mentionedName)) {
+					found = this.registry.getAgent("athena");
+				} else if (/tester|auditor|qa|refactorer|devops|quality/i.test(mentionedName)) {
+					found = this.registry.getAgent("argos");
+				} else if (/researcher|investigador|search/i.test(mentionedName)) {
+					found = this.registry.getAgent("pythia");
+				} else if (/leader|lider|orchestrator/i.test(mentionedName)) {
+					found = this.registry.getAgent("hermes");
+				}
+			}
 			if (found) targetAgentId = found.id;
 		}
 

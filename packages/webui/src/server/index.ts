@@ -3108,6 +3108,7 @@ ${prompt || ""}`;
 
 				const auth = await self.pool.getModelRegistry().getApiKeyAndHeaders(resolvedModel);
 				const apiKey = auth.ok ? auth.apiKey : undefined;
+				let hasYielded = false;
 				try {
 					const streamResult = stream(resolvedModel, pContext, {
 						apiKey,
@@ -3116,18 +3117,25 @@ ${prompt || ""}`;
 
 					for await (const event of streamResult) {
 						if (event.type === "text_delta" && event.delta) {
+							hasYielded = true;
 							yield event.delta;
 						}
 					}
 				} catch (_err: any) {
-					// Fallback to complete() if streaming fails for a specific provider
+					// Stream failed, proceed to fallback
+				}
+
+				if (!hasYielded) {
 					try {
 						const response = await complete(resolvedModel, pContext, {
 							apiKey,
 							temperature: temp,
 						});
 						for (const part of response.content) {
-							if (part.type === "text") yield part.text;
+							if (part.type === "text" && part.text) {
+								hasYielded = true;
+								yield part.text;
+							}
 						}
 					} catch (fallbackErr: any) {
 						yield `[Error al invocar modelo: ${fallbackErr.message || String(fallbackErr)}]`;
