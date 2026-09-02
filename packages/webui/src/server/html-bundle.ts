@@ -877,11 +877,151 @@ export function getWebUiHtml(): string {
               Visor de Resultados Estructurales
             </span>
             <button onclick="copyGraftResult()" class="text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer">
-              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-              Copiar
+    <!-- ======================================================================= -->
+    <!-- VIEW: PANTHEON STUDIO (MULTI-AGENT SOCIETY & SQUADS) -->
+    <!-- ======================================================================= -->
+    <div id="viewPantheon" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4">
+      <!-- Header with subtabs -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-750 pb-3 shrink-0">
+        <div>
+          <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+            <i data-lucide="crown" class="w-5 h-5 text-purple-400"></i>
+            Pantheon Studio
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono font-normal">Multi-Agent Swarm</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-0.5">Sociedad coordinada de agentes especializados con identidades persistentes, mensajería peer-to-peer y contexto Graft/RLM.</p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Sub-Tab switcher -->
+          <div class="bg-surface-800 p-1 rounded-xl border border-surface-700 flex items-center text-xs">
+            <button id="pantheonSubTabRoomBtn" onclick="switchPantheonSubTab('room')" class="px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="messages-square" class="w-3.5 h-3.5"></i>
+              Squad War Room
+            </button>
+            <button id="pantheonSubTabRosterBtn" onclick="switchPantheonSubTab('roster')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="users" class="w-3.5 h-3.5"></i>
+              Roster de Agentes
+            </button>
+            <button id="pantheonSubTabTopologyBtn" onclick="switchPantheonSubTab('topology')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+              Malla & Topología
             </button>
           </div>
-          <pre id="graftResultContent" class="flex-1 p-3 sm:p-4 overflow-auto text-xs font-mono text-slate-200 leading-relaxed bg-surface-900/60 select-text min-h-[200px]"></pre>
+
+          <button onclick="loadPantheonData()" title="Refrescar datos Pantheon" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 text-xs font-medium px-3 py-2 rounded-xl text-slate-200 hover:text-white flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span class="hidden sm:inline">Actualizar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SUBTAB 1: SQUAD WAR ROOM (COLLABORATIVE MULTI-AGENT CHAT) -->
+      <div id="pantheonSubTabRoom" class="flex flex-col flex-1 min-h-[500px] space-y-3">
+        <!-- Controls Bar -->
+        <div class="bg-surface-850 border border-surface-750 rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+            <span class="text-slate-400 font-medium">Escuadrón Activo:</span>
+            <select id="pantheonSquadSelect" onchange="switchActivePantheonSquad(this.value)" class="bg-surface-750 border border-surface-700 text-xs text-white px-3 py-1.5 rounded-xl font-medium focus:outline-none focus:border-purple-500 cursor-pointer">
+              <option value="fullstack-squad">FullStack Engineering Squad (Hermes, Athena, Hephaestus, Argos)</option>
+              <option value="audit-fix-squad">Auditoría & Auto-Refactor Squad (Argos, Hephaestus)</option>
+              <option value="research-squad">Exploración & Investigación Squad (Hermes, Pythia, Athena)</option>
+            </select>
+          </div>
+
+          <!-- Quick Flow Action Buttons -->
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button onclick="runSquadPreset('fullstack')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-purple-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer" title="Flujo completo: Arquitectura -> Coder -> Auditor">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-purple-400"></i>
+              Flujo FullStack
+            </button>
+            <button onclick="runSquadPreset('audit')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-emerald-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer" title="Auditoría Graft + Auto-Fix">
+              <i data-lucide="stethoscope" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Auditoría & Fix
+            </button>
+            <button onclick="runSquadPreset('research')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-pink-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer" title="Exploración RLM">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-pink-400"></i>
+              Investigar RLM
+            </button>
+            <button onclick="clearPantheonRoom()" class="p-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer" title="Limpiar sala">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Collaborative Messages Container -->
+        <div id="pantheonChatTimeline" class="flex-1 bg-surface-950 border border-surface-750 rounded-2xl p-4 sm:p-5 overflow-y-auto space-y-3.5 select-text min-h-[360px] shadow-2xl">
+          <div class="text-center text-slate-500 text-xs py-8 italic">
+            Bienvenido a la Sala de Guerra del Pantheon. Envía una tarea o etiqueta a un agente con <code class="text-purple-300">@Hermes</code>, <code class="text-blue-300">@Athena</code>, <code class="text-amber-300">@Hephaestus</code>, <code class="text-emerald-300">@Argos</code> o <code class="text-pink-300">@Pythia</code>.
+          </div>
+        </div>
+
+        <!-- Input Bar with @mention Quick Chips -->
+        <div class="bg-surface-850 border border-surface-700 rounded-2xl p-3 shadow-xl space-y-2">
+          <!-- Mention chips -->
+          <div id="pantheonMentionChips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-xs">
+            <span class="text-[11px] text-slate-400 font-semibold mr-1">Mencionar:</span>
+            <button onclick="insertPantheonMention('Hermes')" class="px-2 py-0.5 rounded-md bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 font-mono text-[11px] transition-colors">@Hermes</button>
+            <button onclick="insertPantheonMention('Athena')" class="px-2 py-0.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 font-mono text-[11px] transition-colors">@Athena</button>
+            <button onclick="insertPantheonMention('Hephaestus')" class="px-2 py-0.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-mono text-[11px] transition-colors">@Hephaestus</button>
+            <button onclick="insertPantheonMention('Argos')" class="px-2 py-0.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-mono text-[11px] transition-colors">@Argos</button>
+            <button onclick="insertPantheonMention('Pythia')" class="px-2 py-0.5 rounded-md bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 font-mono text-[11px] transition-colors">@Pythia</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <textarea
+              id="pantheonPromptInput"
+              rows="1"
+              placeholder="Escribe una instrucción para el escuadrón o usa @Nombre para dirigir a un especialista..."
+              onkeydown="handlePantheonInputKeyDown(event)"
+              oninput="autoExpandTextarea(this)"
+              class="flex-1 bg-surface-900 border border-surface-750 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 resize-none max-h-32"
+            ></textarea>
+            <button id="pantheonSendBtn" onclick="submitPantheonPrompt()" class="bg-gradient-to-tr from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-lg shadow-purple-500/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>Enviar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBTAB 2: AGENT ROSTER (VISUAL AGENT BUILDER & PROFILES) -->
+      <div id="pantheonSubTabRoster" class="hidden flex flex-col flex-1 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+              <i data-lucide="users" class="w-4 h-4 text-purple-400"></i>
+              Sociedad de Agentes Registrados
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">Define perfiles, roles especializados, modelos de IA y herramientas asignadas a cada bot.</p>
+          </div>
+
+          <button onclick="openCreateAgentModal()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-purple-600/20 transition-all cursor-pointer">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            Nuevo Agente
+          </button>
+        </div>
+
+        <div id="pantheonAgentsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <!-- SUBTAB 3: TOPOLOGY & LIVE MESH -->
+      <div id="pantheonSubTabTopology" class="hidden flex flex-col flex-1 space-y-4">
+        <div class="bg-surface-850 border border-surface-750 rounded-2xl p-4 sm:p-5 flex flex-col space-y-3">
+          <div class="flex items-center justify-between border-b border-surface-750 pb-2">
+            <h3 class="font-bold text-sm text-white flex items-center gap-2">
+              <i data-lucide="network" class="w-4 h-4 text-purple-400"></i>
+              Topología de Comunicación & Delegación Peer-to-Peer
+            </h3>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">Malla Activa</span>
+          </div>
+          <p class="text-xs text-slate-400">Visualización de las conexiones entre el líder de escuadrón y los especialistas, con soporte de contexto Graft AST compartido.</p>
+
+          <div id="pantheonTopologyDiagram" class="p-6 bg-surface-950 border border-surface-750 rounded-2xl min-h-[350px] flex flex-col items-center justify-center">
+            <!-- Rendered by JS -->
+          </div>
         </div>
       </div>
     </div>
@@ -1448,6 +1588,102 @@ for chunk in response:
       </div>
     </div>
 
+    <!-- PANTHEON AGENT CREATOR / EDITOR MODAL -->
+    <div id="pantheonAgentModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl p-5 sm:p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+          <h3 id="pantheonAgentModalTitle" class="font-bold text-base text-white flex items-center gap-2">
+            <i data-lucide="bot" class="w-5 h-5 text-purple-400"></i>
+            Configurar Agente Pantheon
+          </h3>
+          <button onclick="closePantheonAgentModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <form onsubmit="event.preventDefault(); submitSavePantheonAgent();" class="space-y-3.5 text-xs">
+          <input type="hidden" id="pAgentIsSystem" value="false">
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">ID Único</label>
+              <input id="pAgentId" type="text" placeholder="ej: security_auditor" required class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-purple-500">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">Nombre Visible</label>
+              <input id="pAgentName" type="text" placeholder="ej: Aegis" required class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">Avatar Emoji</label>
+              <input id="pAgentAvatar" type="text" placeholder="🛡️" value="🤖" required class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-center text-base focus:outline-none focus:border-purple-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">Rol / Especialidad</label>
+              <input id="pAgentRole" type="text" placeholder="ej: Security & Vulnerability Auditor" required class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">Color de Identidad</label>
+              <input id="pAgentColor" type="color" value="#8B5CF6" class="w-full h-9 bg-surface-750 border border-surface-700 rounded-xl px-2 py-1 cursor-pointer">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">Modelo de IA Asignado</label>
+              <input id="pAgentModel" type="text" placeholder="auto/best-coding, gpt-4o, claude-3-5-sonnet..." value="auto/best-coding" required class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-purple-500">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">Temperatura: <span id="pAgentTempLabel" class="font-mono text-purple-300">0.2</span></label>
+              <input id="pAgentTemp" type="range" min="0" max="1" step="0.05" value="0.2" oninput="document.getElementById('pAgentTempLabel').innerText = this.value" class="w-full accent-purple-500 mt-2">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Prompt de Sistema (Instrucciones del Rol)</label>
+            <textarea id="pAgentSystemPrompt" rows="3" placeholder="Describe la personalidad, responsabilidades y enfoque técnico del agente..." required class="w-full bg-surface-750 border border-surface-700 rounded-xl p-3 text-white focus:outline-none focus:border-purple-500 leading-relaxed"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1.5">Capacidades & Herramientas Asignadas</label>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
+              <label class="flex items-center gap-1.5 text-slate-300 bg-surface-800 p-2 rounded-lg border border-surface-700 cursor-pointer">
+                <input id="pCapWrite" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-purple-500">
+                <span>Edición de Archivos</span>
+              </label>
+              <label class="flex items-center gap-1.5 text-slate-300 bg-surface-800 p-2 rounded-lg border border-surface-700 cursor-pointer">
+                <input id="pCapTerminal" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-purple-500">
+                <span>Terminal / Bash</span>
+              </label>
+              <label class="flex items-center gap-1.5 text-slate-300 bg-surface-800 p-2 rounded-lg border border-surface-700 cursor-pointer">
+                <input id="pCapGraft" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-purple-500">
+                <span>Graft Engineering</span>
+              </label>
+              <label class="flex items-center gap-1.5 text-slate-300 bg-surface-800 p-2 rounded-lg border border-surface-700 cursor-pointer">
+                <input id="pCapRlm" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-purple-500">
+                <span>RLM Subagentes</span>
+              </label>
+              <label class="flex items-center gap-1.5 text-slate-300 bg-surface-800 p-2 rounded-lg border border-surface-700 cursor-pointer">
+                <input id="pCapWeb" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-purple-500">
+                <span>Búsqueda Web</span>
+              </label>
+              <label class="flex items-center gap-1.5 text-slate-300 bg-surface-800 p-2 rounded-lg border border-surface-700 cursor-pointer">
+                <input id="pCapMcp" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-purple-500">
+                <span>Protocolo MCP</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
+            <button type="button" onclick="closePantheonAgentModal()" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/25">Guardar Agente</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- CREATE API KEY MODAL -->
     <div id="createApiKeyModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
@@ -1499,6 +1735,10 @@ for chunk in response:
         <button id="tabChatBtn" onclick="switchView('chat')" class="px-3 py-1.5 rounded-xl font-semibold text-xs text-white bg-brand-600 shadow-md shadow-brand-500/25 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
           <i data-lucide="message-square" class="w-4 h-4"></i>
           <span>Chat & RLM</span>
+        </button>
+        <button id="tabPantheonBtn" onclick="switchView('pantheon')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
+          <i data-lucide="crown" class="w-4 h-4 text-purple-400"></i>
+          <span>Pantheon Studio</span>
         </button>
         <button id="tabTerminalBtn" onclick="switchView('terminal')" class="px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0">
           <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
@@ -2252,6 +2492,7 @@ for chunk in response:
     // --- NAVIGATION & VIEWS ---
     const TAB_BUTTON_MAP = {
       chat: 'tabChatBtn',
+      pantheon: 'tabPantheonBtn',
       terminal: 'tabTerminalBtn',
       providers: 'tabProvidersBtn',
       graft: 'tabGraftBtn',
@@ -2325,12 +2566,12 @@ for chunk in response:
     }
 
     function switchView(view) {
-      ['viewChat', 'viewTerminal', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys', 'viewUsers'].forEach(v => {
+      ['viewChat', 'viewPantheon', 'viewTerminal', 'viewProviders', 'viewGraft', 'viewMemory', 'viewSkills', 'viewTree', 'viewLogs', 'viewFiles', 'viewApiKeys', 'viewUsers'].forEach(v => {
         const el = document.getElementById(v);
         if (el) el.classList.add('hidden');
       });
 
-      ['tabChatBtn', 'tabTerminalBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn', 'tabApiKeysBtn', 'tabUsersBtn'].forEach(t => {
+      ['tabChatBtn', 'tabPantheonBtn', 'tabTerminalBtn', 'tabProvidersBtn', 'tabGraftBtn', 'tabMemoryBtn', 'tabSkillsBtn', 'tabTreeBtn', 'tabLogsBtn', 'tabFilesBtn', 'tabApiKeysBtn', 'tabUsersBtn'].forEach(t => {
         const el = document.getElementById(t);
         if (el) el.className = 'px-3 py-1.5 rounded-xl font-medium text-xs text-slate-400 hover:text-slate-200 hover:bg-surface-750 flex items-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap shrink-0';
       });
@@ -2346,6 +2587,9 @@ for chunk in response:
 
       if (view === 'chat') {
         document.getElementById('viewChat').classList.remove('hidden');
+      } else if (view === 'pantheon') {
+        document.getElementById('viewPantheon').classList.remove('hidden');
+        loadPantheonData();
       } else if (view === 'terminal') {
         document.getElementById('viewTerminal').classList.remove('hidden');
         updateTerminalCwdBadge();
@@ -4560,6 +4804,521 @@ for chunk in response:
       const text = document.getElementById('graftResultContent').innerText;
       navigator.clipboard.writeText(text);
       alert('Resultado copiado al portapapeles');
+    }
+
+    // --- PANTHEON MULTI-AGENT STUDIO CLIENT ---
+    const pantheonState = {
+      activeSubTab: 'room',
+      activeSquadId: 'fullstack-squad',
+      agents: [],
+      squads: [],
+      isStreaming: false
+    };
+
+    function switchPantheonSubTab(tab) {
+      pantheonState.activeSubTab = tab;
+      ['pantheonSubTabRoom', 'pantheonSubTabRoster', 'pantheonSubTabTopology'].forEach(t => {
+        const el = document.getElementById(t);
+        if (el) el.classList.add('hidden');
+      });
+
+      ['pantheonSubTabRoomBtn', 'pantheonSubTabRosterBtn', 'pantheonSubTabTopologyBtn'].forEach(b => {
+        const el = document.getElementById(b);
+        if (el) el.className = 'px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer';
+      });
+
+      if (tab === 'room') {
+        document.getElementById('pantheonSubTabRoom').classList.remove('hidden');
+        document.getElementById('pantheonSubTabRoomBtn').className = 'px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer';
+      } else if (tab === 'roster') {
+        document.getElementById('pantheonSubTabRoster').classList.remove('hidden');
+        document.getElementById('pantheonSubTabRosterBtn').className = 'px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer';
+        renderPantheonAgents();
+      } else if (tab === 'topology') {
+        document.getElementById('pantheonSubTabTopology').classList.remove('hidden');
+        document.getElementById('pantheonSubTabTopologyBtn').className = 'px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer';
+        renderPantheonTopology();
+      }
+      lucide.createIcons();
+    }
+
+    async function loadPantheonData() {
+      await Promise.all([
+        fetchPantheonAgents(),
+        fetchPantheonSquads()
+      ]);
+      renderPantheonSquadSelect();
+      renderPantheonMentionChips();
+      if (pantheonState.activeSubTab === 'roster') renderPantheonAgents();
+      if (pantheonState.activeSubTab === 'topology') renderPantheonTopology();
+    }
+
+    async function fetchPantheonAgents() {
+      try {
+        const res = await fetch(\`/v1/pantheon/agents?projectId=\${encodeURIComponent(currentProjectId)}\`);
+        const data = await res.json();
+        pantheonState.agents = data.agents || [];
+      } catch (err) {
+        console.error('Error fetching Pantheon agents:', err);
+      }
+    }
+
+    async function fetchPantheonSquads() {
+      try {
+        const res = await fetch(\`/v1/pantheon/squads?projectId=\${encodeURIComponent(currentProjectId)}\`);
+        const data = await res.json();
+        pantheonState.squads = data.squads || [];
+      } catch (err) {
+        console.error('Error fetching Pantheon squads:', err);
+      }
+    }
+
+    function renderPantheonSquadSelect() {
+      const select = document.getElementById('pantheonSquadSelect');
+      if (!select) return;
+      select.innerHTML = '';
+      pantheonState.squads.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.innerText = \`\${s.name} (\${s.workflowMode})\`;
+        if (s.id === pantheonState.activeSquadId) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function switchActivePantheonSquad(squadId) {
+      pantheonState.activeSquadId = squadId;
+      if (pantheonState.activeSubTab === 'topology') renderPantheonTopology();
+    }
+
+    function renderPantheonMentionChips() {
+      const container = document.getElementById('pantheonMentionChips');
+      if (!container) return;
+      container.innerHTML = '<span class="text-[11px] text-slate-400 font-semibold mr-1">Mencionar:</span>';
+      pantheonState.agents.forEach(a => {
+        const btn = document.createElement('button');
+        btn.className = 'px-2 py-0.5 rounded-md bg-surface-800 hover:bg-surface-750 border border-surface-700 font-mono text-[11px] transition-colors flex items-center gap-1 cursor-pointer';
+        btn.style.color = a.color || '#A78BFA';
+        btn.innerHTML = \`<span>\${a.avatar}</span> <span>@\${a.name}</span>\`;
+        btn.onclick = () => insertPantheonMention(a.name);
+        container.appendChild(btn);
+      });
+    }
+
+    function insertPantheonMention(name) {
+      const input = document.getElementById('pantheonPromptInput');
+      if (!input) return;
+      input.value = (input.value ? input.value + ' ' : '') + '@' + name + ' ';
+      input.focus();
+      autoExpandTextarea(input);
+    }
+
+    function handlePantheonInputKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitPantheonPrompt();
+      }
+    }
+
+    function clearPantheonRoom() {
+      const timeline = document.getElementById('pantheonChatTimeline');
+      if (timeline) {
+        timeline.innerHTML = '<div class="text-center text-slate-500 text-xs py-8 italic">Sala de Guerra limpia. Escribe una tarea para el escuadrón.</div>';
+      }
+    }
+
+    function runSquadPreset(type) {
+      const input = document.getElementById('pantheonPromptInput');
+      if (!input) return;
+      if (type === 'fullstack') {
+        input.value = '@Hermes Por favor coordina al escuadrón para implementar la siguiente funcionalidad: @Athena revisará la arquitectura y dependencias con Graft, @Hephaestus implementará el código modular y @Argos validará los diagnósticos estáticos y tests.';
+      } else if (type === 'audit') {
+        input.value = '@Argos Ejecuta un escaneo completo de diagnósticos estáticos (graft_diagnostics), detecta dependencias circulares y coordina con @Hephaestus para auto-resolver cualquier problema encontrado.';
+      } else if (type === 'research') {
+        input.value = '@Pythia Realiza una investigación profunda con RLM sobre la arquitectura y dependencias del proyecto, y sintetiza los hallazgos para @Hermes y @Athena.';
+      }
+      autoExpandTextarea(input);
+      input.focus();
+    }
+
+    async function submitPantheonPrompt() {
+      const input = document.getElementById('pantheonPromptInput');
+      if (!input || pantheonState.isStreaming) return;
+      const prompt = input.value.trim();
+      if (!prompt) return;
+
+      input.value = '';
+      pantheonState.isStreaming = true;
+      const sendBtn = document.getElementById('pantheonSendBtn');
+      if (sendBtn) {
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Pensando...</span>';
+      }
+
+      const timeline = document.getElementById('pantheonChatTimeline');
+
+      // Append User message
+      const userBlock = document.createElement('div');
+      userBlock.className = 'p-3.5 rounded-2xl bg-surface-900 border border-surface-750 text-xs text-white space-y-1';
+      userBlock.innerHTML = \`
+        <div class="flex items-center gap-2">
+          <span class="text-base">👤</span>
+          <span class="font-bold text-slate-200">Tú (Operador)</span>
+          <span class="text-[10px] text-slate-500 font-normal ml-auto">\${new Date().toLocaleTimeString()}</span>
+        </div>
+        <div class="text-slate-300 leading-relaxed pl-6 whitespace-pre-wrap">\${prompt}</div>
+      \`;
+      timeline.appendChild(userBlock);
+      timeline.scrollTop = timeline.scrollHeight;
+      lucide.createIcons();
+
+      // Current agent response container
+      let currentAgentDiv = null;
+      let currentAgentTextPre = null;
+
+      try {
+        const response = await fetch('/api/pantheon/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            squadId: pantheonState.activeSquadId,
+            prompt,
+            projectId: currentProjectId
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          const errBlock = document.createElement('div');
+          errBlock.className = 'p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs';
+          errBlock.innerText = errData.error || 'Error al conectar con Pantheon.';
+          timeline.appendChild(errBlock);
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\\n\\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data:')) continue;
+            const dataStr = trimmed.slice(5).trim();
+            if (dataStr === '[DONE]') continue;
+
+            try {
+              const event = JSON.parse(dataStr);
+              if (event.type === 'agent_start') {
+                currentAgentDiv = document.createElement('div');
+                currentAgentDiv.className = 'p-4 rounded-2xl bg-surface-850 border border-surface-700 text-xs text-white space-y-2 shadow-lg transition-all';
+                currentAgentDiv.style.borderLeft = \`4px solid \${event.agentColor || '#8B5CF6'}\`;
+                currentAgentDiv.innerHTML = \`
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xl">\${event.agentAvatar || '🤖'}</span>
+                      <div>
+                        <div class="font-bold text-sm" style="color: \${event.agentColor || '#FFFFFF'}">\${event.agentName}</div>
+                        <div class="text-[10px] text-slate-400">\${event.agentRole}</div>
+                      </div>
+                    </div>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 font-mono">Pantheon Agent</span>
+                  </div>
+                  <pre class="mt-2 text-slate-200 font-sans text-xs whitespace-pre-wrap break-words leading-relaxed pl-7"></pre>
+                \`;
+                timeline.appendChild(currentAgentDiv);
+                currentAgentTextPre = currentAgentDiv.querySelector('pre');
+                timeline.scrollTop = timeline.scrollHeight;
+                lucide.createIcons();
+              } else if (event.type === 'delta' && currentAgentTextPre) {
+                currentAgentTextPre.innerText += event.delta || '';
+                timeline.scrollTop = timeline.scrollHeight;
+              } else if (event.type === 'delegation') {
+                const delDiv = document.createElement('div');
+                delDiv.className = 'p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-200 text-xs flex items-center gap-2 pl-7';
+                delDiv.innerHTML = \`
+                  <i data-lucide="arrow-right-circle" class="w-4 h-4 text-purple-400 shrink-0"></i>
+                  <span><strong>Delegación:</strong> Tarea enviada a <strong>@\${event.delegation.toAgentId}</strong></span>
+                \`;
+                timeline.appendChild(delDiv);
+                timeline.scrollTop = timeline.scrollHeight;
+                lucide.createIcons();
+              } else if (event.type === 'graft_event') {
+                const gDiv = document.createElement('div');
+                gDiv.className = 'p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] flex items-center gap-2 pl-7';
+                gDiv.innerHTML = \`
+                  <i data-lucide="git-fork" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
+                  <span>Contexto Graft AST inyectado (\${event.graftData?.diagnosticsCount || 0} diagnósticos)</span>
+                \`;
+                timeline.appendChild(gDiv);
+                timeline.scrollTop = timeline.scrollHeight;
+                lucide.createIcons();
+              }
+            } catch (e) {}
+          }
+        }
+      } catch (err) {
+        const errDiv = document.createElement('div');
+        errDiv.className = 'p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs';
+        errDiv.innerText = 'Error en la sesión de Pantheon: ' + err.message;
+        timeline.appendChild(errDiv);
+      } finally {
+        pantheonState.isStreaming = false;
+        if (sendBtn) {
+          sendBtn.disabled = false;
+          sendBtn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i><span>Enviar</span>';
+          lucide.createIcons();
+        }
+        timeline.scrollTop = timeline.scrollHeight;
+      }
+    }
+
+    function renderPantheonAgents() {
+      const container = document.getElementById('pantheonAgentsGrid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (pantheonState.agents.length === 0) {
+        container.innerHTML = '<div class="col-span-full p-8 text-center text-slate-400">Cargando agentes Pantheon...</div>';
+        return;
+      }
+
+      pantheonState.agents.forEach(a => {
+        const card = document.createElement('div');
+        card.className = 'bg-surface-850 border border-surface-750 hover:border-purple-500/40 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-lg transition-all';
+        card.style.borderTop = \`3px solid \${a.color || '#8B5CF6'}\`;
+
+        const caps = [];
+        if (a.capabilities.write) caps.push('Write');
+        if (a.capabilities.terminal) caps.push('Terminal');
+        if (a.capabilities.graft) caps.push('Graft');
+        if (a.capabilities.rlm) caps.push('RLM');
+        if (a.capabilities.web) caps.push('Web');
+        if (a.capabilities.mcp) caps.push('MCP');
+
+        card.innerHTML = \`
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-xl bg-surface-800 border border-surface-700 shadow-sm">
+                  \${a.avatar || '🤖'}
+                </div>
+                <div>
+                  <h4 class="font-bold text-sm text-white flex items-center gap-1.5">
+                    \${a.name}
+                    \${a.isSystem ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Sistema</span>' : ''}
+                  </h4>
+                  <span class="text-[10px] text-slate-400 line-clamp-1">\${a.role}</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-slate-300 mt-2.5 line-clamp-3 leading-relaxed">\${a.systemPrompt}</p>
+
+            <div class="space-y-1.5 pt-3 border-t border-surface-800 text-[11px]">
+              <div class="flex items-center justify-between text-slate-400">
+                <span>Modelo:</span>
+                <span class="font-mono text-purple-300 font-semibold truncate max-w-[140px]">\${a.model}</span>
+              </div>
+              <div class="flex items-center justify-between text-slate-400">
+                <span>Temperatura:</span>
+                <span class="font-mono text-slate-200">\${a.temperature}</span>
+              </div>
+              <div class="pt-1 flex flex-wrap gap-1">
+                \${caps.map(c => \`<span class="text-[9px] px-1.5 py-0.5 rounded bg-surface-800 text-slate-300 font-mono">\${c}</span>\`).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2 flex items-center justify-end gap-1.5 border-t border-surface-800">
+            <button onclick="openEditAgentModal('\${a.id}')" class="px-2.5 py-1 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-200 text-xs flex items-center gap-1 transition-colors cursor-pointer">
+              <i data-lucide="edit-3" class="w-3 h-3"></i>
+              <span>Editar</span>
+            </button>
+            \${!a.isSystem ? \`
+              <button onclick="deletePantheonAgent('\${a.id}')" class="p-1 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            \` : ''}
+          </div>
+        \`;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    function openCreateAgentModal() {
+      document.getElementById('pantheonAgentModalTitle').innerText = 'Crear Nuevo Agente Pantheon';
+      document.getElementById('pAgentId').value = 'agent_' + Math.random().toString(36).substring(2, 7);
+      document.getElementById('pAgentId').readOnly = false;
+      document.getElementById('pAgentName').value = '';
+      document.getElementById('pAgentAvatar').value = '🤖';
+      document.getElementById('pAgentRole').value = '';
+      document.getElementById('pAgentColor').value = '#8B5CF6';
+      document.getElementById('pAgentModel').value = 'auto/best-coding';
+      document.getElementById('pAgentTemp').value = '0.2';
+      document.getElementById('pAgentTempLabel').innerText = '0.2';
+      document.getElementById('pAgentSystemPrompt').value = '';
+      document.getElementById('pAgentIsSystem').value = 'false';
+      document.getElementById('pCapWrite').checked = true;
+      document.getElementById('pCapTerminal').checked = true;
+      document.getElementById('pCapGraft').checked = true;
+      document.getElementById('pCapRlm').checked = true;
+      document.getElementById('pCapWeb').checked = true;
+      document.getElementById('pCapMcp').checked = true;
+      document.getElementById('pantheonAgentModal').classList.remove('hidden');
+    }
+
+    function openEditAgentModal(agentId) {
+      const agent = pantheonState.agents.find(a => a.id === agentId);
+      if (!agent) return;
+      document.getElementById('pantheonAgentModalTitle').innerText = \`Editar Agente @\${agent.name}\`;
+      document.getElementById('pAgentId').value = agent.id;
+      document.getElementById('pAgentId').readOnly = true;
+      document.getElementById('pAgentName').value = agent.name;
+      document.getElementById('pAgentAvatar').value = agent.avatar || '🤖';
+      document.getElementById('pAgentRole').value = agent.role;
+      document.getElementById('pAgentColor').value = agent.color || '#8B5CF6';
+      document.getElementById('pAgentModel').value = agent.model;
+      document.getElementById('pAgentTemp').value = String(agent.temperature ?? 0.2);
+      document.getElementById('pAgentTempLabel').innerText = String(agent.temperature ?? 0.2);
+      document.getElementById('pAgentSystemPrompt').value = agent.systemPrompt;
+      document.getElementById('pAgentIsSystem').value = String(agent.isSystem || false);
+      document.getElementById('pCapWrite').checked = Boolean(agent.capabilities?.write);
+      document.getElementById('pCapTerminal').checked = Boolean(agent.capabilities?.terminal);
+      document.getElementById('pCapGraft').checked = Boolean(agent.capabilities?.graft);
+      document.getElementById('pCapRlm').checked = Boolean(agent.capabilities?.rlm);
+      document.getElementById('pCapWeb').checked = Boolean(agent.capabilities?.web);
+      document.getElementById('pCapMcp').checked = Boolean(agent.capabilities?.mcp);
+      document.getElementById('pantheonAgentModal').classList.remove('hidden');
+    }
+
+    function closePantheonAgentModal() {
+      document.getElementById('pantheonAgentModal').classList.add('hidden');
+    }
+
+    async function submitSavePantheonAgent() {
+      const id = document.getElementById('pAgentId').value.trim();
+      const name = document.getElementById('pAgentName').value.trim();
+      const avatar = document.getElementById('pAgentAvatar').value.trim() || '🤖';
+      const role = document.getElementById('pAgentRole').value.trim();
+      const color = document.getElementById('pAgentColor').value;
+      const model = document.getElementById('pAgentModel').value.trim() || 'auto/best-coding';
+      const temperature = parseFloat(document.getElementById('pAgentTemp').value) || 0.2;
+      const systemPrompt = document.getElementById('pAgentSystemPrompt').value.trim();
+      const isSystem = document.getElementById('pAgentIsSystem').value === 'true';
+
+      const capabilities = {
+        write: document.getElementById('pCapWrite').checked,
+        terminal: document.getElementById('pCapTerminal').checked,
+        graft: document.getElementById('pCapGraft').checked,
+        rlm: document.getElementById('pCapRlm').checked,
+        web: document.getElementById('pCapWeb').checked,
+        mcp: document.getElementById('pCapMcp').checked,
+      };
+
+      try {
+        const res = await fetch(\`/v1/pantheon/agents?projectId=\${encodeURIComponent(currentProjectId)}\`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id, name, avatar, role, color, model, temperature, systemPrompt, capabilities, isSystem
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closePantheonAgentModal();
+          await fetchPantheonAgents();
+          renderPantheonAgents();
+          renderPantheonMentionChips();
+        } else {
+          alert('Error al guardar agente: ' + (data.error || 'Desconocido'));
+        }
+      } catch (err) {
+        alert('Error al conectar con el servidor: ' + err.message);
+      }
+    }
+
+    async function deletePantheonAgent(agentId) {
+      if (!confirm(\`¿Eliminar agente @\${agentId}?\`)) return;
+      try {
+        const res = await fetch(\`/v1/pantheon/agents/\${encodeURIComponent(agentId)}?projectId=\${encodeURIComponent(currentProjectId)}\`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          await fetchPantheonAgents();
+          renderPantheonAgents();
+          renderPantheonMentionChips();
+        } else {
+          alert('No se puede eliminar este agente.');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function renderPantheonTopology() {
+      const container = document.getElementById('pantheonTopologyDiagram');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const squad = pantheonState.squads.find(s => s.id === pantheonState.activeSquadId) || pantheonState.squads[0];
+      if (!squad) return;
+
+      const leader = pantheonState.agents.find(a => a.id === squad.leaderId) || pantheonState.agents[0];
+      const members = pantheonState.agents.filter(a => squad.memberIds.includes(a.id) && a.id !== leader?.id);
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'w-full max-w-2xl flex flex-col items-center space-y-6';
+
+      wrapper.innerHTML = \`
+        <!-- Leader Node -->
+        <div class="flex flex-col items-center space-y-2">
+          <div class="px-5 py-3 rounded-2xl bg-surface-850 border-2 shadow-xl flex items-center gap-3 transition-all hover:scale-105" style="border-color: \${leader?.color || '#8B5CF6'}">
+            <span class="text-2xl">\${leader?.avatar || '👑'}</span>
+            <div>
+              <div class="font-bold text-sm text-white flex items-center gap-1.5">
+                \${leader?.name || 'Leader'}
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">Squad Leader</span>
+              </div>
+              <div class="text-[10px] text-slate-400">\${leader?.role}</div>
+            </div>
+          </div>
+          <div class="h-6 w-0.5 bg-gradient-to-b from-purple-500 to-indigo-500"></div>
+        </div>
+
+        <!-- Squad Connection Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-\${Math.min(3, Math.max(1, members.length))} gap-4 w-full">
+          \${members.map(m => \`
+            <div class="bg-surface-850 border border-surface-750 hover:border-purple-500/50 p-3.5 rounded-2xl flex flex-col justify-between space-y-2 shadow-lg transition-all" style="border-top: 3px solid \${m.color || '#3B82F6'}">
+              <div class="flex items-center gap-2">
+                <span class="text-xl">\${m.avatar}</span>
+                <div class="min-w-0">
+                  <div class="font-bold text-xs text-white truncate" style="color: \${m.color}">\${m.name}</div>
+                  <div class="text-[10px] text-slate-400 truncate">\${m.role}</div>
+                </div>
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono bg-surface-900 p-1.5 rounded-lg border border-surface-800 truncate">\${m.model}</div>
+            </div>
+          \`).join('')}
+        </div>
+
+        <!-- Shared Core Systems Footprint -->
+        <div class="w-full pt-4 border-t border-surface-800 flex items-center justify-around text-xs text-slate-400">
+          <span class="flex items-center gap-1 text-cyan-300"><i data-lucide="git-fork" class="w-3.5 h-3.5"></i> Graft Shared AST</span>
+          <span class="flex items-center gap-1 text-purple-300"><i data-lucide="brain" class="w-3.5 h-3.5"></i> RLM Recursive Tree</span>
+          <span class="flex items-center gap-1 text-emerald-300"><i data-lucide="terminal" class="w-3.5 h-3.5"></i> System Terminal</span>
+        </div>
+      \`;
+      container.appendChild(wrapper);
+      lucide.createIcons();
     }
 
     // --- WORKSPACE FILES & DIRECT EDITOR ---

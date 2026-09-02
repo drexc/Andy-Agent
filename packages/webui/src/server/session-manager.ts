@@ -8,6 +8,8 @@ import {
 	createAgentSession,
 	GraftEngine,
 	ModelRegistry,
+	PantheonOrchestrator,
+	PantheonRegistry,
 	SessionManager as PiSessionManager,
 	SettingsManager,
 } from "@earendil-works/pi-coding-agent";
@@ -476,6 +478,27 @@ export class WebUiSessionPool {
 	public getGraftEngine(projectId?: string): GraftEngine {
 		return this.getOrCreateGraftEngine(projectId);
 	}
+
+	public getPantheonRegistry(projectId?: string): PantheonRegistry {
+		const pId = projectId || this.activeProjectId;
+		const project = this.projects.get(pId);
+		const targetPath = project?.path || this.cwd;
+		return new PantheonRegistry(targetPath);
+	}
+
+	public getPantheonOrchestrator(projectId?: string): PantheonOrchestrator {
+		const pId = projectId || this.activeProjectId;
+		let orch = this.pantheonOrchestrators.get(pId);
+		if (!orch) {
+			const project = this.projects.get(pId);
+			const targetPath = project?.path || this.cwd;
+			orch = new PantheonOrchestrator(targetPath);
+			this.pantheonOrchestrators.set(pId, orch);
+		}
+		return orch;
+	}
+
+	private pantheonOrchestrators: Map<string, PantheonOrchestrator> = new Map();
 
 	public getAvailableModels(): Model<any>[] {
 		return this.modelRegistry.getAll();

@@ -32,6 +32,12 @@ export {
 	type IpythonToolOptions,
 } from "./ipython.js";
 export {
+	pantheonDelegateTool,
+	pantheonListSquadTool,
+	pantheonPeerMessageTool,
+	pantheonTools,
+} from "./pantheon-tools.js";
+export {
 	DEFAULT_MAX_BYTES,
 	DEFAULT_MAX_LINES,
 	formatSize,
@@ -49,6 +55,7 @@ import { createEditToolDefinition } from "./edit.js";
 import { createReadToolDefinition, createWriteToolDefinition } from "./file-tools.js";
 import { createGraftTools } from "./graft-tools.js";
 import { createIpythonToolDefinition, type IpythonToolOptions } from "./ipython.js";
+import { pantheonTools } from "./pantheon-tools.js";
 
 export type Tool = AgentTool<any>;
 export type ToolDef = ToolDefinition<any, any>;
@@ -64,6 +71,11 @@ export function createAllToolDefinitions(cwd: string, options?: ToolsOptions): R
 		graftMap[t.name] = t;
 	}
 
+	const pantheonMap: Record<string, ToolDef> = {};
+	for (const t of pantheonTools) {
+		pantheonMap[t.name] = t as any;
+	}
+
 	return {
 		ipython: createIpythonToolDefinition(cwd, options?.ipython),
 		bash: createBashToolDefinition(cwd),
@@ -71,5 +83,6 @@ export function createAllToolDefinitions(cwd: string, options?: ToolsOptions): R
 		read: createReadToolDefinition(cwd),
 		write: createWriteToolDefinition(cwd),
 		...graftMap,
+		...pantheonMap,
 	};
 }

@@ -163,6 +163,7 @@ export type {
 	ResolvedResource,
 } from "./core/package-manager.js";
 export { DefaultPackageManager } from "./core/package-manager.js";
+export * from "./core/pantheon/index.js";
 export type {
 	HarnessState,
 	RefinementEdit,
@@ -286,6 +287,7 @@ export {
 	truncateTail,
 	withFileMutationQueue,
 } from "./core/tools/index.js";
+export * from "./core/tools/pantheon-tools.js";
 // Main entry point
 export { type MainOptions, main } from "./main.js";
 export {

@@ -1697,6 +1697,136 @@ ${prompt || ""}`;
 				return;
 			}
 
+			// --- 15. PANTHEON MULTI-AGENT API ---
+			const pantheonRegistry = this.pool.getPantheonRegistry(targetProjectId);
+			const pantheonOrchestrator = this.pool.getPantheonOrchestrator(targetProjectId);
+
+			if (method === "GET" && (url === "/api/pantheon/agents" || url === "/v1/pantheon/agents")) {
+				const agents = pantheonRegistry.getAgents();
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ agents, total: agents.length }, null, 2));
+				return;
+			}
+
+			if (method === "POST" && (url === "/api/pantheon/agents" || url === "/v1/pantheon/agents")) {
+				const body = await this.readJsonBody<any>(req);
+				const saved = pantheonRegistry.saveAgent(body);
+				this.addLog("INFO", "Pantheon", `Saved Pantheon Agent "${saved.name}" (${saved.role})`);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, agent: saved }));
+				return;
+			}
+
+			if (
+				method === "DELETE" &&
+				(url.startsWith("/api/pantheon/agents/") || url.startsWith("/v1/pantheon/agents/"))
+			) {
+				const agentId = url.split("/")[4] || url.split("/")[3];
+				const deleted = pantheonRegistry.deleteAgent(agentId);
+				this.addLog("INFO", "Pantheon", `Deleted Pantheon Agent "${agentId}": ${deleted}`);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: deleted, agentId }));
+				return;
+			}
+
+			if (method === "GET" && (url === "/api/pantheon/squads" || url === "/v1/pantheon/squads")) {
+				const squads = pantheonRegistry.getSquads();
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ squads, total: squads.length }, null, 2));
+				return;
+			}
+
+			if (method === "POST" && (url === "/api/pantheon/squads" || url === "/v1/pantheon/squads")) {
+				const body = await this.readJsonBody<any>(req);
+				const saved = pantheonRegistry.saveSquad(body);
+				this.addLog("INFO", "Pantheon", `Saved Pantheon Squad "${saved.name}"`);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, squad: saved }));
+				return;
+			}
+
+			if (
+				method === "DELETE" &&
+				(url.startsWith("/api/pantheon/squads/") || url.startsWith("/v1/pantheon/squads/"))
+			) {
+				const squadId = url.split("/")[4] || url.split("/")[3];
+				const deleted = pantheonRegistry.deleteSquad(squadId);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: deleted, squadId }));
+				return;
+			}
+
+			if (method === "POST" && (url === "/api/pantheon/chat" || url === "/v1/pantheon/chat")) {
+				const body = await this.readJsonBody<any>(req);
+				const squadId = body?.squadId || "fullstack-squad";
+				const prompt = (body?.prompt || "").trim();
+				const targetAgentId = body?.targetAgentId || undefined;
+
+				if (!prompt) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Prompt is required" }));
+					return;
+				}
+
+				this.addLog("INFO", "Pantheon", `Squad "${squadId}" Turn Initiated: "${prompt.slice(0, 80)}..."`);
+
+				res.writeHead(200, {
+					"Content-Type": "text/event-stream; charset=utf-8",
+					"Cache-Control": "no-cache, no-transform",
+					Connection: "keep-alive",
+				});
+
+				const llmCaller = async (messages: any[], modelId: string, temp: number) => {
+					const targetModel = this.pool.findModel(modelId);
+					if (!targetModel) {
+						return `[Modelo ${modelId} no encontrado en el registro de proveedores]`;
+					}
+					const authStorage = this.pool.getAuthStorage();
+					const apiKey = await authStorage.getApiKey(targetModel.provider);
+					const now = Date.now();
+					const context: Context = {
+						messages: messages.map((m: any) => ({
+							role: m.role as any,
+							content: [{ type: "text" as const, text: m.content }],
+							timestamp: now,
+						})),
+					};
+					const streamOptions = {
+						apiKey: apiKey || undefined,
+						temperature: temp ?? 0.2,
+						maxTokens: 4096,
+					};
+
+					async function* textStream() {
+						try {
+							const eventStream = stream(targetModel!, context, streamOptions);
+							for await (const ev of eventStream) {
+								if (ev.type === "text_delta") {
+									yield ev.delta;
+								}
+							}
+						} catch (err: any) {
+							yield `\n[Error al generar con ${modelId}: ${err.message}]`;
+						}
+					}
+
+					return textStream();
+				};
+
+				await pantheonOrchestrator.executeTurn(
+					squadId,
+					prompt,
+					async (event) => {
+						res.write(`data: ${JSON.stringify(event)}\n\n`);
+					},
+					{ targetAgentId, llmCaller },
+				);
+
+				res.write("data: [DONE]\n\n");
+				res.end();
+				return;
+			}
+
 			// --- 404 NOT FOUND ---
 			res.writeHead(404, { "Content-Type": "application/json" });
 			res.end(JSON.stringify({ error: { message: `Route not found: ${method} ${url}`, code: 404 } }));
