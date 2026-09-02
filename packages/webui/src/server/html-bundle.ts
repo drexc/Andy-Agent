@@ -474,7 +474,7 @@ export function getWebUiHtml(): string {
       <div class="p-2 sm:p-4 bg-surface-900/95 border-t border-surface-750/80 shrink-0 safe-bottom">
         <div class="max-w-4xl mx-auto relative bg-surface-800 border border-surface-700 rounded-2xl shadow-xl focus-within:border-purple-500 transition-all duration-200 overflow-hidden">
           <!-- Chat Quick Mention Chips Bar with Horizontal Scroll and Arrow Controls -->
-          <div class="relative flex items-center border-b border-surface-750/50 bg-surface-850/70 px-1 py-1 overflow-hidden">
+          <div id="chatMentionBarContainer" onwheel="handleMentionWheel(event)" class="relative flex items-center border-b border-surface-750/50 bg-surface-850/70 px-1 py-1 overflow-hidden">
             <button
               id="mentionScrollLeftBtn"
               onclick="scrollMentionChips('left')"
@@ -5538,10 +5538,57 @@ for chunk in response:
       lucide.createIcons();
     }
 
+    function handleMentionWheel(e) {
+      const container = document.getElementById('chatMentionChips');
+      if (!container) return;
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (delta !== 0) {
+        e.preventDefault();
+        container.scrollLeft += delta;
+        updateMentionScrollArrows();
+      }
+    }
+
+    let isMentionDragging = false;
+    let mentionStartX = 0;
+    let mentionScrollLeft = 0;
+
+    function setupMentionDragAndScroll() {
+      const container = document.getElementById('chatMentionChips');
+      if (!container || container.dataset.scrollBound === 'true') return;
+      container.dataset.scrollBound = 'true';
+
+      container.addEventListener('wheel', (e) => {
+        handleMentionWheel(e);
+      }, { passive: false });
+
+      container.addEventListener('mousedown', (e) => {
+        if (e.target.closest('button')) return;
+        isMentionDragging = true;
+        mentionStartX = e.pageX - container.offsetLeft;
+        mentionScrollLeft = container.scrollLeft;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isMentionDragging) return;
+        const container = document.getElementById('chatMentionChips');
+        if (!container) return;
+        e.preventDefault();
+        const x = e.pageX - container.offsetLeft;
+        const walk = (x - mentionStartX) * 1.5;
+        container.scrollLeft = mentionScrollLeft - walk;
+        updateMentionScrollArrows();
+      });
+
+      window.addEventListener('mouseup', () => {
+        isMentionDragging = false;
+      });
+    }
+
     function scrollMentionChips(direction) {
       const container = document.getElementById('chatMentionChips');
       if (!container) return;
-      const step = 200;
+      const step = 220;
       container.scrollBy({ left: direction === 'left' ? -step : step, behavior: 'smooth' });
       setTimeout(updateMentionScrollArrows, 250);
     }
@@ -5599,6 +5646,7 @@ for chunk in response:
         container.appendChild(btn);
       });
       lucide.createIcons();
+      setupMentionDragAndScroll();
       setTimeout(updateMentionScrollArrows, 100);
     }
 
