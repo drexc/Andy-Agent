@@ -719,28 +719,38 @@ export class PantheonOrchestrator {
 				manifestSummary = manifests.join("\n\n");
 			}
 
-			// Extract public interfaces and classes from top source files
+			// Extract public interfaces, models, and classes from source files
 			if (sourceFiles.length > 0) {
 				const snippets: string[] = [];
-				for (const sf of sourceFiles.slice(0, 8)) {
+				for (const sf of sourceFiles.slice(0, 25)) {
 					try {
 						const rel = path.relative(targetCwd, sf).replace(/\\/g, "/");
 						const content = readFileSync(sf, "utf-8");
 						const ext = path.extname(sf).slice(1) || "cs";
-						// Extract declarations (interface, class, public methods, events, properties)
-						const lines = content.split(/\r?\n/);
-						const relevantLines = lines.filter(
-							(l) =>
-								/(?:public|internal|protected)\s+(?:class|interface|struct|enum|record|void|async|Task|event|string|int|bool|byte)/i.test(
-									l,
-								) || /namespace\s+|using\s+/i.test(l),
-						);
-						if (relevantLines.length > 0) {
-							snippets.push(
-								`### 🔍 ${rel} (Estructura/Signaturas públicas):\n\`\`\`${ext}\n${relevantLines.slice(0, 40).join("\n")}\n\`\`\``,
-							);
+
+						// If file is small (< 12KB), include full content for complete context
+						if (content.length <= 12000) {
+							snippets.push(`### 🔍 ${rel} (Código Completo):\n\`\`\`${ext}\n${content}\n\`\`\``);
 						} else {
-							snippets.push(`### 🔍 ${rel}:\n\`\`\`${ext}\n${content.slice(0, 1500)}\n\`\`\``);
+							// For larger files, extract declarations, signatures, public methods, events, properties
+							const lines = content.split(/\r?\n/);
+							const relevantLines = lines.filter(
+								(l) =>
+									/(?:public|internal|protected)\s+(?:class|interface|struct|enum|record|void|async|Task|event|string|int|bool|byte|List|Dictionary|delegate)/i.test(
+										l,
+									) ||
+									/#region|#endregion/i.test(l) ||
+									/namespace\s+|using\s+/i.test(l),
+							);
+							if (relevantLines.length > 0) {
+								snippets.push(
+									`### 🔍 ${rel} (Estructura/Signaturas públicas y eventos):\n\`\`\`${ext}\n${relevantLines.slice(0, 80).join("\n")}\n\`\`\``,
+								);
+							} else {
+								snippets.push(
+									`### 🔍 ${rel} (Muestra inicial):\n\`\`\`${ext}\n${content.slice(0, 3000)}\n\`\`\``,
+								);
+							}
 						}
 					} catch {}
 				}

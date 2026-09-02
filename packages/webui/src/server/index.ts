@@ -3029,6 +3029,7 @@ ${prompt || ""}`;
 		nonSystem: any[],
 		_body: any,
 	) {
+		const self = this;
 		const pantheonOrchestrator = this.pool.getPantheonOrchestrator(ideProject.id);
 		const settingsMgr = this.pool.getSettingsManager();
 
@@ -3071,41 +3072,66 @@ ${prompt || ""}`;
 			`IDE Chat completion executing Pantheon Squad "${squadId}" on project "${ideProject.name}" (${ideProject.path}): "${prompt.slice(0, 80)}..."`,
 		);
 
-		const llmCaller = async (pMessages: any[], pModelId: string, temp: number, pSystemPrompt?: string) => {
-			const defaultModel = settingsMgr.getDefaultModel() || "auto/best-coding";
-			const resolvedModel =
-				this.pool.findModel(pModelId) || this.pool.findModel(defaultModel) || this.pool.getAvailableModels()[0];
+		const llmCaller = async (
+			pMessages: any[],
+			pModelId: string,
+			temp: number,
+			pSystemPrompt?: string,
+		): Promise<AsyncIterable<string>> => {
+			const generator = async function* () {
+				const defaultModel = settingsMgr.getDefaultModel() || "auto/best-coding";
+				const resolvedModel =
+					self.pool.findModel(pModelId) || self.pool.findModel(defaultModel) || self.pool.getAvailableModels()[0];
 
-			if (!resolvedModel) {
-				return `[Error: No hay modelos LLM disponibles para ejecutar a los agentes]`;
-			}
+				if (!resolvedModel) {
+					yield `[Error: No hay modelos LLM disponibles para ejecutar a los agentes]`;
+					return;
+				}
 
-			const pContext: Context = {
-				systemPrompt: pSystemPrompt,
-				messages: pMessages.map((m: any) => {
-					if (typeof m.content === "string") {
-						return {
-							role: m.role || "user",
-							content: m.content,
-							timestamp: Date.now(),
-						} as Message;
+				const pContext: Context = {
+					systemPrompt: pSystemPrompt,
+					messages: pMessages.map((m: any) => {
+						if (typeof m.content === "string") {
+							return {
+								role: m.role || "user",
+								content: m.content,
+								timestamp: Date.now(),
+							} as Message;
+						}
+						return m as Message;
+					}),
+				};
+
+				const auth = await self.pool.getModelRegistry().getApiKeyAndHeaders(resolvedModel);
+				const apiKey = auth.ok ? auth.apiKey : undefined;
+				try {
+					const streamResult = stream(resolvedModel, pContext, {
+						apiKey,
+						temperature: temp,
+					});
+
+					for await (const event of streamResult) {
+						if (event.type === "text_delta" && event.delta) {
+							yield event.delta;
+						}
 					}
-					return m as Message;
-				}),
+				} catch (_err: any) {
+					// Fallback to complete() if streaming fails for a specific provider
+					try {
+						const response = await complete(resolvedModel, pContext, {
+							apiKey,
+							temperature: temp,
+						});
+						for (const part of response.content) {
+							if (part.type === "text") yield part.text;
+						}
+					} catch (fallbackErr: any) {
+						yield `[Error al invocar modelo: ${fallbackErr.message || String(fallbackErr)}]`;
+					}
+				}
 			};
 
-			const auth = await this.pool.getModelRegistry().getApiKeyAndHeaders(resolvedModel);
-			const apiKey = auth.ok ? auth.apiKey : undefined;
-			const response = await complete(resolvedModel, pContext, {
-				apiKey,
-				temperature: temp,
-			});
-
-			let resultText = "";
-			for (const part of response.content) {
-				if (part.type === "text") resultText += part.text;
-			}
-			return resultText;
+			return generator();
 		};
 
 		const abortCtrl = new AbortController();
@@ -3409,9 +3435,129 @@ ${prompt || ""}`;
 			match = unixPathRegex.exec(combined);
 		}
 
+		// 4. Keyword & Active Dev Projects Auto-Discovery
+		const roots = [
+			"C:/Users/dre_x/OneDrive - Comdata SA/Desarrollo",
+			"C:/Users/dre_x/OneDrive/Desarrollo",
+			"C:/Users/dre_x/Desarrollo",
+			path.join(os.homedir(), "OneDrive - Comdata SA", "Desarrollo"),
+			path.join(os.homedir(), "OneDrive", "Desarrollo"),
+			path.join(os.homedir(), "source", "repos"),
+		];
+
+		const knownKeywords = [
+			"Hitachi-IH110",
+			"Hitachi",
+			"IH110",
+			"Validadoras",
+			"Contadora",
+			"SmartCash",
+			"TS300",
+			"Cdata",
+		];
+
+		const matchedKws = knownKeywords.filter((k) => new RegExp(`\\b${k}\\b`, "i").test(combined));
+
+		if (matchedKws.length > 0) {
+			for (const r of roots) {
+				if (!existsSync(r)) continue;
+				const findMatching = (dir: string, depth = 0): string | undefined => {
+					if (depth > 6) return undefined;
+					try {
+						const base = path.basename(dir).toLowerCase();
+						for (const kw of matchedKws) {
+							if (base === kw.toLowerCase() || base.includes(kw.toLowerCase())) {
+								const entries = readdirSync(dir);
+								if (
+									entries.some(
+										(e) =>
+											e.endsWith(".csproj") || e.endsWith(".sln") || e === ".kilo" || e === "package.json",
+									)
+								) {
+									return dir;
+								}
+							}
+						}
+						for (const entry of readdirSync(dir, { withFileTypes: true })) {
+							if (
+								entry.isDirectory() &&
+								!entry.name.startsWith(".") &&
+								!["node_modules", "bin", "obj", "dist", "build", "packages", "AppData"].includes(entry.name)
+							) {
+								const res = findMatching(path.join(dir, entry.name), depth + 1);
+								if (res) return res;
+							}
+						}
+					} catch {}
+					return undefined;
+				};
+
+				const found = findMatching(r);
+				if (found) return found;
+			}
+		}
+
+		// 5. Check if any project in session pool matches keyword and is not dummy
+		for (const p of this.pool.listProjects().projects) {
+			if (
+				p.path &&
+				existsSync(p.path) &&
+				!p.path.includes("AppData\\Local\\Temp") &&
+				!p.path.includes(".andy\\agent\\workspaces")
+			) {
+				if (
+					matchedKws.some(
+						(k) =>
+							p.name.toLowerCase().includes(k.toLowerCase()) || p.path.toLowerCase().includes(k.toLowerCase()),
+					)
+				) {
+					return p.path;
+				}
+			}
+		}
+
+		// 6. Check for recent .kilo workspace in developer roots
+		for (const r of roots) {
+			if (!existsSync(r)) continue;
+			const findKilo = (dir: string, depth = 0): string | undefined => {
+				if (depth > 5) return undefined;
+				try {
+					if (existsSync(path.join(dir, ".kilo"))) {
+						// Prefer leaf project if it has csproj/sln/package.json
+						const entries = readdirSync(dir);
+						if (
+							entries.some(
+								(e) => e.endsWith(".csproj") || e.endsWith(".sln") || e.endsWith(".cs") || e === "package.json",
+							)
+						) {
+							return dir;
+						}
+					}
+					for (const entry of readdirSync(dir, { withFileTypes: true })) {
+						if (
+							entry.isDirectory() &&
+							!entry.name.startsWith(".") &&
+							!["node_modules", "bin", "obj", "dist", "build", "packages", "AppData"].includes(entry.name)
+						) {
+							const res = findKilo(path.join(dir, entry.name), depth + 1);
+							if (res) return res;
+						}
+					}
+				} catch {}
+				return undefined;
+			};
+			const foundKilo = findKilo(r);
+			if (foundKilo) return foundKilo;
+		}
+
 		// Fallback to active project from WebUI pool if valid and not default dummy
 		const activeProj = this.pool.getActiveProject();
-		if (activeProj && activeProj.path && existsSync(activeProj.path)) {
+		if (
+			activeProj &&
+			activeProj.path &&
+			existsSync(activeProj.path) &&
+			!activeProj.path.includes("AppData\\Local\\Temp")
+		) {
 			return activeProj.path;
 		}
 
