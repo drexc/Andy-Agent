@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import os from "node:os";
 import path from "node:path";
@@ -2393,16 +2393,6 @@ ${prompt || ""}`;
 		else if (userAgent.toLowerCase().includes("python")) clientHint = "Python SDK";
 		else if (userAgent.toLowerCase().includes("curl")) clientHint = "CLI / cURL";
 
-		const customWorkspace =
-			(req.headers["x-workspace-path"] as string) ||
-			(req.headers["x-project-path"] as string) ||
-			(req.headers["x-project-dir"] as string) ||
-			undefined;
-
-		const ideProject = this.pool.getOrCreateIdeProject(authResult.key, clientHint, customWorkspace);
-		const customSessionId = (req.headers["x-session-id"] as string) || (body.user as string);
-		const sessionId = customSessionId ? `ide-${ideProject.id}-${customSessionId}` : `ide-session-${ideProject.id}`;
-
 		// Extract prompt and system instruction
 		const messages: any[] = body.messages;
 		const systemMsgs = messages.filter((m: any) => m.role === "system" || m.role === "developer");
@@ -2414,6 +2404,11 @@ ${prompt || ""}`;
 						.map((m: any) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
 						.join("\n\n")
 				: "";
+
+		const customWorkspace = this.detectWorkspaceFromRequest(req, body, messages, rawSystemPrompt);
+		const ideProject = this.pool.getOrCreateIdeProject(authResult.key, clientHint, customWorkspace);
+		const customSessionId = (req.headers["x-session-id"] as string) || (body.user as string);
+		const sessionId = customSessionId ? `ide-${ideProject.id}-${customSessionId}` : `ide-session-${ideProject.id}`;
 
 		const isConsolidationRequest = messages.some((m: any) => {
 			const txt = (typeof m.content === "string" ? m.content : JSON.stringify(m.content || "")).toLowerCase();
@@ -3325,6 +3320,102 @@ ${prompt || ""}`;
 		} catch (err: any) {
 			this.addLog("WARN", "Pantheon Bridge", `Failed to persist IDE session: ${err.message}`);
 		}
+	}
+
+	private detectWorkspaceFromRequest(
+		req: IncomingMessage,
+		body: any,
+		messages: any[],
+		systemPrompt: string,
+	): string | undefined {
+		// 1. Direct HTTP Headers
+		const headerCandidates = [
+			req.headers["x-workspace-path"],
+			req.headers["x-project-path"],
+			req.headers["x-project-dir"],
+			req.headers["x-workspace"],
+			req.headers["x-cwd"],
+			req.headers["workspace-path"],
+			req.headers["x-folder"],
+		];
+		for (const h of headerCandidates) {
+			if (typeof h === "string" && h.trim()) {
+				const cand = h.trim();
+				if (existsSync(cand)) return cand;
+			}
+		}
+
+		// 2. Body parameters
+		const bodyCandidates = [
+			body?.workspace,
+			body?.workspace_path,
+			body?.workspacePath,
+			body?.cwd,
+			body?.project_path,
+			body?.projectPath,
+		];
+		for (const b of bodyCandidates) {
+			if (typeof b === "string" && b.trim()) {
+				const cand = b.trim();
+				if (existsSync(cand)) return cand;
+			}
+		}
+
+		// 3. Scan messages and system prompt for Windows / Unix paths that exist on disk
+		const allTexts: string[] = [systemPrompt || ""];
+		for (const m of messages) {
+			if (typeof m?.content === "string") allTexts.push(m.content);
+			else if (Array.isArray(m?.content)) {
+				for (const part of m.content) {
+					if (part?.type === "text" && typeof part?.text === "string") allTexts.push(part.text);
+				}
+			}
+		}
+		const combined = allTexts.join("\n");
+
+		// Windows path regex (e.g. C:\Users\... or D:\...)
+		const winPathRegex = /([A-Za-z]:\\[^"'\r\n<>`]+)/g;
+		let match = winPathRegex.exec(combined);
+		while (match) {
+			const raw = match[1]
+				.trim()
+				.replace(/[.,;:)>\]]+$/, "")
+				.trim();
+			if (raw.length > 5 && existsSync(raw)) {
+				try {
+					const stat = statSync(raw);
+					if (stat.isDirectory()) return raw;
+					if (stat.isFile()) return path.dirname(raw);
+				} catch {}
+			}
+			match = winPathRegex.exec(combined);
+		}
+
+		// Unix path regex
+		const unixPathRegex = /(\/(?:Users|home|root|var|etc|opt|tmp|mnt|srv)[a-zA-Z0-9_\-./]+)/g;
+		match = unixPathRegex.exec(combined);
+		while (match) {
+			const raw = match[1]
+				.trim()
+				.replace(/[.,;:)>\]]+$/, "")
+				.trim();
+			if (raw.length > 5 && existsSync(raw)) {
+				try {
+					const stat = statSync(raw);
+					if (stat.isDirectory()) return raw;
+					if (stat.isFile()) return path.dirname(raw);
+				} catch {}
+			}
+			match = unixPathRegex.exec(combined);
+		}
+
+		// Fallback to active project from WebUI pool if valid and not default dummy
+		const activeProj = this.pool.getActiveProject();
+		if (activeProj && activeProj.path && existsSync(activeProj.path)) {
+			return activeProj.path;
+		}
+
+		return undefined;
 	}
 
 	private listSkills(projectDir: string, globalDir: string): any[] {

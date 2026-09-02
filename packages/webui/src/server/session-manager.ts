@@ -392,6 +392,13 @@ export class WebUiSessionPool {
 		for (const p of this.projects.values()) {
 			if (apiKey && p.apiKeyId === apiKey.id) {
 				p.lastActive = Date.now();
+				if (workspacePath && existsSync(workspacePath)) {
+					const resolved = path.resolve(workspacePath);
+					if (p.path !== resolved) {
+						p.path = resolved;
+						this.getOrCreateGraftEngine(p.id, resolved);
+					}
+				}
 				this.saveProjects();
 				return p;
 			}
@@ -399,6 +406,13 @@ export class WebUiSessionPool {
 				p.lastActive = Date.now();
 				if (apiKey && !p.apiKeyId) {
 					p.apiKeyId = apiKey.id;
+				}
+				if (workspacePath && existsSync(workspacePath)) {
+					const resolved = path.resolve(workspacePath);
+					if (p.path !== resolved) {
+						p.path = resolved;
+						this.getOrCreateGraftEngine(p.id, resolved);
+					}
 				}
 				this.saveProjects();
 				return p;
@@ -488,10 +502,10 @@ export class WebUiSessionPool {
 
 	public getPantheonOrchestrator(projectId?: string): PantheonOrchestrator {
 		const pId = projectId || this.activeProjectId;
+		const project = this.projects.get(pId);
+		const targetPath = project?.path || this.cwd;
 		let orch = this.pantheonOrchestrators.get(pId);
-		if (!orch) {
-			const project = this.projects.get(pId);
-			const targetPath = project?.path || this.cwd;
+		if (!orch || (orch as any).cwd !== targetPath) {
 			orch = new PantheonOrchestrator(targetPath);
 			this.pantheonOrchestrators.set(pId, orch);
 		}

@@ -26,6 +26,8 @@ export interface PantheonProjectContext {
 	fileList: string;
 	memory?: string;
 	agentsMd?: string;
+	manifestSummary?: string;
+	codeSnippetsSummary?: string;
 }
 
 export interface PantheonExecutionEvent {
@@ -139,14 +141,38 @@ export class PantheonOrchestrator {
 		const activeAgentId = targetAgentId || squad.leaderId || "hermes";
 		const primaryAgent = this.registry.getAgent(activeAgentId) || this.registry.getAgents()[0];
 
+		// Detect if userPrompt mentions an explicit project path on disk
+		let effectiveProjectInfo = options.projectInfo;
+		const winPathRegex = /([A-Za-z]:\\[^"'\r\n<>`]+)/g;
+		let pathMatch = winPathRegex.exec(userPrompt);
+		while (pathMatch) {
+			const cand = pathMatch[1]
+				.trim()
+				.replace(/[.,;:)>\]]+$/, "")
+				.trim();
+			if (cand.length > 5 && existsSync(cand)) {
+				const resolved = path.resolve(cand);
+				effectiveProjectInfo = {
+					id: effectiveProjectInfo?.id || "custom-path",
+					name: path.basename(resolved),
+					path: resolved,
+					description: effectiveProjectInfo?.description,
+				};
+				break;
+			}
+			pathMatch = winPathRegex.exec(userPrompt);
+		}
+
 		// Load Project Context (MEMORY.md, AGENTS.md, Files, CWD)
-		const projectContext = this.loadProjectContext(options.projectInfo);
+		const projectContext = this.loadProjectContext(effectiveProjectInfo);
 
 		// Collect Graft Structural Context
 		let graftContextData: any;
 		try {
-			const graftMap = await this.graft.map();
-			const diags = await this.graft.diagnostics();
+			const graftEngine =
+				projectContext.path && projectContext.path !== this.cwd ? new GraftEngine(projectContext.path) : this.graft;
+			const graftMap = await graftEngine.map();
+			const diags = await graftEngine.diagnostics();
 			graftContextData = {
 				map: graftMap.slice(0, 3000),
 				mapSummary: graftMap.slice(0, 500),
@@ -529,6 +555,36 @@ export class PantheonOrchestrator {
 			}
 		}
 
+		// 3. File Read Request Execution (e.g. ```read: path/file.cs``` or [read(file_path='...')] )
+		const readBlockRegex = /(?:```(?:read|file_read):\s*([^\r\n]+)```|\[read\(file_path=['"]?([^'"]+)['"]?\)\])/gi;
+		let readMatch = readBlockRegex.exec(text);
+		while (readMatch !== null) {
+			const targetFile = (readMatch[1] || readMatch[2] || "").trim();
+			if (targetFile) {
+				try {
+					const fullPath = path.isAbsolute(targetFile) ? targetFile : path.resolve(targetCwd, targetFile);
+					if (existsSync(fullPath)) {
+						const content = readFileSync(fullPath, "utf-8");
+						const ext = (path.extname(targetFile).slice(1) || "text").toLowerCase();
+						await onEvent({
+							type: "tool_start",
+							agentId: agent.id,
+							tool: "read",
+							input: { path: targetFile },
+						});
+						await onEvent({
+							type: "tool_result",
+							agentId: agent.id,
+							tool: "read",
+							output: `✓ Lectura de ${targetFile} (${content.split(/\r?\n/).length} líneas)`,
+						});
+						extraResultsText += `\n\n### 📖 Contenido de \`${targetFile}\`:\n\`\`\`${ext}\n${content.slice(0, 4000)}\n\`\`\``;
+					}
+				} catch {}
+			}
+			readMatch = readBlockRegex.exec(text);
+		}
+
 		return extraResultsText;
 	}
 
@@ -575,43 +631,120 @@ export class PantheonOrchestrator {
 			}
 		}
 
-		// 3. Scan workspace file structure
+		// 3. Deep scan workspace file structure & manifests
 		let fileList = "";
+		let manifestSummary = "";
+		let codeSnippetsSummary = "";
+
 		try {
 			const scanned: string[] = [];
+			const manifestFiles: string[] = [];
+			const sourceFiles: string[] = [];
+
 			const scanDir = (dir: string, depth = 0) => {
-				if (depth > 2 || scanned.length >= 40) return;
-				const entries = readdirSync(dir);
-				for (const entry of entries) {
-					if (
-						entry.startsWith(".") ||
-						entry === "node_modules" ||
-						entry === "dist" ||
-						entry === "build" ||
-						entry === "bin" ||
-						entry === "obj" ||
-						entry === "coverage"
-					) {
-						continue;
-					}
-					const fullPath = path.join(dir, entry);
-					const relPath = path.relative(targetCwd, fullPath).replace(/\\/g, "/");
-					try {
-						const stat = statSync(fullPath);
-						if (stat.isDirectory()) {
-							scanned.push(`📁 ${relPath}/`);
-							scanDir(fullPath, depth + 1);
-						} else {
-							scanned.push(`📄 ${relPath}`);
+				if (depth > 6 || scanned.length >= 200) return;
+				if (!existsSync(dir)) return;
+				try {
+					const entries = readdirSync(dir);
+					for (const entry of entries) {
+						if (
+							entry.startsWith(".") ||
+							entry === "node_modules" ||
+							entry === "dist" ||
+							entry === "build" ||
+							entry === "bin" ||
+							entry === "obj" ||
+							entry === "coverage" ||
+							entry === "packages" ||
+							entry === "TestResults" ||
+							entry === "Debug" ||
+							entry === "Release"
+						) {
+							continue;
 						}
-					} catch {}
-				}
+						const fullPath = path.join(dir, entry);
+						const relPath = path.relative(targetCwd, fullPath).replace(/\\/g, "/");
+						try {
+							const stat = statSync(fullPath);
+							if (stat.isDirectory()) {
+								scanned.push(`📁 ${relPath}/`);
+								scanDir(fullPath, depth + 1);
+							} else {
+								scanned.push(`📄 ${relPath}`);
+								const lower = entry.toLowerCase();
+								if (
+									lower.endsWith(".sln") ||
+									lower.endsWith(".csproj") ||
+									lower.endsWith(".fsproj") ||
+									lower.endsWith(".vbproj") ||
+									lower === "package.json" ||
+									lower === "cargo.toml" ||
+									lower === "go.mod" ||
+									lower === "requirements.txt" ||
+									lower === "pyproject.toml"
+								) {
+									manifestFiles.push(fullPath);
+								} else if (
+									(lower.endsWith(".cs") ||
+										lower.endsWith(".ts") ||
+										lower.endsWith(".py") ||
+										lower.endsWith(".rs") ||
+										lower.endsWith(".go")) &&
+									sourceFiles.length < 15
+								) {
+									sourceFiles.push(fullPath);
+								}
+							}
+						} catch {}
+					}
+				} catch {}
 			};
 
 			scanDir(targetCwd);
-			fileList = scanned.slice(0, 40).join("\n");
+			fileList = scanned.slice(0, 150).join("\n");
 			if (scanned.length === 0) {
 				fileList = "(Directorio vacío o recién inicializado)";
+			}
+
+			// Read key manifest files
+			if (manifestFiles.length > 0) {
+				const manifests: string[] = [];
+				for (const mf of manifestFiles.slice(0, 5)) {
+					try {
+						const rel = path.relative(targetCwd, mf).replace(/\\/g, "/");
+						const content = readFileSync(mf, "utf-8").trim();
+						manifests.push(`### 📦 ${rel}\n\`\`\`xml\n${content.slice(0, 2000)}\n\`\`\``);
+					} catch {}
+				}
+				manifestSummary = manifests.join("\n\n");
+			}
+
+			// Extract public interfaces and classes from top source files
+			if (sourceFiles.length > 0) {
+				const snippets: string[] = [];
+				for (const sf of sourceFiles.slice(0, 8)) {
+					try {
+						const rel = path.relative(targetCwd, sf).replace(/\\/g, "/");
+						const content = readFileSync(sf, "utf-8");
+						const ext = path.extname(sf).slice(1) || "cs";
+						// Extract declarations (interface, class, public methods, events, properties)
+						const lines = content.split(/\r?\n/);
+						const relevantLines = lines.filter(
+							(l) =>
+								/(?:public|internal|protected)\s+(?:class|interface|struct|enum|record|void|async|Task|event|string|int|bool|byte)/i.test(
+									l,
+								) || /namespace\s+|using\s+/i.test(l),
+						);
+						if (relevantLines.length > 0) {
+							snippets.push(
+								`### 🔍 ${rel} (Estructura/Signaturas públicas):\n\`\`\`${ext}\n${relevantLines.slice(0, 40).join("\n")}\n\`\`\``,
+							);
+						} else {
+							snippets.push(`### 🔍 ${rel}:\n\`\`\`${ext}\n${content.slice(0, 1500)}\n\`\`\``);
+						}
+					} catch {}
+				}
+				codeSnippetsSummary = snippets.join("\n\n");
 			}
 		} catch {
 			fileList = "(No fue posible escanear los archivos del directorio)";
@@ -624,6 +757,8 @@ export class PantheonOrchestrator {
 			fileList,
 			memory,
 			agentsMd,
+			manifestSummary,
+			codeSnippetsSummary,
 		};
 	}
 
@@ -645,10 +780,12 @@ export class PantheonOrchestrator {
 - **Nombre del Proyecto**: ${projectContext.name}
 - **Directorio Raíz / Workspace CWD**: ${projectContext.path}
 ${projectContext.description ? `- **Propósito/Descripción**: ${projectContext.description}\n` : ""}
-## Inventario de Archivos del Proyecto:
+## Árbol de Archivos del Proyecto:
 \`\`\`
 ${projectContext.fileList}
 \`\`\`
+${projectContext.manifestSummary ? `\n## Manifiestos de Construcción y Dependencias del Proyecto:\n${projectContext.manifestSummary}\n` : ""}
+${projectContext.codeSnippetsSummary ? `\n## Interfaces y Estructuras Públicas del Código Fuente:\n${projectContext.codeSnippetsSummary}\n` : ""}
 ${projectContext.memory ? `\n## Memoria Persistente del Proyecto (MEMORY.md):\n${projectContext.memory}\n` : ""}
 ${projectContext.agentsMd ? `\n## Reglas y Directivas del Proyecto (AGENTS.md):\n${projectContext.agentsMd}\n` : ""}`
 			: `\n\n# ESPACIO DE TRABAJO
@@ -680,9 +817,9 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 		const operationalRules = `\n\n# REGLAS CRÍTICAS DE EJECUCIÓN DEL PANTHEON
 1. **Identidad del Agente**: Eres exclusivamente **@${agent.name}** (${agent.role}), un agente autónomo del sistema multi-agente Pantheon en el ecosistema Andy Agent. Tu única identidad es @${agent.name}. NUNCA te identifiques como Antigravity, Google DeepMind, OpenAI ni un asistente genérico.
 2. **Idioma y Formato Humano**: Responde siempre en **Español** con formato Markdown estructurado, limpio y profesional (encabezados, listas, tablas y bloques de código).
-3. **PROHIBICIÓN ABSOLUTA DE GENERAR PSEUDO-TAGS O TOKENS DE HERRAMIENTAS**: NUNCA generes tokens o etiquetas especiales de llamada a herramientas como \`<|tool_call_start|>\`, \`<|tool_call_end|>\`, \`[read(...)]\`, \`[write(...)]\`, \`[execute(...)]\`, \`<tool_call>\`, \`<arg_key>\`, \`<arg_value>\`, \`<action>\`. No intentes ejecutar comandos por tokens. Toda la información del proyecto y del AST de Graft ya ha sido recolectada y provista arriba. Redacta siempre en texto Markdown en Español para el usuario y para tus compañeros de escuadrón.
-4. **Conocimiento del Proyecto Activo**: Ya te encuentras ejecutando dentro del espacio de trabajo del proyecto activo ("${projectContext?.name || path.basename(this.cwd)}" en "${projectContext?.path || this.cwd}").
-5. **PROHIBIDO PREGUNTAR POR EL PROYECTO O RUTA**: No preguntes al usuario "¿cuál es el proyecto?", "¿dónde está el código?" ni pidas que te indiquen rutas. Actúa directamente sobre el proyecto activo aquí provisto.
+3. **PROHIBICIÓN ABSOLUTA DE GENERAR PSEUDO-TAGS O TOKENS DE HERRAMIENTAS**: NUNCA generes tokens o etiquetas especiales de llamada a herramientas como \`<|tool_call_start|>\`, \`<|tool_call_end|>\`, \`<tool_call>\`, \`<arg_key>\`, \`<arg_value>\`, \`<action>\`. Toda la información del proyecto, manifiestos y código fuente ya ha sido leída y provista arriba. Redacta siempre en texto Markdown en Español para el usuario y para tus compañeros de escuadrón.
+4. **Acceso Directo al Proyecto Activo**: Ya te encuentras ejecutando dentro del espacio de trabajo del proyecto activo ("${projectContext?.name || path.basename(this.cwd)}" en "${projectContext?.path || this.cwd}"). Toda la estructura de archivos y código ya está provista arriba.
+5. **PROHIBIDO PREGUNTAR POR EL PROYECTO O PEDIR QUE EL USUARIO EJECUTE COMANDOS DE ESTRUCTURA**: NO preguntes "¿cuál es el proyecto?", "¿dónde está el código?" ni pidas al usuario que ejecute "tree /F" o comparta la estructura. Tienes acceso directo al proyecto arriba presentado. Procede inmediatamente con tu análisis o desarrollo.
 6. **Especialización Inmediata**:
    - Si eres **@Pythia**: Realiza la investigación profunda RLM y síntesis analizando los módulos, dependencias y arquitectura del proyecto activo, y presenta los hallazgos directamente.
    - Si eres **@Athena**: Diseña la arquitectura, interfaces y evalúa el impacto estructural (Graft blast radius) sobre el proyecto activo.
@@ -700,7 +837,7 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 
 2. **Para Ejecutar Pruebas o Comandos (@Argos)**:
    Escribe el bloque de comando con el formato:
-   \`\`\`bash:npm test\`\`\` o \`\`\`bash:npm run check\`\`\` o \`\`\`bash:pytest\`\`\`
+   \`\`\`bash:dotnet test\`\`\` o \`\`\`bash:npm test\`\`\` o \`\`\`bash:pytest\`\`\`
    El sistema ejecutará el comando en la terminal real del proyecto y presentará el reporte de calidad.
 
 3. **Para Investigar (@Pythia)**:
