@@ -312,36 +312,42 @@ export function getWebUiHtml(): string {
 
       <!-- Right side: Controls -->
       <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        <!-- Model Selector Dropdown with Provider Categorization -->
+        <!-- Pantheon Squad Selector Dropdown -->
         <div class="relative">
-          <button onclick="toggleModelDropdown()" id="modelSelectorBtn" class="flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-slate-200 transition-colors shadow-sm max-w-[125px] sm:max-w-[200px] md:max-w-none truncate">
-            <span id="selectedProviderDot" class="w-2 h-2 rounded-full bg-brand-500 shrink-0"></span>
-            <span id="selectedModelLabel" class="truncate text-[11px] sm:text-xs">auto/best-coding</span>
-            <i data-lucide="chevron-down" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 shrink-0"></i>
+          <button onclick="toggleSquadDropdown()" id="squadSelectorBtn" class="flex items-center gap-1.5 bg-surface-800 hover:bg-surface-750 border border-purple-500/40 px-2 sm:px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-100 transition-all shadow-sm max-w-[150px] sm:max-w-[240px] md:max-w-none truncate cursor-pointer group">
+            <span class="w-2 h-2 rounded-full bg-purple-400 animate-pulse shrink-0"></span>
+            <i data-lucide="shield" class="w-3.5 h-3.5 text-purple-400 shrink-0"></i>
+            <span id="selectedSquadLabel" class="truncate text-[11px] sm:text-xs">FullStack Engineering Squad</span>
+            <span id="selectedSquadCountBadge" class="hidden sm:inline text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">4 agentes</span>
+            <i data-lucide="chevron-down" class="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-400 shrink-0 group-hover:text-white transition-colors"></i>
           </button>
           
-          <!-- Rich Categorized Dropdown Popover (Centered modal on smartphone) -->
-          <div id="modelDropdownMenu" class="hidden fixed inset-x-3 top-16 md:absolute md:inset-auto md:right-0 md:top-auto md:mt-1.5 md:w-96 max-w-[calc(100vw-1.5rem)] bg-surface-850 border border-surface-700 rounded-xl shadow-2xl z-50 text-xs overflow-hidden flex flex-col max-h-[75vh] md:max-h-[28rem]">
-            <!-- Search bar -->
-            <div class="p-2.5 border-b border-surface-750 bg-surface-800/80">
+          <!-- Squads Dropdown Popover -->
+          <div id="squadDropdownMenu" class="hidden fixed inset-x-3 top-16 md:absolute md:inset-auto md:right-0 md:top-auto md:mt-1.5 md:w-96 max-w-[calc(100vw-1.5rem)] bg-surface-850 border border-surface-700 rounded-2xl shadow-2xl z-50 text-xs overflow-hidden flex flex-col max-h-[75vh] md:max-h-[30rem]">
+            <!-- Header & Search -->
+            <div class="p-3 border-b border-surface-750 bg-surface-800/80 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-white text-xs flex items-center gap-1.5">
+                  <i data-lucide="shield" class="w-4 h-4 text-purple-400"></i>
+                  Escuadrones Multi-Agente
+                </span>
+                <span id="squadDropdownCountText" class="text-[10px] font-mono text-purple-300 bg-purple-500/15 px-2 py-0.5 rounded-full">3 disponibles</span>
+              </div>
               <div class="relative">
                 <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i>
-                <input id="modelSearchInput" type="text" placeholder="Buscar modelo (ej: best-coding, gpt-4o, claude)..." oninput="filterDropdownCatalog(this.value)" class="w-full bg-surface-750 border border-surface-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-brand-500">
+                <input id="squadSearchInput" type="text" placeholder="Buscar escuadrón..." oninput="filterSquadDropdown(this.value)" class="w-full bg-surface-750 border border-surface-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-purple-500">
               </div>
             </div>
 
-            <!-- Provider Selection Tabs -->
-            <div id="dropdownProviderTabs" class="flex items-center gap-1 p-1.5 border-b border-surface-750 bg-surface-800 overflow-x-auto no-scrollbar text-[10px]"></div>
+            <!-- Dynamic Squad List -->
+            <div id="squadsDropdownList" class="flex-1 overflow-y-auto p-2 space-y-1.5 max-h-72 select-none"></div>
 
-            <!-- Dynamic Model List -->
-            <div id="modelsDropdownList" class="flex-1 overflow-y-auto p-1.5 space-y-0.5 max-h-64 select-none"></div>
-
-            <!-- Footer link to Providers tab -->
-            <div class="p-2 border-t border-surface-750 bg-surface-800/50 flex items-center justify-between text-[11px] text-slate-400">
-              <span id="dropdownModelCountText">0 modelos</span>
-              <button onclick="switchView('providers'); toggleModelDropdown();" class="text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1">
-                <i data-lucide="settings" class="w-3 h-3"></i>
-                Gestionar Proveedores
+            <!-- Footer link to Pantheon Studio -->
+            <div class="p-2.5 border-t border-surface-750 bg-surface-800/60 flex items-center justify-between text-[11px] text-slate-400">
+              <span>Configuración de escuadrones</span>
+              <button onclick="switchView('pantheon'); toggleSquadDropdown();" class="text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1 cursor-pointer">
+                <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                <span>Pantheon Studio</span>
               </button>
             </div>
           </div>
@@ -466,11 +472,17 @@ export function getWebUiHtml(): string {
       </div>
 
       <div class="p-2 sm:p-4 bg-surface-900/95 border-t border-surface-750/80 shrink-0 safe-bottom">
-        <div class="max-w-4xl mx-auto relative bg-surface-800 border border-surface-700 rounded-xl shadow-xl focus-within:border-brand-500 transition-all duration-200">
+        <div class="max-w-4xl mx-auto relative bg-surface-800 border border-surface-700 rounded-2xl shadow-xl focus-within:border-purple-500 transition-all duration-200 overflow-hidden">
+          <!-- Chat Quick Mention Chips Bar -->
+          <div id="chatMentionChips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-3 pt-2 pb-1 text-xs border-b border-surface-750/40 bg-surface-850/60">
+            <span class="text-[10px] text-slate-400 font-semibold shrink-0 mr-0.5">Mencionar:</span>
+            <!-- Dynamically populated via JS -->
+          </div>
+
           <textarea
             id="promptInput"
             rows="1"
-            placeholder="Envía un mensaje a Andy Agent o usa /..."
+            placeholder="Envía una instrucción al escuadrón o menciona a un especialista (@Hermes, @Athena, @Argos)..."
             oninput="autoExpandTextarea(this)"
             onkeydown="handleInputKeyDown(event)"
             class="w-full bg-transparent text-sm text-slate-100 placeholder-slate-400 px-3 py-2.5 sm:px-4 sm:py-3 resize-none focus:outline-none max-h-36 sm:max-h-48 overflow-y-auto leading-relaxed"
@@ -990,17 +1002,13 @@ export function getWebUiHtml(): string {
         <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           <!-- Sub-Tab switcher -->
           <div class="bg-surface-800 p-1 rounded-xl border border-surface-700 flex items-center text-xs w-full sm:w-auto overflow-x-auto no-scrollbar">
-            <button id="pantheonSubTabRoomBtn" onclick="switchPantheonSubTab('room')" class="px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
-              <i data-lucide="messages-square" class="w-3.5 h-3.5"></i>
-              War Room
-            </button>
-            <button id="pantheonSubTabRosterBtn" onclick="switchPantheonSubTab('roster')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
+            <button id="pantheonSubTabRosterBtn" onclick="switchPantheonSubTab('roster')" class="px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
               <i data-lucide="users" class="w-3.5 h-3.5"></i>
-              Agentes & Escuadrones
+              Escuadrones & Agentes
             </button>
             <button id="pantheonSubTabTopologyBtn" onclick="switchPantheonSubTab('topology')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
               <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
-              Topología
+              Topología de Malla
             </button>
           </div>
 
@@ -1011,79 +1019,32 @@ export function getWebUiHtml(): string {
         </div>
       </div>
 
-      <!-- SUBTAB 1: SQUAD WAR ROOM (COLLABORATIVE MULTI-AGENT CHAT) -->
-      <div id="pantheonSubTabRoom" class="flex flex-col flex-1 min-h-[400px] space-y-3">
-        <!-- Controls Bar -->
-        <div class="bg-surface-850 border border-surface-750 rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2.5 text-xs">
-          <div class="flex items-center gap-2 flex-1 min-w-[220px]">
-            <span class="text-slate-400 font-medium shrink-0">Escuadrón:</span>
-            <select id="pantheonSquadSelect" onchange="switchActivePantheonSquad(this.value)" class="w-full bg-surface-750 border border-surface-700 text-xs text-white px-2.5 py-1.5 rounded-xl font-medium focus:outline-none focus:border-purple-500 cursor-pointer truncate">
-              <option value="fullstack-squad">FullStack Engineering Squad</option>
-              <option value="audit-fix-squad">Auditoría & Auto-Refactor</option>
-              <option value="research-squad">Exploración & Investigación</option>
-            </select>
-          </div>
-
-          <!-- Quick Flow Action Buttons -->
-          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto py-0.5">
-            <button onclick="runSquadPreset('fullstack')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-purple-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0" title="Flujo completo: Arquitectura -> Coder -> Auditor">
-              <i data-lucide="zap" class="w-3.5 h-3.5 text-purple-400"></i>
-              Flujo FullStack
-            </button>
-            <button onclick="runSquadPreset('audit')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-emerald-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0" title="Auditoría Graft + Auto-Fix">
-              <i data-lucide="stethoscope" class="w-3.5 h-3.5 text-emerald-400"></i>
-              Auditoría & Fix
-            </button>
-            <button onclick="runSquadPreset('research')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-pink-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0" title="Exploración RLM">
-              <i data-lucide="search" class="w-3.5 h-3.5 text-pink-400"></i>
-              RLM
-            </button>
-            <button onclick="clearPantheonRoom()" class="p-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer shrink-0 ml-auto" title="Limpiar sala">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- Collaborative Messages Container -->
-        <div id="pantheonChatTimeline" class="flex-1 bg-surface-950 border border-surface-750 rounded-2xl p-3 sm:p-5 overflow-y-auto space-y-3.5 select-text min-h-[260px] max-h-[calc(100dvh-320px)] sm:max-h-none shadow-2xl">
-          <div class="text-center text-slate-500 text-xs py-8 italic">
-            Bienvenido a la Sala de Guerra del Pantheon. Envía una tarea o etiqueta a un agente con <code class="text-purple-300">@Hermes</code>, <code class="text-blue-300">@Athena</code>, <code class="text-amber-300">@Hephaestus</code>, <code class="text-emerald-300">@Argos</code> o <code class="text-pink-300">@Pythia</code>.
-          </div>
-        </div>
-
-        <!-- Input Bar with @mention Quick Chips -->
-        <div class="bg-surface-850 border border-surface-700 rounded-2xl p-3 shadow-xl space-y-2">
-          <!-- Mention chips -->
-          <div id="pantheonMentionChips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-xs">
-            <span class="text-[11px] text-slate-400 font-semibold mr-1">Mencionar:</span>
-            <button onclick="insertPantheonMention('Hermes')" class="px-2 py-0.5 rounded-md bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 font-mono text-[11px] transition-colors">@Hermes</button>
-            <button onclick="insertPantheonMention('Athena')" class="px-2 py-0.5 rounded-md bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 font-mono text-[11px] transition-colors">@Athena</button>
-            <button onclick="insertPantheonMention('Hephaestus')" class="px-2 py-0.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-mono text-[11px] transition-colors">@Hephaestus</button>
-            <button onclick="insertPantheonMention('Argos')" class="px-2 py-0.5 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-mono text-[11px] transition-colors">@Argos</button>
-            <button onclick="insertPantheonMention('Pythia')" class="px-2 py-0.5 rounded-md bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/30 text-pink-300 font-mono text-[11px] transition-colors">@Pythia</button>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <textarea
-              id="pantheonPromptInput"
-              rows="1"
-              placeholder="Escribe una instrucción para el escuadrón o usa @Nombre para dirigir a un especialista..."
-              onkeydown="handlePantheonInputKeyDown(event)"
-              oninput="autoExpandTextarea(this)"
-              class="flex-1 bg-surface-900 border border-surface-750 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 resize-none max-h-32"
-            ></textarea>
-            <button id="pantheonSendBtn" onclick="submitPantheonPrompt()" class="bg-gradient-to-tr from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs px-4 py-3 rounded-xl shadow-lg shadow-purple-500/20 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer">
-              <i data-lucide="send" class="w-4 h-4"></i>
-              <span>Enviar</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- SUBTAB 2: AGENT ROSTER & SQUADS (VISUAL BUILDER) -->
-      <div id="pantheonSubTabRoster" class="hidden flex flex-col flex-1 space-y-6">
-        <!-- Section 1: Specialists Society -->
+      <!-- SUBTAB 1: AGENT ROSTER & SQUADS (VISUAL BUILDER) -->
+      <div id="pantheonSubTabRoster" class="flex flex-col flex-1 space-y-6">
+        <!-- Section 1: Squads of the Pantheon -->
         <div class="space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-surface-750 pb-2">
+            <div>
+              <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                <i data-lucide="shield" class="w-4 h-4 text-indigo-400"></i>
+                Escuadrones Colaborativos
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Equipos tácticos de agentes con un líder coordinador y flujos jerárquicos, secuenciales o colaborativos.</p>
+            </div>
+
+            <button onclick="openCreateSquadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0">
+              <i data-lucide="shield-plus" class="w-4 h-4"></i>
+              Crear Nuevo Escuadrón
+            </button>
+          </div>
+
+          <div id="pantheonSquadsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+
+        <!-- Section 2: Specialists Society -->
+        <div class="space-y-3 pt-4 border-t border-surface-750">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-surface-750 pb-2">
             <div>
               <h3 class="font-bold text-sm text-white flex items-center gap-2">
@@ -1103,31 +1064,9 @@ export function getWebUiHtml(): string {
             <!-- Populated dynamically via JS -->
           </div>
         </div>
-
-        <!-- Section 2: Squads of the Pantheon -->
-        <div class="space-y-3 pt-4 border-t border-surface-750">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-surface-750 pb-2">
-            <div>
-              <h3 class="font-bold text-sm text-white flex items-center gap-2">
-                <i data-lucide="shield" class="w-4 h-4 text-indigo-400"></i>
-                Escuadrones Colaborativos
-              </h3>
-              <p class="text-xs text-slate-400 mt-0.5">Equipos tácticos de agentes con un líder coordinador y flujos jerárquicos o secuenciales.</p>
-            </div>
-
-            <button onclick="openCreateSquadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0">
-              <i data-lucide="shield-plus" class="w-4 h-4"></i>
-              Crear Nuevo Escuadrón
-            </button>
-          </div>
-
-          <div id="pantheonSquadsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Populated dynamically via JS -->
-          </div>
-        </div>
       </div>
 
-      <!-- SUBTAB 3: TOPOLOGY & LIVE MESH -->
+      <!-- SUBTAB 2: TOPOLOGY & LIVE MESH -->
       <div id="pantheonSubTabTopology" class="hidden flex flex-col flex-1 space-y-4">
         <div class="bg-surface-850 border border-surface-750 rounded-2xl p-4 sm:p-5 flex flex-col space-y-3">
           <div class="flex items-center justify-between border-b border-surface-750 pb-2">
@@ -3570,38 +3509,38 @@ for chunk in response:
       liveIndicator.classList.remove('hidden');
       document.getElementById('liveExecutionText').innerText = 'Pensando y preparando respuesta...';
 
-      const assistantMsgContainer = createAssistantMessageCard();
-      document.getElementById('chatMessages').appendChild(assistantMsgContainer);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-
       activeAbortController = new AbortController();
+      const chatMessages = document.getElementById('chatMessages');
+
+      let currentAgentDiv = null;
+      let currentAgentContentDiv = null;
+      let currentAgentFullText = '';
 
       try {
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api/pantheon/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sessionId: currentSessionId,
+            squadId: pantheonState.activeSquadId || 'fullstack-squad',
+            prompt: text,
             projectId: currentProjectId,
-            model: currentModelId,
-            provider: currentProviderId || 'omniroute',
-            thinkingLevel: currentThinkingLevel,
-            messages: [{ role: 'user', content: text }]
+            sessionId: currentSessionId
           }),
           signal: activeAbortController.signal
         });
 
         if (!response.ok) {
           const errText = await response.text();
-          appendErrorCard(assistantMsgContainer, 'Error en la solicitud HTTP ' + response.status + ': ' + errText);
+          const errDiv = document.createElement('div');
+          errDiv.className = 'p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs my-2';
+          errDiv.innerText = 'Error en la solicitud HTTP ' + response.status + ': ' + errText;
+          chatMessages.appendChild(errDiv);
           return;
         }
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        let fullAssistantContent = '';
-        let fullReasoningContent = '';
 
         while (true) {
           const { done, value } = await reader.read();
@@ -3612,39 +3551,86 @@ for chunk in response:
           buffer = lines.pop() || '';
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const jsonStr = line.slice(6).trim();
-              if (jsonStr === '[DONE]') continue;
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data:')) continue;
+            const dataStr = trimmed.slice(5).trim();
+            if (dataStr === '[DONE]') continue;
 
-              try {
-                const event = JSON.parse(jsonStr);
-
-                if (event.type === 'token') {
-                  fullAssistantContent += event.content;
-                  updateAssistantContent(assistantMsgContainer, fullAssistantContent);
-                } else if (event.type === 'reasoning') {
-                  fullReasoningContent += event.content;
-                  updateReasoningBlock(assistantMsgContainer, fullReasoningContent);
-                } else if (event.type === 'tool_start') {
-                  document.getElementById('liveExecutionText').innerText = \`Ejecutando herramienta: \${event.tool}...\`;
-                  appendToolCallCard(assistantMsgContainer, event.tool, event.input);
-                } else if (event.type === 'tool_result') {
-                  updateToolCallResult(assistantMsgContainer, event.tool, event.output);
-                } else if (event.type === 'error') {
-                  appendErrorCard(assistantMsgContainer, event.error || 'Error en el proveedor');
-                }
-              } catch (e) {}
-            }
+            try {
+              const event = JSON.parse(dataStr);
+              if (event.type === 'agent_start') {
+                currentAgentFullText = '';
+                document.getElementById('liveExecutionText').innerText = 'Agente @' + event.agentName + ' (' + event.agentRole + ') respondiendo...';
+                currentAgentDiv = document.createElement('div');
+                currentAgentDiv.className = 'p-4 rounded-2xl bg-surface-850 border border-surface-700 text-xs text-white space-y-2 shadow-lg my-2 transition-all';
+                currentAgentDiv.style.borderLeft = \`4px solid \${event.agentColor || '#8B5CF6'}\`;
+                currentAgentDiv.innerHTML = \`
+                  <div class="flex items-center justify-between border-b border-surface-750/50 pb-2">
+                    <div class="flex items-center gap-2.5">
+                      <span class="text-xl">\${event.agentAvatar || '🤖'}</span>
+                      <div>
+                        <div class="font-bold text-sm" style="color: \${event.agentColor || '#FFFFFF'}">\${event.agentName}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">\${event.agentRole}</div>
+                      </div>
+                    </div>
+                    <span class="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 font-mono border border-purple-500/20">Pantheon Agent</span>
+                  </div>
+                  <div class="agent-markdown-body prose-custom mt-2 text-slate-200 font-sans text-xs whitespace-normal break-words leading-relaxed pl-7 select-text space-y-2"></div>
+                \`;
+                chatMessages.appendChild(currentAgentDiv);
+                currentAgentContentDiv = currentAgentDiv.querySelector('.agent-markdown-body');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                lucide.createIcons();
+              } else if (event.type === 'delta' && currentAgentContentDiv) {
+                currentAgentFullText += event.delta || '';
+                const cleaned = cleanPantheonOutput(currentAgentFullText);
+                currentAgentContentDiv.innerHTML = formatMarkdown(cleaned);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              } else if (event.type === 'agent_finish' && currentAgentContentDiv) {
+                const cleaned = cleanPantheonOutput(currentAgentFullText);
+                currentAgentContentDiv.innerHTML = formatMarkdown(cleaned);
+                currentAgentContentDiv.querySelectorAll('pre code').forEach((block) => {
+                  hljs.highlightElement(block);
+                });
+                lucide.createIcons();
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              } else if (event.type === 'delegation') {
+                const delDiv = document.createElement('div');
+                delDiv.className = 'p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-200 text-xs flex items-center gap-2 my-1.5 pl-6';
+                delDiv.innerHTML = \`
+                  <i data-lucide="arrow-right-circle" class="w-4 h-4 text-purple-400 shrink-0"></i>
+                  <span><strong>Delegación:</strong> Tarea transferida a <strong>@\${event.delegation?.toAgentId || 'agente'}</strong></span>
+                \`;
+                chatMessages.appendChild(delDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                lucide.createIcons();
+              } else if (event.type === 'graft_event') {
+                const gDiv = document.createElement('div');
+                gDiv.className = 'p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] flex items-center gap-2 my-1 pl-6';
+                gDiv.innerHTML = \`
+                  <i data-lucide="git-fork" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
+                  <span>Contexto Graft AST inyectado (\${event.graftData?.diagnosticsCount || 0} diagnósticos estáticos)</span>
+                \`;
+                chatMessages.appendChild(gDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                lucide.createIcons();
+              } else if (event.type === 'error') {
+                const errDiv = document.createElement('div');
+                errDiv.className = 'p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs my-1 pl-6';
+                errDiv.innerText = 'Aviso del agente: ' + (event.error || 'Error en la respuesta');
+                chatMessages.appendChild(errDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              }
+            } catch (e) {}
           }
           chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-
-        if (!fullAssistantContent && !assistantMsgContainer.querySelector('.tool-card-') && !assistantMsgContainer.querySelector('.error-card')) {
-          appendErrorCard(assistantMsgContainer, 'No se recibió texto del modelo. Por favor verifica que el proveedor esté activo o ingresa tu API Key.');
-        }
       } catch (err) {
         if (err.name !== 'AbortError') {
-          appendErrorCard(assistantMsgContainer, err.message || String(err));
+          const errDiv = document.createElement('div');
+          errDiv.className = 'p-3.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs my-2';
+          errDiv.innerText = 'Error en la sesión de Pantheon: ' + (err.message || String(err));
+          chatMessages.appendChild(errDiv);
         }
       } finally {
         liveIndicator.classList.add('hidden');
@@ -5157,7 +5143,7 @@ for chunk in response:
 
     // --- PANTHEON MULTI-AGENT STUDIO CLIENT ---
     const pantheonState = {
-      activeSubTab: 'room',
+      activeSubTab: 'roster',
       activeSquadId: 'fullstack-squad',
       agents: [],
       squads: [],
@@ -5166,26 +5152,24 @@ for chunk in response:
 
     function switchPantheonSubTab(tab) {
       pantheonState.activeSubTab = tab;
-      ['pantheonSubTabRoom', 'pantheonSubTabRoster', 'pantheonSubTabTopology'].forEach(t => {
+      ['pantheonSubTabRoster', 'pantheonSubTabTopology'].forEach(t => {
         const el = document.getElementById(t);
         if (el) el.classList.add('hidden');
       });
 
-      ['pantheonSubTabRoomBtn', 'pantheonSubTabRosterBtn', 'pantheonSubTabTopologyBtn'].forEach(b => {
+      ['pantheonSubTabRosterBtn', 'pantheonSubTabTopologyBtn'].forEach(b => {
         const el = document.getElementById(b);
-        if (el) el.className = 'px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer';
+        if (el) el.className = 'px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shrink-0';
       });
 
-      if (tab === 'room') {
-        document.getElementById('pantheonSubTabRoom').classList.remove('hidden');
-        document.getElementById('pantheonSubTabRoomBtn').className = 'px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer';
-      } else if (tab === 'roster') {
+      if (tab === 'roster') {
         document.getElementById('pantheonSubTabRoster').classList.remove('hidden');
-        document.getElementById('pantheonSubTabRosterBtn').className = 'px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer';
+        document.getElementById('pantheonSubTabRosterBtn').className = 'px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0';
+        renderPantheonSquadsList();
         renderPantheonAgents();
       } else if (tab === 'topology') {
         document.getElementById('pantheonSubTabTopology').classList.remove('hidden');
-        document.getElementById('pantheonSubTabTopologyBtn').className = 'px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer';
+        document.getElementById('pantheonSubTabTopologyBtn').className = 'px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0';
         renderPantheonTopology();
       }
       lucide.createIcons();
@@ -5196,10 +5180,11 @@ for chunk in response:
         fetchPantheonAgents(),
         fetchPantheonSquads()
       ]);
-      renderPantheonSquadSelect();
-      renderPantheonMentionChips();
-      renderPantheonAgents();
+      updateHeaderSquadButton();
+      renderHeaderSquadDropdown();
+      renderChatMentionChips();
       renderPantheonSquadsList();
+      renderPantheonAgents();
       renderPantheonTopology();
     }
 
@@ -5223,72 +5208,152 @@ for chunk in response:
       }
     }
 
-    function renderPantheonSquadSelect() {
-      const select = document.getElementById('pantheonSquadSelect');
-      if (!select) return;
-      select.innerHTML = '';
-      pantheonState.squads.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.id;
-        opt.innerText = \`\${s.name} (\${s.workflowMode})\`;
-        if (s.id === pantheonState.activeSquadId) opt.selected = true;
-        select.appendChild(opt);
-      });
+    function updateHeaderSquadButton() {
+      const label = document.getElementById('selectedSquadLabel');
+      const countBadge = document.getElementById('selectedSquadCountBadge');
+      const squad = pantheonState.squads.find(s => s.id === pantheonState.activeSquadId) || pantheonState.squads[0];
+      if (label && squad) {
+        label.innerText = squad.name;
+      }
+      if (countBadge && squad) {
+        countBadge.innerText = (squad.memberIds?.length || 0) + ' agentes';
+      }
     }
 
-    function switchActivePantheonSquad(squadId) {
-      pantheonState.activeSquadId = squadId;
-      if (pantheonState.activeSubTab === 'topology') renderPantheonTopology();
-    }
-
-    function renderPantheonMentionChips() {
-      const container = document.getElementById('pantheonMentionChips');
+    function renderHeaderSquadDropdown() {
+      const container = document.getElementById('squadsDropdownList');
+      const countText = document.getElementById('squadDropdownCountText');
       if (!container) return;
-      container.innerHTML = '<span class="text-[11px] text-slate-400 font-semibold mr-1">Mencionar:</span>';
+      container.innerHTML = '';
+
+      if (countText) countText.innerText = (pantheonState.squads.length || 0) + ' disponibles';
+
+      if (pantheonState.squads.length === 0) {
+        container.innerHTML = '<div class="p-4 text-center text-slate-400 text-xs">Cargando escuadrones...</div>';
+        return;
+      }
+
+      pantheonState.squads.forEach(s => {
+        const isSelected = s.id === pantheonState.activeSquadId;
+        const members = pantheonState.agents.filter(a => s.memberIds.includes(a.id));
+        const btn = document.createElement('button');
+        btn.className = 'w-full text-left p-2.5 rounded-xl border transition-all flex flex-col space-y-1.5 cursor-pointer ' +
+          (isSelected ? 'bg-purple-600/20 border-purple-500/50 shadow-md' : 'bg-surface-800/80 border-surface-750 hover:bg-surface-750 hover:border-surface-600');
+        btn.onclick = () => selectHeaderSquad(s.id);
+
+        const modeBadgeColor = s.workflowMode === 'hierarchical' ? 'bg-purple-500/20 text-purple-300' :
+                               s.workflowMode === 'sequential' ? 'bg-amber-500/20 text-amber-300' : 'bg-cyan-500/20 text-cyan-300';
+
+        btn.innerHTML = \`
+          <div class="flex items-center justify-between w-full">
+            <div class="flex items-center gap-2 truncate">
+              <span class="text-base">🛡️</span>
+              <span class="font-bold text-xs truncate \${isSelected ? 'text-purple-200' : 'text-white'}">\${s.name}</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-[9px] px-1.5 py-0.2 rounded font-mono \${modeBadgeColor}">\${s.workflowMode}</span>
+              \${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i>' : ''}
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-400 line-clamp-1">\${s.description || ''}</p>
+          <div class="flex items-center gap-1 pt-1 border-t border-surface-750/50">
+            <span class="text-[9px] text-slate-500 mr-1">Agentes:</span>
+            \${members.map(m => \`<span title="\${m.name} (\${m.role})" class="text-xs">\${m.avatar}</span>\`).join('')}
+          </div>
+        \`;
+        container.appendChild(btn);
+      });
+      lucide.createIcons();
+    }
+
+    function selectHeaderSquad(squadId) {
+      pantheonState.activeSquadId = squadId;
+      updateHeaderSquadButton();
+      renderHeaderSquadDropdown();
+      toggleSquadDropdown();
+      renderChatMentionChips();
+    }
+
+    function toggleSquadDropdown() {
+      const menu = document.getElementById('squadDropdownMenu');
+      if (!menu) return;
+      menu.classList.toggle('hidden');
+      if (!menu.classList.contains('hidden')) {
+        renderHeaderSquadDropdown();
+        const input = document.getElementById('squadSearchInput');
+        if (input) {
+          input.value = '';
+          input.focus();
+        }
+      }
+    }
+
+    function filterSquadDropdown(query) {
+      const q = (query || '').toLowerCase().trim();
+      const container = document.getElementById('squadsDropdownList');
+      if (!container) return;
+      const filtered = pantheonState.squads.filter(s => s.name.toLowerCase().includes(q) || (s.description || '').toLowerCase().includes(q));
+      container.innerHTML = '';
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="p-4 text-center text-slate-400 text-xs">No se encontraron escuadrones.</div>';
+        return;
+      }
+      filtered.forEach(s => {
+        const isSelected = s.id === pantheonState.activeSquadId;
+        const members = pantheonState.agents.filter(a => s.memberIds.includes(a.id));
+        const btn = document.createElement('button');
+        btn.className = 'w-full text-left p-2.5 rounded-xl border transition-all flex flex-col space-y-1.5 cursor-pointer ' +
+          (isSelected ? 'bg-purple-600/20 border-purple-500/50 shadow-md' : 'bg-surface-800/80 border-surface-750 hover:bg-surface-750 hover:border-surface-600');
+        btn.onclick = () => selectHeaderSquad(s.id);
+        btn.innerHTML = \`
+          <div class="flex items-center justify-between w-full">
+            <div class="flex items-center gap-2 truncate">
+              <span class="text-base">🛡️</span>
+              <span class="font-bold text-xs truncate \${isSelected ? 'text-purple-200' : 'text-white'}">\${s.name}</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-[9px] px-1.5 py-0.2 rounded font-mono bg-purple-500/20 text-purple-300">\${s.workflowMode}</span>
+              \${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i>' : ''}
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-400 line-clamp-1">\${s.description || ''}</p>
+          <div class="flex items-center gap-1 pt-1 border-t border-surface-750/50">
+            <span class="text-[9px] text-slate-500 mr-1">Agentes:</span>
+            \${members.map(m => \`<span title="\${m.name} (\${m.role})" class="text-xs">\${m.avatar}</span>\`).join('')}
+          </div>
+        \`;
+        container.appendChild(btn);
+      });
+      lucide.createIcons();
+    }
+
+    function renderChatMentionChips() {
+      const container = document.getElementById('chatMentionChips');
+      if (!container) return;
+      container.innerHTML = '<span class="text-[10px] text-slate-400 font-semibold shrink-0 mr-0.5">Mencionar:</span>';
       pantheonState.agents.forEach(a => {
         const btn = document.createElement('button');
-        btn.className = 'px-2 py-0.5 rounded-md bg-surface-800 hover:bg-surface-750 border border-surface-700 font-mono text-[11px] transition-colors flex items-center gap-1 cursor-pointer';
+        btn.className = 'px-2 py-0.5 rounded-lg bg-surface-800 hover:bg-surface-750 border border-surface-700 font-mono text-[11px] transition-colors flex items-center gap-1 cursor-pointer shrink-0';
         btn.style.color = a.color || '#A78BFA';
         btn.innerHTML = \`<span>\${a.avatar}</span> <span>@\${a.name}</span>\`;
-        btn.onclick = () => insertPantheonMention(a.name);
+        btn.onclick = () => insertChatMention(a.name);
         container.appendChild(btn);
       });
     }
 
-    function insertPantheonMention(name) {
-      const input = document.getElementById('pantheonPromptInput');
+    function insertChatMention(name) {
+      const input = document.getElementById('promptInput');
       if (!input) return;
-      input.value = (input.value ? input.value + ' ' : '') + '@' + name + ' ';
+      input.value = (input.value ? input.value.trim() + ' ' : '') + '@' + name + ' ';
       input.focus();
       autoExpandTextarea(input);
     }
 
-    function handlePantheonInputKeyDown(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        submitPantheonPrompt();
-      }
-    }
-
-    function clearPantheonRoom() {
-      const timeline = document.getElementById('pantheonChatTimeline');
-      if (timeline) {
-        timeline.innerHTML = '<div class="text-center text-slate-500 text-xs py-8 italic">Sala de Guerra limpia. Escribe una tarea para el escuadrón.</div>';
-      }
-    }
-
-    function runSquadPreset(type) {
-      const input = document.getElementById('pantheonPromptInput');
-      if (!input) return;
-            if (type === 'fullstack') {
-        input.value = '@Hermes Por favor coordina al escuadrón para implementar la siguiente funcionalidad: @Athena revisará la arquitectura y dependencias con Graft, @Hephaestus implementará el código modular y @Argos validará los diagnósticos estáticos y tests.';
-      } else if (type === 'audit') {
-        input.value = '@Argos Ejecuta un escaneo completo de diagnósticos estáticos (graft_diagnostics), detecta dependencias circulares y coordina con @Hephaestus para auto-resolver cualquier problema encontrado.';
-      } else if (type === 'research') {
-        input.value = '@Pythia Realiza una investigación profunda con RLM sobre la arquitectura y dependencias del proyecto, y sintetiza los hallazgos para @Hermes y @Athena.';
-      }
-      autoExpandTextarea(input);
-      input.focus();
+    function openSquadInChat(squadId) {
+      pantheonState.activeSquadId = squadId;
+      updateHeaderSquadButton();
+      renderChatMentionChips();
+      switchView('chat');
     }
 
     function cleanPantheonOutput(text) {
@@ -5300,159 +5365,6 @@ for chunk in response:
         .replace(/<tool_call>([\\s\\S]*?)<\\/tool_call>/gi, function(_, c) {
           return '\\n\\n\`\`\`text\\n' + c.trim() + '\\n\`\`\`\\n\\n';
         });
-    }
-
-    async function submitPantheonPrompt() {
-      if (pantheonState.isStreaming) return;
-      const input = document.getElementById('pantheonPromptInput');
-      const prompt = (input?.value || '').trim();
-      if (!prompt) return;
-
-      input.value = '';
-      pantheonState.isStreaming = true;
-      const sendBtn = document.getElementById('pantheonSendBtn');
-      if (sendBtn) {
-        sendBtn.disabled = true;
-        sendBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Pensando...</span>';
-      }
-
-      const timeline = document.getElementById('pantheonChatTimeline');
-
-      // Append User message
-      const userBlock = document.createElement('div');
-      userBlock.className = 'p-3.5 rounded-2xl bg-surface-900 border border-surface-750 text-xs text-white space-y-1';
-      userBlock.innerHTML = \`
-        <div class="flex items-center gap-2">
-          <span class="text-base">👤</span>
-          <span class="font-bold text-slate-200">Tú (Operador)</span>
-          <span class="text-[10px] text-slate-500 font-normal ml-auto">\${new Date().toLocaleTimeString()}</span>
-        </div>
-        <div class="text-slate-300 leading-relaxed pl-6 whitespace-pre-wrap">\${prompt}</div>
-      \`;
-      timeline.appendChild(userBlock);
-      timeline.scrollTop = timeline.scrollHeight;
-      lucide.createIcons();
-
-      // Current agent response container
-      let currentAgentDiv = null;
-      let currentAgentContentDiv = null;
-      let currentAgentFullText = '';
-
-      try {
-        const response = await fetch('/api/pantheon/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            squadId: pantheonState.activeSquadId,
-            prompt,
-            projectId: currentProjectId
-          })
-        });
-
-        if (!response.ok) {
-          const errData = await response.json();
-          const errBlock = document.createElement('div');
-          errBlock.className = 'p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs';
-          errBlock.innerText = errData.error || 'Error al conectar con Pantheon.';
-          timeline.appendChild(errBlock);
-          return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed.startsWith('data:')) continue;
-            const dataStr = trimmed.slice(5).trim();
-            if (dataStr === '[DONE]') continue;
-
-            try {
-              const event = JSON.parse(dataStr);
-              if (event.type === 'agent_start') {
-                currentAgentFullText = '';
-                currentAgentDiv = document.createElement('div');
-                currentAgentDiv.className = 'p-4 rounded-2xl bg-surface-850 border border-surface-700 text-xs text-white space-y-2 shadow-lg transition-all';
-                currentAgentDiv.style.borderLeft = \`4px solid \${event.agentColor || '#8B5CF6'}\`;
-                currentAgentDiv.innerHTML = \`
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <span class="text-xl">\${event.agentAvatar || '🤖'}</span>
-                      <div>
-                        <div class="font-bold text-sm" style="color: \${event.agentColor || '#FFFFFF'}">\${event.agentName}</div>
-                        <div class="text-[10px] text-slate-400">\${event.agentRole}</div>
-                      </div>
-                    </div>
-                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 font-mono">Pantheon Agent</span>
-                  </div>
-                  <div class="agent-markdown-body mt-2 text-slate-200 font-sans text-xs whitespace-normal break-words leading-relaxed pl-7 space-y-2"></div>
-                \`;
-                timeline.appendChild(currentAgentDiv);
-                currentAgentContentDiv = currentAgentDiv.querySelector('.agent-markdown-body');
-                timeline.scrollTop = timeline.scrollHeight;
-                lucide.createIcons();
-              } else if (event.type === 'delta' && currentAgentContentDiv) {
-                currentAgentFullText += event.delta || '';
-                const cleaned = cleanPantheonOutput(currentAgentFullText);
-                currentAgentContentDiv.innerHTML = formatMarkdown(cleaned);
-                timeline.scrollTop = timeline.scrollHeight;
-              } else if (event.type === 'agent_finish' && currentAgentContentDiv) {
-                const cleaned = cleanPantheonOutput(currentAgentFullText);
-                currentAgentContentDiv.innerHTML = formatMarkdown(cleaned);
-                lucide.createIcons();
-                timeline.scrollTop = timeline.scrollHeight;
-              } else if (event.type === 'delegation') {
-                const delDiv = document.createElement('div');
-                delDiv.className = 'p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-200 text-xs flex items-center gap-2 pl-7';
-                delDiv.innerHTML = \`
-                  <i data-lucide="arrow-right-circle" class="w-4 h-4 text-purple-400 shrink-0"></i>
-                  <span><strong>Delegación:</strong> Tarea enviada a <strong>@\${event.delegation?.toAgentId || 'agente'}</strong></span>
-                \`;
-                timeline.appendChild(delDiv);
-                timeline.scrollTop = timeline.scrollHeight;
-                lucide.createIcons();
-              } else if (event.type === 'graft_event') {
-                const gDiv = document.createElement('div');
-                gDiv.className = 'p-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] flex items-center gap-2 pl-7';
-                gDiv.innerHTML = \`
-                  <i data-lucide="git-fork" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
-                  <span>Contexto Graft AST inyectado (\${event.graftData?.diagnosticsCount || 0} diagnósticos)</span>
-                \`;
-                timeline.appendChild(gDiv);
-                timeline.scrollTop = timeline.scrollHeight;
-                lucide.createIcons();
-              } else if (event.type === 'error') {
-                const errDiv = document.createElement('div');
-                errDiv.className = 'p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs pl-7';
-                errDiv.innerText = 'Aviso del agente: ' + (event.error || 'Error en la respuesta');
-                timeline.appendChild(errDiv);
-                timeline.scrollTop = timeline.scrollHeight;
-              }
-            } catch (e) {}
-          }
-        }
-      } catch (err) {
-        const errDiv = document.createElement('div');
-        errDiv.className = 'p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs';
-        errDiv.innerText = 'Error en la sesión de Pantheon: ' + err.message;
-        timeline.appendChild(errDiv);
-      } finally {
-        pantheonState.isStreaming = false;
-        if (sendBtn) {
-          sendBtn.disabled = false;
-          sendBtn.innerHTML = '<i data-lucide="send" class="w-4 h-4"></i><span>Enviar</span>';
-          lucide.createIcons();
-        }
-        timeline.scrollTop = timeline.scrollHeight;
-      }
     }
 
     function renderPantheonAgents() {
@@ -5917,12 +5829,12 @@ for chunk in response:
           </div>
 
           <div class="pt-2 flex items-center justify-end gap-1.5 border-t border-surface-800">
-            <button onclick="switchActivePantheonSquad('\${s.id}'); switchPantheonSubTab('room');" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer">
-              <i data-lucide="play" class="w-3 h-3 fill-current"></i>
-              <span>Activar Sala</span>
+            <button onclick="openSquadInChat('\${s.id}')" class="px-3 py-1 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-purple-600/20 transition-all cursor-pointer">
+              <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+              <span>Abrir en Chat</span>
             </button>
-            <button onclick="openEditSquadModal('\${s.id}')" class="px-2 py-1 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs flex items-center gap-1 transition-colors cursor-pointer">
-              <i data-lucide="edit-3" class="w-3 h-3"></i>
+            <button onclick="openEditSquadModal('\${s.id}')" class="px-2 py-1 rounded-xl bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs flex items-center gap-1 transition-colors cursor-pointer">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
             </button>
             \${!s.isSystem ? \`
               <button onclick="deletePantheonSquad('\${s.id}')" class="p-1 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer">
