@@ -46,7 +46,10 @@ export interface PantheonExecutionEvent {
 	agentColor?: string;
 	agentRole?: string;
 	delta?: string;
+	text?: string;
 	tool?: string;
+	target?: string;
+	exitCode?: number;
 	input?: any;
 	output?: any;
 	message?: PantheonMessage;

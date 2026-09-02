@@ -1421,18 +1421,59 @@ ${prompt || ""}`;
 				(url === "/v1/models" || url === "/models" || url === "/api/models" || url.endsWith("/models"))
 			) {
 				const models = this.pool.getAvailableModels();
+				const pantheonReg = this.pool.getPantheonRegistry();
+				const squads = pantheonReg.getSquads();
+				const agents = pantheonReg.getAgents();
+
+				const squadModelItems = squads.flatMap((s) => [
+					{
+						id: `squad:${s.id}`,
+						object: "model",
+						created: Math.floor(Date.now() / 1000),
+						owned_by: "pantheon-squad",
+						context_window: 128000,
+						description: `Pantheon Squad: ${s.name} (${s.description || ""})`,
+					},
+					{
+						id: s.id,
+						object: "model",
+						created: Math.floor(Date.now() / 1000),
+						owned_by: "pantheon-squad",
+						context_window: 128000,
+						description: `Pantheon Squad: ${s.name}`,
+					},
+				]);
+
+				const agentModelItems = agents.map((a) => ({
+					id: `agent:${a.id}`,
+					object: "model",
+					created: Math.floor(Date.now() / 1000),
+					owned_by: "pantheon-agent",
+					context_window: 128000,
+					description: `Pantheon Agent: ${a.name} (${a.role})`,
+				}));
+
+				const regularModelItems = models.map((m) => ({
+					id: m.id,
+					object: "model",
+					created: Math.floor(Date.now() / 1000),
+					owned_by: m.provider,
+					context_window: m.contextWindow || 128000,
+				}));
+
+				const seenIds = new Set<string>();
+				const combinedData = [...squadModelItems, ...agentModelItems, ...regularModelItems].filter((item) => {
+					if (seenIds.has(item.id)) return false;
+					seenIds.add(item.id);
+					return true;
+				});
+
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(
 					JSON.stringify(
 						{
 							object: "list",
-							data: models.map((m) => ({
-								id: m.id,
-								object: "model",
-								created: Math.floor(Date.now() / 1000),
-								owned_by: m.provider,
-								context_window: m.contextWindow || 128000,
-							})),
+							data: combinedData,
 						},
 						null,
 						2,
@@ -2418,7 +2459,49 @@ ${prompt || ""}`;
 				: `## Andy Agent Persistent Memory & Guidelines:${memoryContext}`
 			: rawSystemPrompt || undefined;
 
-		const modelId = body.model || "auto/best-coding";
+		const rawModelId = (body.model || "auto/best-coding").trim();
+		const normModelId = rawModelId.toLowerCase();
+
+		// Check if target model is a Pantheon Squad or Agent
+		const pantheonRegistry = this.pool.getPantheonRegistry(ideProject.id);
+		const allSquads = pantheonRegistry.getSquads();
+		const allAgents = pantheonRegistry.getAgents();
+
+		let targetSquadId: string | null = null;
+		let targetAgentId: string | undefined;
+
+		if (normModelId.startsWith("squad:")) {
+			targetSquadId = normModelId.slice(6).trim();
+		} else if (normModelId.startsWith("pantheon/")) {
+			targetSquadId = normModelId.slice(9).trim();
+		} else if (allSquads.some((s) => s.id.toLowerCase() === normModelId)) {
+			targetSquadId = allSquads.find((s) => s.id.toLowerCase() === normModelId)!.id;
+		} else if (normModelId.startsWith("agent:")) {
+			targetAgentId = normModelId.slice(6).trim();
+			targetSquadId = "fullstack-squad";
+		} else if (allAgents.some((a) => a.id.toLowerCase() === normModelId && !this.pool.findModel(rawModelId))) {
+			targetAgentId = allAgents.find((a) => a.id.toLowerCase() === normModelId)!.id;
+			targetSquadId = "fullstack-squad";
+		}
+
+		if (targetSquadId) {
+			await this.handlePantheonOpenAiBridge(
+				req,
+				res,
+				reqId,
+				ideProject,
+				sessionId,
+				isStream,
+				targetSquadId,
+				targetAgentId,
+				messages,
+				nonSystem,
+				body,
+			);
+			return;
+		}
+
+		const modelId = rawModelId;
 		this.addLog(
 			"INFO",
 			"OpenAI Bridge",
@@ -2935,6 +3018,312 @@ ${prompt || ""}`;
 				res.writeHead(500, { "Content-Type": "application/json" });
 				res.end(JSON.stringify({ error: { message: err.message || String(err) } }));
 			}
+		}
+	}
+
+	private async handlePantheonOpenAiBridge(
+		req: IncomingMessage,
+		res: ServerResponse,
+		reqId: string,
+		ideProject: any,
+		sessionId: string,
+		isStream: boolean,
+		squadId: string,
+		targetAgentId: string | undefined,
+		_messages: any[],
+		nonSystem: any[],
+		_body: any,
+	) {
+		const pantheonOrchestrator = this.pool.getPantheonOrchestrator(ideProject.id);
+		const settingsMgr = this.pool.getSettingsManager();
+
+		// Extract prompt: User's latest prompt + conversation context if any
+		const userMsgs = nonSystem.filter((m: any) => m.role === "user");
+		const lastUserMsg = userMsgs[userMsgs.length - 1];
+		let prompt = "";
+		if (lastUserMsg) {
+			prompt =
+				typeof lastUserMsg.content === "string"
+					? lastUserMsg.content
+					: Array.isArray(lastUserMsg.content)
+						? lastUserMsg.content.map((c: any) => (c.type === "text" ? c.text || "" : "")).join(" ")
+						: JSON.stringify(lastUserMsg.content || "");
+		}
+		if (!prompt) prompt = "Hola, escuadrón.";
+
+		// If there is preceding history, format a concise context header
+		if (nonSystem.length > 1) {
+			const priorTurns = nonSystem.slice(-5, -1);
+			let historySnippet = "\n[Historial reciente en IDE]:\n";
+			for (const turn of priorTurns) {
+				const roleLabel = turn.role === "user" ? "Usuario" : "Asistente";
+				const tText =
+					typeof turn.content === "string"
+						? turn.content
+						: Array.isArray(turn.content)
+							? turn.content.map((c: any) => (c.type === "text" ? c.text || "" : "")).join(" ")
+							: "";
+				if (tText) {
+					historySnippet += `- ${roleLabel}: ${tText.slice(0, 300)}\n`;
+				}
+			}
+			prompt = `${prompt}\n\n${historySnippet}`;
+		}
+
+		this.addLog(
+			"INFO",
+			"Pantheon Bridge",
+			`IDE Chat completion executing Pantheon Squad "${squadId}" on project "${ideProject.name}" (${ideProject.path}): "${prompt.slice(0, 80)}..."`,
+		);
+
+		const llmCaller = async (pMessages: any[], pModelId: string, temp: number, pSystemPrompt?: string) => {
+			const defaultModel = settingsMgr.getDefaultModel() || "auto/best-coding";
+			const resolvedModel =
+				this.pool.findModel(pModelId) || this.pool.findModel(defaultModel) || this.pool.getAvailableModels()[0];
+
+			if (!resolvedModel) {
+				return `[Error: No hay modelos LLM disponibles para ejecutar a los agentes]`;
+			}
+
+			const pContext: Context = {
+				systemPrompt: pSystemPrompt,
+				messages: pMessages.map((m: any) => {
+					if (typeof m.content === "string") {
+						return {
+							role: m.role || "user",
+							content: m.content,
+							timestamp: Date.now(),
+						} as Message;
+					}
+					return m as Message;
+				}),
+			};
+
+			const auth = await this.pool.getModelRegistry().getApiKeyAndHeaders(resolvedModel);
+			const apiKey = auth.ok ? auth.apiKey : undefined;
+			const response = await complete(resolvedModel, pContext, {
+				apiKey,
+				temperature: temp,
+			});
+
+			let resultText = "";
+			for (const part of response.content) {
+				if (part.type === "text") resultText += part.text;
+			}
+			return resultText;
+		};
+
+		const abortCtrl = new AbortController();
+		let isAborted = false;
+		const onClientClose = () => {
+			isAborted = true;
+			abortCtrl.abort();
+		};
+		req.on("close", onClientClose);
+
+		const modelName = targetAgentId ? `agent:${targetAgentId}` : `squad:${squadId}`;
+		let accumulatedFullText = "";
+
+		if (isStream) {
+			res.writeHead(200, {
+				"Content-Type": "text/event-stream; charset=utf-8",
+				"Cache-Control": "no-cache, no-transform",
+				Connection: "keep-alive",
+				"X-Accel-Buffering": "no",
+			});
+
+			// Initial chunk indicating assistant role
+			res.write(
+				`data: ${JSON.stringify({
+					id: reqId,
+					object: "chat.completion.chunk",
+					created: Math.floor(Date.now() / 1000),
+					model: modelName,
+					choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }],
+				})}\n\n`,
+			);
+
+			try {
+				await pantheonOrchestrator.executeTurn(
+					squadId,
+					prompt,
+					(event) => {
+						if (isAborted || res.writableEnded) return;
+
+						let contentToSend = "";
+						if (event.type === "agent_start") {
+							contentToSend = `\n\n### 🤖 @${event.agentName} (${event.agentRole})\n\n`;
+						} else if (event.type === "delta") {
+							contentToSend = (event as any).delta || (event as any).text || "";
+						} else if (event.type === "tool_start") {
+							contentToSend = `\n\n> ⚙️ **Ejecutando ${event.tool === "write" ? "Modificación de Archivo" : "Comando en Terminal"}**: \`${event.target}\`...\n\n`;
+						} else if (event.type === "tool_result") {
+							if (event.tool === "write") {
+								contentToSend = `> ✓ **Archivo actualizado**: \`${event.target}\` (${event.output || "OK"})\n\n`;
+							} else {
+								contentToSend = `\n\`\`\`bash\n# ${event.target} (Exit code: ${event.exitCode ?? 0})\n${event.output || ""}\n\`\`\`\n\n`;
+							}
+						} else if (event.type === "agent_finish") {
+							contentToSend = "\n";
+						}
+
+						if (contentToSend) {
+							accumulatedFullText += contentToSend;
+							res.write(
+								`data: ${JSON.stringify({
+									id: reqId,
+									object: "chat.completion.chunk",
+									created: Math.floor(Date.now() / 1000),
+									model: modelName,
+									choices: [{ index: 0, delta: { content: contentToSend }, finish_reason: null }],
+								})}\n\n`,
+							);
+						}
+					},
+					{
+						targetAgentId,
+						llmCaller,
+						projectInfo: { path: ideProject.path, name: ideProject.name },
+					},
+				);
+
+				if (!res.writableEnded) {
+					res.write(
+						`data: ${JSON.stringify({
+							id: reqId,
+							object: "chat.completion.chunk",
+							created: Math.floor(Date.now() / 1000),
+							model: modelName,
+							choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+						})}\n\n`,
+					);
+					res.write("data: [DONE]\n\n");
+					res.end();
+				}
+			} catch (err: any) {
+				if (!res.writableEnded) {
+					res.write(
+						`data: ${JSON.stringify({
+							id: reqId,
+							object: "chat.completion.chunk",
+							created: Math.floor(Date.now() / 1000),
+							model: modelName,
+							choices: [
+								{
+									index: 0,
+									delta: { content: `\n\n[Error en escuadrón: ${err.message}]` },
+									finish_reason: "stop",
+								},
+							],
+						})}\n\n`,
+					);
+					res.write("data: [DONE]\n\n");
+					res.end();
+				}
+			}
+		} else {
+			// Non-streaming response
+			try {
+				await pantheonOrchestrator.executeTurn(
+					squadId,
+					prompt,
+					(event) => {
+						if (event.type === "agent_start") {
+							accumulatedFullText += `\n\n### 🤖 @${event.agentName} (${event.agentRole})\n\n`;
+						} else if (event.type === "delta") {
+							accumulatedFullText += (event as any).delta || (event as any).text || "";
+						} else if (event.type === "tool_start") {
+							accumulatedFullText += `\n\n> ⚙️ **Ejecutando ${event.tool === "write" ? "Modificación de Archivo" : "Comando en Terminal"}**: \`${event.target}\`...\n\n`;
+						} else if (event.type === "tool_result") {
+							if (event.tool === "write") {
+								accumulatedFullText += `> ✓ **Archivo actualizado**: \`${event.target}\` (${event.output || "OK"})\n\n`;
+							} else {
+								accumulatedFullText += `\n\`\`\`bash\n# ${event.target} (Exit code: ${event.exitCode ?? 0})\n${event.output || ""}\n\`\`\`\n\n`;
+							}
+						} else if (event.type === "agent_finish") {
+							accumulatedFullText += "\n";
+						}
+					},
+					{
+						targetAgentId,
+						llmCaller,
+						projectInfo: { path: ideProject.path, name: ideProject.name },
+					},
+				);
+			} catch (err: any) {
+				accumulatedFullText += `\n\n[Error en escuadrón: ${err.message}]`;
+			}
+
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(
+				JSON.stringify(
+					{
+						id: reqId,
+						object: "chat.completion",
+						created: Math.floor(Date.now() / 1000),
+						model: modelName,
+						choices: [
+							{
+								index: 0,
+								message: {
+									role: "assistant",
+									content: accumulatedFullText.trim(),
+								},
+								finish_reason: "stop",
+							},
+						],
+						usage: {
+							prompt_tokens: Math.ceil(prompt.length / 4),
+							completion_tokens: Math.ceil(accumulatedFullText.length / 4),
+							total_tokens: Math.ceil((prompt.length + accumulatedFullText.length) / 4),
+						},
+					},
+					null,
+					2,
+				),
+			);
+		}
+
+		// Persist interaction into IDE project session for full transparency in WebUI
+		try {
+			const sessionItem = await this.pool.getOrCreateSession(sessionId, modelName, undefined, ideProject.id);
+			const cleanResponse = accumulatedFullText.trim();
+			if (cleanResponse) {
+				const assistantContent: (TextContent | ThinkingContent | ToolCall)[] = [
+					{ type: "text", text: cleanResponse },
+				];
+				const finalAssistantMessage: AssistantMessage = {
+					role: "assistant",
+					content: assistantContent,
+					api: "openai-completions",
+					provider: "pantheon",
+					model: modelName,
+					usage: {
+						input: Math.ceil(prompt.length / 4),
+						output: Math.ceil(cleanResponse.length / 4),
+						cacheRead: 0,
+						cacheWrite: 0,
+						totalTokens: Math.ceil((prompt.length + cleanResponse.length) / 4),
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+					},
+					stopReason: "stop",
+					timestamp: Date.now(),
+				};
+				const userMessage: UserMessage = {
+					role: "user",
+					content: prompt,
+					timestamp: Date.now() - 1000,
+				};
+				(sessionItem.session.state as any).messages = [
+					...(sessionItem.session.state.messages || []),
+					userMessage,
+					finalAssistantMessage,
+				];
+				sessionItem.lastActive = Date.now();
+				this.pool.persistSession(sessionItem);
+			}
+		} catch (err: any) {
+			this.addLog("WARN", "Pantheon Bridge", `Failed to persist IDE session: ${err.message}`);
 		}
 	}
 
