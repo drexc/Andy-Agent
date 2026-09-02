@@ -390,8 +390,8 @@ export class PantheonOrchestrator {
 				break;
 			}
 
-			// Check if current agent explicitly delegated to peer agents
-			const peerDelegations = this.detectPeerDelegations(fullResponseText, currentAgent.id);
+			// Check if current agent explicitly delegated to peer agents in the same squad
+			const peerDelegations = this.detectPeerDelegations(fullResponseText, currentAgent.id, squad);
 			for (const del of peerDelegations) {
 				roomState.delegations.push(del);
 				await onEvent({
@@ -412,8 +412,8 @@ export class PantheonOrchestrator {
 
 			// Purposeful Next-Step Routing (No Blind 5-Agent Tip Loops)
 			if (peerDelegations.length === 0 && agentsQueue.length === 0) {
-				// 1. If leader (Hermes) just completed the planning step:
-				if (currentAgent.id === "hermes") {
+				// 1. If leader/architect just completed the planning step:
+				if (currentAgent.id === "hermes" || currentAgent.id === "architect" || currentAgent.id === "athena") {
 					const lowerPrompt = userPrompt.toLowerCase();
 					const isCodingTask =
 						/crea|haz|programa|corrige|modifica|escribe|agrega|refactoriza|implementa|build|code|fix|function|clase|archivo/i.test(
@@ -421,8 +421,11 @@ export class PantheonOrchestrator {
 						);
 					const isResearchTask = /investiga|explora|busca|analiza|documenta/i.test(lowerPrompt);
 
-					if (isCodingTask && squad.memberIds.includes("hephaestus") && !(executionCounts.hephaestus > 0)) {
-						const coder = this.registry.getAgent("hephaestus");
+					const coderId = squad.memberIds.find((id) => id === "developer" || id === "hephaestus");
+					const researcherId = squad.memberIds.find((id) => id === "pythia" || id === "researcher");
+
+					if (isCodingTask && coderId && !(executionCounts[coderId] > 0)) {
+						const coder = this.registry.getAgent(coderId);
 						if (coder) {
 							agentsQueue.push(coder);
 							await this.emitAutoDelegation(
@@ -433,8 +436,8 @@ export class PantheonOrchestrator {
 								onEvent,
 							);
 						}
-					} else if (isResearchTask && squad.memberIds.includes("pythia") && !(executionCounts.pythia > 0)) {
-						const researcher = this.registry.getAgent("pythia");
+					} else if (isResearchTask && researcherId && !(executionCounts[researcherId] > 0)) {
+						const researcher = this.registry.getAgent(researcherId);
 						if (researcher) {
 							agentsQueue.push(researcher);
 							await this.emitAutoDelegation(
@@ -447,22 +450,21 @@ export class PantheonOrchestrator {
 						}
 					}
 				}
-				// 2. If Hephaestus (Coder) just modified or created files, automatically delegate to Argos (Tester/Auditor):
-				else if (
-					currentAgent.id === "hephaestus" &&
-					squad.memberIds.includes("argos") &&
-					!(executionCounts.argos > 0)
-				) {
-					const tester = this.registry.getAgent("argos");
-					if (tester) {
-						agentsQueue.push(tester);
-						await this.emitAutoDelegation(
-							currentAgent.id,
-							tester.id,
-							"Auditoría de calidad y ejecución de tests",
-							roomState,
-							onEvent,
-						);
+				// 2. If Coder (Developer / Hephaestus) just modified or created files, automatically delegate to Tester/Auditor:
+				else if (currentAgent.id === "developer" || currentAgent.id === "hephaestus") {
+					const testerId = squad.memberIds.find((id) => id === "tester" || id === "argos");
+					if (testerId && !(executionCounts[testerId] > 0)) {
+						const tester = this.registry.getAgent(testerId);
+						if (tester) {
+							agentsQueue.push(tester);
+							await this.emitAutoDelegation(
+								currentAgent.id,
+								tester.id,
+								"Auditoría de calidad y ejecución de tests",
+								roomState,
+								onEvent,
+							);
+						}
 					}
 				}
 			}
@@ -925,48 +927,79 @@ ${graftContext.map}
 Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una tarea o solicitó tu análisis en los mensajes inmediatamente anteriores. Lee atentamente sus conclusiones o instrucciones previas en el historial, asume el control inmediato y entrega tus resultados según tu especialidad sin repetir lo que ya se dijo.`
 			: "";
 
+		const squadAgents = this.registry.getAgents().filter((a) => squad.memberIds.includes(a.id));
+
+		const memberTags = squadAgents.map((a) => `@${a.name}`).join(", ");
+		const otherSquadMembers = squadAgents.filter((a) => a.id !== agent.id);
+		const otherTags = otherSquadMembers.map((a) => `@${a.name}`).join(", ");
+
 		const squadCollaborationProtocol = `\n\n# PROTOCOLO OBLIGATORIO DE COLABORACIÓN Y DELEGACIÓN EN EL ESCUADRÓN
-1. **Trabajo en Equipo Autónomo**: No estás solo, formas parte de un escuadrón especializado.
-2. **Delega Explícitamente**: Para pasarle la tarea o hallazgos al siguiente especialista, menciona su etiqueta con @Nombre (ej: \`@Athena\`, \`@Pythia\`, \`@Hephaestus\`, \`@Argos\`, \`@Hermes\`). Cada mención activará al agente en vivo para que elabore su parte en la misma conversación.
-3. **Flujo de Escuadrón Recomendado**:
-   - **@Hermes** (Líder): Diseña el plan y delega a los especialistas (@Athena / @Pythia / @Hephaestus / @Argos).
-   - **@Pythia**: Investiga dependencias y pasa el informe a @Athena o @Hermes.
-   - **@Athena**: Diseña la arquitectura y pasa las especificaciones a @Hephaestus para programar.
-   - **@Hephaestus**: Desarrolla el código y delega a @Argos para auditar la calidad.
-   - **@Argos**: Audita el código, reporta diagnósticos y devuelve veredicto al usuario o a @Hephaestus.`;
+1. **Trabajo en Equipo Autónomo**: Formas parte del escuadrón especializado "${squad.name}".
+2. **Delega Explícitamente a tus Compañeros**: Para pasarle la tarea o hallazgos al siguiente especialista DE TU ESCUADRÓN, menciona su etiqueta con @Nombre (miembros del escuadrón disponibles: ${otherTags || memberTags}). Cada mención activará al agente en vivo para que elabore su parte en la misma conversación.
+3. **Regla de Escuadrón**: Delega EXCLUSIVAMENTE a miembros de tu escuadrón (${otherTags || memberTags}). NUNCA delegues a agentes de otros escuadrones.`;
+
+		const specializationBullets = squadAgents
+			.map((a) => {
+				if (a.id.includes("architect") || a.id.includes("athena")) {
+					return `   - Si eres **@${a.name}**: Diseña la arquitectura, contratos, interfaces y especificaciones técnicas de la solución, y delega inmediatamente a los desarrolladores del escuadrón.`;
+				}
+				if (a.id.includes("tester")) {
+					return `   - Si eres **@${a.name}**: Diseña y escribe pruebas unitarias e integración para validar la lógica del negocio con bloques de prueba y comandos \`\`\`bash:dotnet test\`\`\`.`;
+				}
+				if (a.id.includes("refactorer")) {
+					return `   - Si eres **@${a.name}**: Audita el código generado, optimiza code smells y aplica principios SOLID (SRP/DIP).`;
+				}
+				if (a.id.includes("debugger")) {
+					return `   - Si eres **@${a.name}**: Analiza stack traces, diagnostica fallos y propone fixes precisos.`;
+				}
+				if (a.id.includes("devops")) {
+					return `   - Si eres **@${a.name}**: Configura pipelines, scripts de build y dependencias del proyecto.`;
+				}
+				if (a.id.includes("pythia") || a.id.includes("researcher")) {
+					return `   - Si eres **@${a.name}**: Analiza dependencias y código fuente preexistente y sintetiza los hallazgos técnicos para los desarrolladores de tu escuadrón.`;
+				}
+				if (a.id.includes("developer") || a.id.includes("hephaestus") || a.capabilities.write) {
+					return `   - Si eres **@${a.name}**: PROGRAMA Y ESCRIBE DIRECTAMENTE el código completo de la solución en disco con bloques \`\`\`file:ruta/archivo.ext ... \`\`\`. Utiliza las clases y dependencias existentes en el proyecto.`;
+				}
+				if (a.capabilities.terminal) {
+					return `   - Si eres **@${a.name}**: Audita el código generado y ejecuta la validación o compilación con bloques de comando \`\`\`bash:comando\`\`\` (ej: \`\`\`bash:dotnet build\`\`\`).`;
+				}
+				return `   - Si eres **@${a.name}**: Realiza tu análisis especializado (${a.role}) y delega al siguiente especialista de tu escuadrón.`;
+			})
+			.join("\n");
 
 		const operationalRules = `\n\n# REGLAS CRÍTICAS DE EJECUCIÓN DEL PANTHEON
-1. **Identidad del Agente**: Eres exclusivamente **@${agent.name}** (${agent.role}), un agente autónomo del sistema multi-agente Pantheon en el ecosistema Andy Agent. Tu única identidad es @${agent.name}. NUNCA te identifiques como Antigravity, Google DeepMind, OpenAI ni un asistente genérico.
+1. **Identidad del Agente**: Eres exclusivamente **@${agent.name}** (${agent.role}), un agente autónomo del escuadrón "${squad.name}" en el ecosistema Andy Agent. Tu única identidad es @${agent.name}. NUNCA te identifiques como Antigravity, Google DeepMind, OpenAI ni un asistente genérico.
 2. **Idioma y Formato Humano**: Responde siempre en **Español** con formato Markdown estructurado, limpio y profesional (encabezados, listas, tablas y bloques de código).
 3. **PROHIBICIÓN ABSOLUTA DE GENERAR PSEUDO-TAGS O TOKENS DE HERRAMIENTAS**: NUNCA generes tokens o etiquetas especiales de llamada a herramientas como \`<|tool_call_start|>\`, \`<|tool_call_end|>\`, \`<tool_call>\`, \`<arg_key>\`, \`<arg_value>\`, \`<action>\`. Toda la información del proyecto, manifiestos y código fuente ya ha sido leída y provista arriba. Redacta siempre en texto Markdown en Español para el usuario y para tus compañeros de escuadrón.
 4. **Acceso Directo y Total al Proyecto Activo**: Ya te encuentras ejecutando dentro del espacio de trabajo del proyecto activo ("${projectContext?.name || path.basename(this.cwd)}" en "${projectContext?.path || this.cwd}"). Toda la estructura de archivos, clases, interfaces públicas, manifiestos (.csproj / .sln) y modelos C# ya están completamente leídos e incluidos arriba.
 5. **PROHIBICIÓN ESTRICTA DE DECIR "NO PUEDO ACCEDER" O PEDIR COMANDOS DE TERMINAL PARA VER ARCHIVOS**: NUNCA digas "NO PUEDO Acceder a tu Filesystem", "no tengo acceso al código" ni pidas que el usuario ejecute "Get-ChildItem", "tree /F", "dir" o comparta archivos. Tienes el código fuente C# completo arriba en "Interfaces y Estructuras Públicas del Código Fuente" y "Árbol de Archivos del Proyecto".
 6. **Programación Inmediata Sin Preguntas Retóricas**: No pidas confirmación para empezar ni preguntes "¿deseas que proceda?". Entrega de inmediato el diseño arquitectónico y el CÓDIGO FUENTE COMPLETO implementado.
-7. **Especialización Inmediata**:
-   - Si eres **@Pythia**: Analiza las clases, modelos y protocolos provistos arriba, sintetizando los métodos para @Athena y @Hephaestus.
-   - Si eres **@Athena**: Diseña la arquitectura, controles de formulario, paneles y flujo de eventos de la aplicación de prueba Windows Forms (.NET 10), y delega inmediatamente a @Hephaestus.
-   - Si eres **@Hephaestus**: PROGRAMA Y ESCRIBE DIRECTAMENTE el código completo de la app de prueba (ej: \`\`\`file:HitachiTestApp/MainForm.cs ... \`\`\`, \`\`\`file:HitachiTestApp/Program.cs ... \`\`\`, \`\`\`file:HitachiTestApp/HitachiTestApp.csproj ... \`\`\`). Utiliza las clases reales existentes (Protocolo.Main, Protocolo.Comandos, ProtocolRecvEvent, HitachiContadoraService, Models).
-   - Si eres **@Argos**: Audita el código generado y ejecuta la validación o compilación con \`\`\`bash:dotnet build\`\`\`.
-   - Si eres **@Hermes**: Orquesta el plan y delega inmediatamente a @Athena y @Hephaestus.`;
+7. **Especialización Inmediata en tu Escuadrón**:\n${specializationBullets}`;
+
+		const writerAgents =
+			squadAgents
+				.filter((a) => a.capabilities.write)
+				.map((a) => `@${a.name}`)
+				.join(" / ") || "@Developer";
+		const terminalAgents =
+			squadAgents
+				.filter((a) => a.capabilities.terminal)
+				.map((a) => `@${a.name}`)
+				.join(" / ") || "@Tester";
 
 		const actionProtocol = `\n\n# PROTOCOLO DE ACCIÓN DIRECTA SOBRE EL ESPACIO DE TRABAJO
-1. **Para Escribir o Modificar Archivos (@Hephaestus)**:
+1. **Para Escribir o Modificar Archivos (${writerAgents})**:
    Escribe el bloque de código indicando la ruta del archivo:
    \`\`\`file:ruta/del/archivo.ext
    // Código fuente completo
    \`\`\`
-   El sistema escribirá inmediatamente el archivo en el disco del proyecto. Al terminar de codificar, delega a @Argos para que ejecute la auditoría.
+   El sistema escribirá inmediatamente el archivo en el disco del proyecto. Al terminar de codificar, delega a ${terminalAgents} para que ejecute la verificación.
 
-2. **Para Ejecutar Pruebas o Comandos (@Argos)**:
+2. **Para Ejecutar Pruebas o Comandos (${terminalAgents})**:
    Escribe el bloque de comando con el formato:
    \`\`\`bash:dotnet build\`\`\` o \`\`\`bash:dotnet test\`\`\`
-   El sistema ejecutará el comando en la terminal real del proyecto y presentará el reporte de calidad.
-
-3. **Para Investigar (@Pythia)**:
-   Analiza el código y dependencias de los archivos del proyecto provistos arriba y sintetiza los puntos clave para @Athena y @Hephaestus.
-
-4. **Para Coordinar (@Hermes)**:
-   Define el plan y delega a @Athena o @Hephaestus. No repitas consejos redundantes.`;
+   El sistema ejecutará el comando en la terminal real del proyecto y presentará el reporte de calidad.`;
 
 		return `${agent.systemPrompt}
 
@@ -989,11 +1022,13 @@ ${projectSection}${graftSection}${delegationSection}${squadCollaborationProtocol
 			.trim();
 	}
 
-	private detectPeerDelegations(text: string, fromAgentId: string): PantheonTaskDelegation[] {
+	private detectPeerDelegations(text: string, fromAgentId: string, squad?: PantheonSquad): PantheonTaskDelegation[] {
 		const delegations: PantheonTaskDelegation[] = [];
-		const agents = this.registry.getAgents();
+		const allowedAgents = squad
+			? this.registry.getAgents().filter((a) => squad.memberIds.includes(a.id))
+			: this.registry.getAgents();
 
-		for (const a of agents) {
+		for (const a of allowedAgents) {
 			if (a.id === fromAgentId) continue;
 			const regex = new RegExp(`@${a.name}\\b|@${a.id}\\b`, "i");
 			if (regex.test(text)) {
