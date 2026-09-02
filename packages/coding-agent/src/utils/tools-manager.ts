@@ -1,11 +1,11 @@
 import chalk from "chalk";
 import { spawnSync } from "child_process";
-import extractZip from "extract-zip";
 import { chmodSync, createWriteStream, existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "fs";
 import { arch, platform } from "os";
 import { join } from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
+import yauzl from "yauzl";
 import { APP_NAME, getBinDir } from "../config.js";
 
 const TOOLS_DIR = getBinDir();
@@ -222,6 +222,40 @@ async function downloadTool(tool: ManagedTool): Promise<string> {
 	);
 	mkdirSync(extractDir, { recursive: true });
 
+	async function extractZipSafely(archivePath: string, destDir: string): Promise<void> {
+		return new Promise((resolve, reject) => {
+			yauzl.open(archivePath, { lazyEntries: true }, (err: any, zipfile: any) => {
+				if (err || !zipfile) return reject(err || new Error("Failed to open zip archive"));
+
+				zipfile.readEntry();
+				zipfile.on("entry", (entry: any) => {
+					const safeFileName = entry.fileName.replace(/\\/g, "/");
+					const resolvedDest = join(destDir, safeFileName);
+					// Zip Slip / Path Traversal protection
+					if (safeFileName.includes("..") || !resolvedDest.startsWith(destDir)) {
+						return zipfile.readEntry();
+					}
+
+					if (entry.fileName.endsWith("/")) {
+						mkdirSync(resolvedDest, { recursive: true });
+						zipfile.readEntry();
+					} else {
+						mkdirSync(join(resolvedDest, ".."), { recursive: true });
+						zipfile.openReadStream(entry, (sErr: any, readStream: any) => {
+							if (sErr) return reject(sErr);
+							const writeStream = createWriteStream(resolvedDest);
+							readStream.pipe(writeStream);
+							writeStream.on("finish", () => zipfile.readEntry());
+							writeStream.on("error", reject);
+						});
+					}
+				});
+				zipfile.on("end", () => resolve());
+				zipfile.on("error", reject);
+			});
+		});
+	}
+
 	try {
 		if (assetName.endsWith(".tar.gz")) {
 			const extractResult = spawnSync("tar", ["xzf", archivePath, "-C", extractDir], { stdio: "pipe" });
@@ -230,7 +264,7 @@ async function downloadTool(tool: ManagedTool): Promise<string> {
 				throw new Error(`Failed to extract ${assetName}: ${errMsg}`);
 			}
 		} else if (assetName.endsWith(".zip")) {
-			await extractZip(archivePath, { dir: extractDir });
+			await extractZipSafely(archivePath, extractDir);
 		} else {
 			throw new Error(`Unsupported archive format: ${assetName}`);
 		}

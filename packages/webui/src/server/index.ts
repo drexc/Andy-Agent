@@ -659,26 +659,27 @@ export class AndyWebUiServer {
 
 			if (method === "POST" && url === "/api/skills") {
 				const body = await this.readJsonBody<any>(req);
-				const { name, description, prompt, scope } = body;
+				const { name, description, prompt, scope } = body || {};
 				if (!name) {
 					res.writeHead(400, { "Content-Type": "application/json" });
 					res.end(JSON.stringify({ error: "Skill name is required" }));
 					return;
 				}
+				const safeName = path.basename(name).replace(/[^a-zA-Z0-9_-]/g, "_");
 				const baseDir = scope === "global" ? globalSkillsDir : projectSkillsDir;
-				const skillDir = path.join(baseDir, name);
+				const skillDir = path.join(baseDir, safeName);
 				if (!existsSync(skillDir)) mkdirSync(skillDir, { recursive: true });
 				const skillFile = path.join(skillDir, "SKILL.md");
 				const skillContent = `---
-name: ${name}
-description: ${description || name}
+name: ${safeName}
+description: ${description || safeName}
 ---
 
 ${prompt || ""}`;
 				writeFileSync(skillFile, skillContent, "utf-8");
-				this.addLog("INFO", "Skills", `Saved skill: ${name} (${scope || "project"})`);
+				this.addLog("INFO", "Skills", `Saved skill: ${safeName} (${scope || "project"})`);
 				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ success: true, name, path: skillFile }));
+				res.end(JSON.stringify({ success: true, name: safeName, path: skillFile }));
 				return;
 			}
 
@@ -703,19 +704,20 @@ ${prompt || ""}`;
 
 			if (method === "POST" && url === "/api/prompts") {
 				const body = await this.readJsonBody<any>(req);
-				const { name, content, scope } = body;
+				const { name, content, scope } = body || {};
 				if (!name) {
 					res.writeHead(400, { "Content-Type": "application/json" });
 					res.end(JSON.stringify({ error: "Prompt name is required" }));
 					return;
 				}
+				const safeName = path.basename(name).replace(/[^a-zA-Z0-9_\-.]/g, "_");
 				const baseDir = scope === "global" ? globalPromptsDir : projectPromptsDir;
 				if (!existsSync(baseDir)) mkdirSync(baseDir, { recursive: true });
-				const promptFile = path.join(baseDir, `${name}.md`);
+				const promptFile = path.join(baseDir, `${safeName}.md`);
 				writeFileSync(promptFile, content || "", "utf-8");
-				this.addLog("INFO", "Prompts", `Saved prompt template: ${name} (${scope || "project"})`);
+				this.addLog("INFO", "Prompts", `Saved prompt template: ${safeName} (${scope || "project"})`);
 				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ success: true, name, path: promptFile }));
+				res.end(JSON.stringify({ success: true, name: safeName, path: promptFile }));
 				return;
 			}
 
@@ -1558,7 +1560,8 @@ ${prompt || ""}`;
 			}
 
 			if ((method === "PUT" || method === "PATCH") && url.startsWith("/api/sessions/")) {
-				const sessionId = url.split("/")[3] || "default";
+				const rawId = url.split("/")[3] || "default";
+				const sessionId = path.basename(rawId).replace(/[^a-zA-Z0-9_-]/g, "_") || "default";
 				const body = await this.readJsonBody<any>(req);
 				const title = body?.title;
 				if (title) {
@@ -1571,7 +1574,8 @@ ${prompt || ""}`;
 			}
 
 			if (method === "DELETE" && url.startsWith("/api/sessions/")) {
-				const sessionId = url.split("/")[3] || "default";
+				const rawId = url.split("/")[3] || "default";
+				const sessionId = path.basename(rawId).replace(/[^a-zA-Z0-9_-]/g, "_") || "default";
 				await this.pool.deleteSession(sessionId);
 				this.addLog("INFO", "Session", `Deleted session ${sessionId}`);
 				res.writeHead(200, { "Content-Type": "application/json" });
@@ -1934,7 +1938,19 @@ ${prompt || ""}`;
 
 			if (method === "GET" && url === "/api/files/read") {
 				const filePath = parsedUrl.searchParams.get("path") || "";
-				const full = path.isAbsolute(filePath) ? filePath : path.resolve(this.pool.cwd, filePath);
+				const targetProjectId = parsedUrl.searchParams.get("projectId") || undefined;
+				const full = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(this.pool.cwd, filePath);
+
+				if (!this.isPathAllowed(full, targetProjectId)) {
+					res.writeHead(403, { "Content-Type": "application/json" });
+					res.end(
+						JSON.stringify({
+							error: "Acceso denegado: Ruta fuera del espacio de trabajo permitido (Path Traversal Protection).",
+						}),
+					);
+					return;
+				}
+
 				if (!existsSync(full)) {
 					res.writeHead(404, { "Content-Type": "application/json" });
 					res.end(JSON.stringify({ error: "File not found" }));
@@ -1948,8 +1964,25 @@ ${prompt || ""}`;
 
 			if (method === "POST" && url === "/api/files/write") {
 				const body = await this.readJsonBody<any>(req);
-				const { filePath, content } = body;
-				const full = path.isAbsolute(filePath) ? filePath : path.resolve(this.pool.cwd, filePath);
+				const { filePath, content, projectId } = body || {};
+				if (!filePath) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "filePath is required" }));
+					return;
+				}
+
+				const full = path.isAbsolute(filePath) ? path.resolve(filePath) : path.resolve(this.pool.cwd, filePath);
+
+				if (!this.isPathAllowed(full, projectId)) {
+					res.writeHead(403, { "Content-Type": "application/json" });
+					res.end(
+						JSON.stringify({
+							error: "Acceso denegado: Ruta fuera del espacio de trabajo permitido (Path Traversal Protection).",
+						}),
+					);
+					return;
+				}
+
 				const dir = path.dirname(full);
 				if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 				writeFileSync(full, content || "", "utf-8");
@@ -2074,6 +2107,13 @@ ${prompt || ""}`;
 					Connection: "keep-alive",
 				});
 
+				const turnAbortController = new AbortController();
+				req.on("close", () => {
+					if (!turnAbortController.signal.aborted) {
+						turnAbortController.abort();
+					}
+				});
+
 				const llmCaller = async (messages: any[], modelId: string, temp: number, systemPrompt?: string) => {
 					const targetModel = this.pool.findModel(modelId);
 					if (!targetModel) {
@@ -2135,6 +2175,7 @@ ${prompt || ""}`;
 						apiKey: apiKey || undefined,
 						temperature: temp ?? 0.2,
 						maxTokens: 4096,
+						signal: turnAbortController.signal,
 					};
 
 					async function* textStream() {
@@ -2197,6 +2238,7 @@ ${prompt || ""}`;
 							}
 						} else if (streamGen && Symbol.asyncIterator in streamGen) {
 							for await (const chunk of streamGen) {
+								if (turnAbortController.signal.aborted) break;
 								accumulatedResponse += chunk;
 								if (!res.writableEnded) {
 									res.write(
@@ -2261,6 +2303,7 @@ ${prompt || ""}`;
 							},
 							{
 								targetAgentId,
+								abortController: turnAbortController,
 								llmCaller,
 								projectInfo: {
 									id: activeProj.id,
@@ -4108,6 +4151,31 @@ ${prompt || ""}`;
 			}
 		} catch {}
 		return results;
+	}
+
+	private isPathAllowed(targetPath: string, targetProjectId?: string): boolean {
+		const normalized = path.resolve(targetPath).toLowerCase();
+		const allowedRoots: string[] = [
+			this.options.cwd ? path.resolve(this.options.cwd) : process.cwd(),
+			process.cwd(),
+			this.pool.cwd,
+			path.join(os.homedir(), ".andy"),
+			path.join(os.homedir(), ".prime"),
+		];
+
+		const activeProj = this.pool.getProject(targetProjectId || "") || this.pool.getActiveProject();
+		if (activeProj?.path) allowedRoots.push(activeProj.path);
+
+		const allProjects = this.pool.listProjects()?.projects || [];
+		for (const p of allProjects) {
+			if (p.path) allowedRoots.push(p.path);
+		}
+
+		return allowedRoots.some((root) => {
+			const resolvedRoot = path.resolve(root).toLowerCase();
+			const rel = path.relative(resolvedRoot, normalized);
+			return !rel.startsWith("..") && !path.isAbsolute(rel);
+		});
 	}
 
 	private readJsonBody<T>(req: IncomingMessage): Promise<T | null> {

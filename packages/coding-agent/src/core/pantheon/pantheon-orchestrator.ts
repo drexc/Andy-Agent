@@ -512,6 +512,13 @@ export class PantheonOrchestrator {
 		});
 	}
 
+	private isPathSafe(resolvedPath: string, rootDir: string): boolean {
+		const resolvedRoot = path.resolve(rootDir).toLowerCase();
+		const target = path.resolve(resolvedPath).toLowerCase();
+		const rel = path.relative(resolvedRoot, target);
+		return !rel.startsWith("..") && !path.isAbsolute(rel);
+	}
+
 	private async executeAgentActions(
 		agent: PantheonAgentProfile,
 		text: string,
@@ -530,7 +537,18 @@ export class PantheonOrchestrator {
 				const content = match[2];
 				if (rawPath && content !== undefined) {
 					try {
-						const fullPath = path.isAbsolute(rawPath) ? rawPath : path.resolve(targetCwd, rawPath);
+						const fullPath = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(targetCwd, rawPath);
+						if (!this.isPathSafe(fullPath, targetCwd)) {
+							const safetyMsg = `🛡️ [Guardrail de Seguridad]: Intento de escribir fuera del directorio del proyecto bloqueado: "${rawPath}".`;
+							await onEvent({
+								type: "error",
+								agentId: agent.id,
+								error: safetyMsg,
+							});
+							extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió escribir en \`${rawPath}\` porque excede los límites del proyecto.`;
+							match = fileBlockRegex.exec(text);
+							continue;
+						}
 						const dir = path.dirname(fullPath);
 						if (!existsSync(dir)) {
 							mkdirSync(dir, { recursive: true });
@@ -579,7 +597,18 @@ export class PantheonOrchestrator {
 				const content = match[2];
 				if (rawPath && content !== undefined) {
 					try {
-						const fullPath = path.isAbsolute(rawPath) ? rawPath : path.resolve(targetCwd, rawPath);
+						const fullPath = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(targetCwd, rawPath);
+						if (!this.isPathSafe(fullPath, targetCwd)) {
+							const safetyMsg = `🛡️ [Guardrail de Seguridad]: Intento de escribir fuera del directorio del proyecto bloqueado: "${rawPath}".`;
+							await onEvent({
+								type: "error",
+								agentId: agent.id,
+								error: safetyMsg,
+							});
+							extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió escribir en \`${rawPath}\` porque excede los límites del proyecto.`;
+							match = commentedFileBlockRegex.exec(text);
+							continue;
+						}
 						const dir = path.dirname(fullPath);
 						if (!existsSync(dir)) {
 							mkdirSync(dir, { recursive: true });
@@ -675,7 +704,20 @@ export class PantheonOrchestrator {
 			const targetFile = (readMatch[1] || readMatch[2] || "").trim();
 			if (targetFile) {
 				try {
-					const fullPath = path.isAbsolute(targetFile) ? targetFile : path.resolve(targetCwd, targetFile);
+					const fullPath = path.isAbsolute(targetFile)
+						? path.resolve(targetFile)
+						: path.resolve(targetCwd, targetFile);
+					if (!this.isPathSafe(fullPath, targetCwd)) {
+						const safetyMsg = `🛡️ [Guardrail de Seguridad]: Lectura de archivo fuera del directorio del proyecto bloqueada: "${targetFile}".`;
+						await onEvent({
+							type: "error",
+							agentId: agent.id,
+							error: safetyMsg,
+						});
+						extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió leer \`${targetFile}\` porque excede los límites del proyecto.`;
+						readMatch = readBlockRegex.exec(text);
+						continue;
+					}
 					if (existsSync(fullPath)) {
 						const content = readFileSync(fullPath, "utf-8");
 						const ext = (path.extname(targetFile).slice(1) || "text").toLowerCase();

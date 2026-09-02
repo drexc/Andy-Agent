@@ -54,6 +54,11 @@ interface StoredSessionData {
 	messages: any[];
 }
 
+export function sanitizeSessionId(id: string): string {
+	const clean = path.basename(id || "").replace(/[^a-zA-Z0-9_-]/g, "_");
+	return clean || "default";
+}
+
 interface StoredProjectsFile {
 	activeProjectId: string;
 	projects: ProjectItem[];
@@ -127,9 +132,10 @@ export class WebUiSessionPool {
 			if (!modelsConfig.providers.omniroute) {
 				const isDebianOrLinux = process.platform === "linux";
 				const defaultBaseUrl = isDebianOrLinux ? "http://127.0.0.1:20128/v1" : "http://ia.v2nethost.cl:20128/v1";
+				const omniKey = process.env.OMNIROUTE_API_KEY || "sk-7fd5586a69f723fb-71d90e-838d8616";
 				modelsConfig.providers.omniroute = {
 					baseUrl: defaultBaseUrl,
-					apiKey: "sk-7fd5586a69f723fb-71d90e-838d8616",
+					apiKey: omniKey,
 					api: "openai-completions",
 					models: [
 						{
@@ -153,9 +159,10 @@ export class WebUiSessionPool {
 
 			// Ensure AuthStorage has omniroute credentials
 			if (!this.authStorage.hasAuth("omniroute")) {
+				const omniKey = process.env.OMNIROUTE_API_KEY || "sk-7fd5586a69f723fb-71d90e-838d8616";
 				this.authStorage.set("omniroute", {
 					type: "api_key",
-					key: "sk-7fd5586a69f723fb-71d90e-838d8616",
+					key: omniKey,
 				});
 			}
 
@@ -655,11 +662,12 @@ export class WebUiSessionPool {
 	}
 
 	public async getOrCreateSession(
-		sessionId = "default",
+		rawSessionId = "default",
 		modelId?: string,
 		provider?: string,
 		projectId?: string,
 	): Promise<WebUiSessionItem> {
+		const sessionId = sanitizeSessionId(rawSessionId);
 		const targetProjectId = projectId || this.activeProjectId;
 		const targetProject = this.getProject(targetProjectId) || this.getActiveProject();
 
@@ -742,7 +750,8 @@ export class WebUiSessionPool {
 		return item;
 	}
 
-	public async setSessionTitle(sessionId: string, newTitle: string): Promise<boolean> {
+	public async setSessionTitle(rawSessionId: string, newTitle: string): Promise<boolean> {
+		const sessionId = sanitizeSessionId(rawSessionId);
 		const title = newTitle.trim();
 		if (!title) return false;
 
@@ -770,9 +779,10 @@ export class WebUiSessionPool {
 
 	public persistSession(item: WebUiSessionItem): void {
 		try {
-			const filePath = path.join(this.storageDir, `${item.id}.json`);
+			const safeId = sanitizeSessionId(item.id);
+			const filePath = path.join(this.storageDir, `${safeId}.json`);
 			const data: StoredSessionData = {
-				id: item.id,
+				id: safeId,
 				projectId: item.projectId,
 				title: item.title,
 				modelId: item.modelId,
@@ -787,7 +797,8 @@ export class WebUiSessionPool {
 		}
 	}
 
-	public async deleteSession(sessionId: string): Promise<boolean> {
+	public async deleteSession(rawSessionId: string): Promise<boolean> {
+		const sessionId = sanitizeSessionId(rawSessionId);
 		const item = this.sessions.get(sessionId);
 		if (item) {
 			try {
