@@ -5359,12 +5359,18 @@ for chunk in response:
     function cleanPantheonOutput(text) {
       if (!text) return '';
       return text
+        .replace(/<|tool_call_start|>[sS]*?<|tool_call_end|>/gi, '')
+        .replace(/<|tool_call_start|>[sS]*$/gi, '')
+        .replace(/<|im_start|>[sS]*?<|im_end|>/gi, '')
         .replace(/<tool_call>\\s*([A-Za-z0-9_-]+)[\\s\\S]*?<arg_key>([^<]*)<\\/arg_key>[\\s\\S]*?<arg_value>([\\s\\S]*?)<\\/arg_value>\\s*<\\/tool_call>/gi, function(_, tool, _k, val) {
           return '\\n\\n\`\`\`bash\\n# Comando (' + tool + '):\\n' + val.trim() + '\\n\`\`\`\\n\\n';
         })
         .replace(/<tool_call>([\\s\\S]*?)<\\/tool_call>/gi, function(_, c) {
           return '\\n\\n\`\`\`text\\n' + c.trim() + '\\n\`\`\`\\n\\n';
-        });
+        })
+        .replace(/\\[read\\(file_path=[^\\]]*\\)\\]/gi, '')
+        .replace(/\\[write\\(file_path=[^\\]]*\\)\\]/gi, '')
+        .replace(/\\[execute\\(command=[^\\]]*\\)\\]/gi, '');
     }
 
     function renderPantheonAgents() {

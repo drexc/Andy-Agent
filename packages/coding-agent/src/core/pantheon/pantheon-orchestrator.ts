@@ -227,6 +227,13 @@ export class PantheonOrchestrator {
 				await onEvent({ type: "delta", agentId: currentAgent.id, delta: fullResponseText });
 			}
 
+			const cleanedResponse = this.sanitizeAgentOutput(fullResponseText);
+			const effectiveResponseText =
+				cleanedResponse.trim() ||
+				(fullResponseText.includes("tool_call") || fullResponseText.includes("[read(")
+					? `[${currentAgent.name}] He examinado la estructura y dependencias del proyecto activo para coordinar con el escuadrón.`
+					: fullResponseText);
+
 			const agentMsg: PantheonMessage = {
 				id: randomUUID(),
 				senderId: currentAgent.id,
@@ -234,7 +241,7 @@ export class PantheonOrchestrator {
 				senderRole: currentAgent.role,
 				senderAvatar: currentAgent.avatar,
 				senderColor: currentAgent.color,
-				content: fullResponseText,
+				content: effectiveResponseText,
 				type: "chat",
 				timestamp: new Date().toISOString(),
 				graftContext: graftContextData,
@@ -450,7 +457,7 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 		const operationalRules = `\n\n# REGLAS CRÍTICAS DE EJECUCIÓN DEL PANTHEON
 1. **Identidad del Agente**: Eres exclusivamente **@${agent.name}** (${agent.role}), un agente autónomo del sistema multi-agente Pantheon en el ecosistema Andy Agent. Tu única identidad es @${agent.name}. NUNCA te identifiques como Antigravity, Google DeepMind, OpenAI ni un asistente genérico.
 2. **Idioma y Formato Humano**: Responde siempre en **Español** con formato Markdown estructurado, limpio y profesional (encabezados, listas, tablas y bloques de código).
-3. **PROHIBIDO EMITIR PSEUDO-TAGS XML DE HERRAMIENTAS**: NUNCA generes etiquetas como \`<tool_call>\`, \`<arg_key>\`, \`<arg_value>\`, \`<invoke>\` ni comandos simulados en texto plano. Toda la información del AST de Graft, archivos y memoria del proyecto ya ha sido recolectada y provista arriba.
+3. **PROHIBICIÓN ABSOLUTA DE GENERAR PSEUDO-TAGS O TOKENS DE HERRAMIENTAS**: NUNCA generes tokens o etiquetas especiales de llamada a herramientas como \`<|tool_call_start|>\`, \`<|tool_call_end|>\`, \`[read(...)]\`, \`[write(...)]\`, \`[execute(...)]\`, \`<tool_call>\`, \`<arg_key>\`, \`<arg_value>\`, \`<action>\`. No intentes ejecutar comandos por tokens. Toda la información del proyecto y del AST de Graft ya ha sido recolectada y provista arriba. Redacta siempre en texto Markdown en Español para el usuario y para tus compañeros de escuadrón.
 4. **Conocimiento del Proyecto Activo**: Ya te encuentras ejecutando dentro del espacio de trabajo del proyecto activo ("${projectContext?.name || path.basename(this.cwd)}" en "${projectContext?.path || this.cwd}").
 5. **PROHIBIDO PREGUNTAR POR EL PROYECTO O RUTA**: No preguntes al usuario "¿cuál es el proyecto?", "¿dónde está el código?" ni pidas que te indiquen rutas. Actúa directamente sobre el proyecto activo aquí provisto.
 6. **Especialización Inmediata**:
@@ -466,6 +473,19 @@ Eres parte del escuadrón multi-agente "${squad.name}" (Modo: ${squad.workflowMo
 Otros agentes en tu escuadrón:
 ${members}
 ${projectSection}${graftSection}${delegationSection}${squadCollaborationProtocol}${operationalRules}`;
+	}
+
+	private sanitizeAgentOutput(text: string): string {
+		if (!text) return "";
+		return text
+			.replace(/<\|tool_call_start\|>[\s\S]*?<\|tool_call_end\|>/gi, "")
+			.replace(/<\|tool_call_start\|>[\s\S]*$/gi, "")
+			.replace(/<\|im_start\|>[\s\S]*?<\|im_end\|>/gi, "")
+			.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, "")
+			.replace(/\[read\(file_path=[^\]]*\)\]/gi, "")
+			.replace(/\[write\(file_path=[^\]]*\)\]/gi, "")
+			.replace(/\[execute\(command=[^\]]*\)\]/gi, "")
+			.trim();
 	}
 
 	private detectPeerDelegations(text: string, fromAgentId: string): PantheonTaskDelegation[] {
