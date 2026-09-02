@@ -5347,14 +5347,14 @@ for chunk in response:
         }
 
         const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
+        const decoder = new TextDecoder();
         let buffer = '';
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\\n\\n');
+          const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 
           for (const line of lines) {
@@ -5394,7 +5394,7 @@ for chunk in response:
                 delDiv.className = 'p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-200 text-xs flex items-center gap-2 pl-7';
                 delDiv.innerHTML = \`
                   <i data-lucide="arrow-right-circle" class="w-4 h-4 text-purple-400 shrink-0"></i>
-                  <span><strong>Delegación:</strong> Tarea enviada a <strong>@\${event.delegation.toAgentId}</strong></span>
+                  <span><strong>Delegación:</strong> Tarea enviada a <strong>@\${event.delegation?.toAgentId || 'agente'}</strong></span>
                 \`;
                 timeline.appendChild(delDiv);
                 timeline.scrollTop = timeline.scrollHeight;
@@ -5409,6 +5409,12 @@ for chunk in response:
                 timeline.appendChild(gDiv);
                 timeline.scrollTop = timeline.scrollHeight;
                 lucide.createIcons();
+              } else if (event.type === 'error') {
+                const errDiv = document.createElement('div');
+                errDiv.className = 'p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs pl-7';
+                errDiv.innerText = 'Aviso del agente: ' + (event.error || 'Error en la respuesta');
+                timeline.appendChild(errDiv);
+                timeline.scrollTop = timeline.scrollHeight;
               }
             } catch (e) {}
           }

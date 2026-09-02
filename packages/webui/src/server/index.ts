@@ -1940,36 +1940,49 @@ ${prompt || ""}`;
 							for await (const ev of eventStream) {
 								if (ev.type === "text_delta") {
 									yield ev.delta;
+								} else if (ev.type === "error") {
+									yield `\n[Error del proveedor: ${ev.error?.errorMessage || "Inferencia fallida"}]`;
 								}
 							}
 						} catch (err: any) {
-							yield `\n[Error al generar con ${modelId}: ${err.message}]`;
+							yield `\n[Error al conectar con ${modelId}: ${err.message || String(err)}]`;
 						}
 					}
 
 					return textStream();
 				};
 
-				await pantheonOrchestrator.executeTurn(
-					squadId,
-					prompt,
-					async (event) => {
-						res.write(`data: ${JSON.stringify(event)}\n\n`);
-					},
-					{
-						targetAgentId,
-						llmCaller,
-						projectInfo: {
-							id: activeProj.id,
-							name: activeProj.name,
-							path: activeProj.path,
-							description: activeProj.description,
+				try {
+					await pantheonOrchestrator.executeTurn(
+						squadId,
+						prompt,
+						async (event) => {
+							if (!res.writableEnded) {
+								res.write(`data: ${JSON.stringify(event)}\n\n`);
+							}
 						},
-					},
-				);
-
-				res.write("data: [DONE]\n\n");
-				res.end();
+						{
+							targetAgentId,
+							llmCaller,
+							projectInfo: {
+								id: activeProj.id,
+								name: activeProj.name,
+								path: activeProj.path,
+								description: activeProj.description,
+							},
+						},
+					);
+				} catch (err: any) {
+					this.addLog("ERROR", "Pantheon", `Turn error: ${err.message || String(err)}`);
+					if (!res.writableEnded) {
+						res.write(`data: ${JSON.stringify({ type: "error", error: err.message || String(err) })}\n\n`);
+					}
+				} finally {
+					if (!res.writableEnded) {
+						res.write("data: [DONE]\n\n");
+						res.end();
+					}
+				}
 				return;
 			}
 
