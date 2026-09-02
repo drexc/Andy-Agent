@@ -5182,7 +5182,7 @@ for chunk in response:
     // --- PANTHEON MULTI-AGENT STUDIO CLIENT ---
     const pantheonState = {
       activeSubTab: 'roster',
-      activeSquadId: 'fullstack-squad',
+      activeSquadId: (typeof localStorage !== 'undefined' ? localStorage.getItem('andy_active_squad_id') : null) || 'fullstack-squad',
       agents: [],
       squads: [],
       isStreaming: false
@@ -5218,6 +5218,14 @@ for chunk in response:
         fetchPantheonAgents(),
         fetchPantheonSquads()
       ]);
+
+      const savedSquadId = (typeof currentProjectId !== 'undefined' && currentProjectId ? localStorage.getItem('andy_active_squad_' + currentProjectId) : null) || localStorage.getItem('andy_active_squad_id');
+      if (savedSquadId && pantheonState.squads.some(s => s.id === savedSquadId)) {
+        pantheonState.activeSquadId = savedSquadId;
+      } else if (pantheonState.squads.length > 0 && !pantheonState.squads.some(s => s.id === pantheonState.activeSquadId)) {
+        pantheonState.activeSquadId = pantheonState.squads[0].id;
+      }
+
       updateHeaderSquadButton();
       renderHeaderSquadDropdown();
       renderChatMentionChips();
@@ -5306,6 +5314,12 @@ for chunk in response:
 
     function selectHeaderSquad(squadId) {
       pantheonState.activeSquadId = squadId;
+      try {
+        localStorage.setItem('andy_active_squad_id', squadId);
+        if (typeof currentProjectId !== 'undefined' && currentProjectId) {
+          localStorage.setItem('andy_active_squad_' + currentProjectId, squadId);
+        }
+      } catch (e) {}
       updateHeaderSquadButton();
       renderHeaderSquadDropdown();
       toggleSquadDropdown();
@@ -5389,6 +5403,12 @@ for chunk in response:
 
     function openSquadInChat(squadId) {
       pantheonState.activeSquadId = squadId;
+      try {
+        localStorage.setItem('andy_active_squad_id', squadId);
+        if (typeof currentProjectId !== 'undefined' && currentProjectId) {
+          localStorage.setItem('andy_active_squad_' + currentProjectId, squadId);
+        }
+      } catch (e) {}
       updateHeaderSquadButton();
       renderChatMentionChips();
       switchView('chat');
