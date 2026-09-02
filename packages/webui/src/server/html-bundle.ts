@@ -5280,7 +5280,7 @@ for chunk in response:
     function runSquadPreset(type) {
       const input = document.getElementById('pantheonPromptInput');
       if (!input) return;
-      if (type === 'fullstack') {
+            if (type === 'fullstack') {
         input.value = '@Hermes Por favor coordina al escuadrón para implementar la siguiente funcionalidad: @Athena revisará la arquitectura y dependencias con Graft, @Hephaestus implementará el código modular y @Argos validará los diagnósticos estáticos y tests.';
       } else if (type === 'audit') {
         input.value = '@Argos Ejecuta un escaneo completo de diagnósticos estáticos (graft_diagnostics), detecta dependencias circulares y coordina con @Hephaestus para auto-resolver cualquier problema encontrado.';
@@ -5291,10 +5291,21 @@ for chunk in response:
       input.focus();
     }
 
+    function cleanPantheonOutput(text) {
+      if (!text) return '';
+      return text
+        .replace(/<tool_call>\\s*([A-Za-z0-9_-]+)[\\s\\S]*?<arg_key>([^<]*)<\\/arg_key>[\\s\\S]*?<arg_value>([\\s\\S]*?)<\\/arg_value>\\s*<\\/tool_call>/gi, function(_, tool, _k, val) {
+          return '\\n\\n\`\`\`bash\\n# Comando (' + tool + '):\\n' + val.trim() + '\\n\`\`\`\\n\\n';
+        })
+        .replace(/<tool_call>([\\s\\S]*?)<\\/tool_call>/gi, function(_, c) {
+          return '\\n\\n\`\`\`text\\n' + c.trim() + '\\n\`\`\`\\n\\n';
+        });
+    }
+
     async function submitPantheonPrompt() {
+      if (pantheonState.isStreaming) return;
       const input = document.getElementById('pantheonPromptInput');
-      if (!input || pantheonState.isStreaming) return;
-      const prompt = input.value.trim();
+      const prompt = (input?.value || '').trim();
       if (!prompt) return;
 
       input.value = '';
@@ -5324,7 +5335,8 @@ for chunk in response:
 
       // Current agent response container
       let currentAgentDiv = null;
-      let currentAgentTextPre = null;
+      let currentAgentContentDiv = null;
+      let currentAgentFullText = '';
 
       try {
         const response = await fetch('/api/pantheon/chat', {
@@ -5366,6 +5378,7 @@ for chunk in response:
             try {
               const event = JSON.parse(dataStr);
               if (event.type === 'agent_start') {
+                currentAgentFullText = '';
                 currentAgentDiv = document.createElement('div');
                 currentAgentDiv.className = 'p-4 rounded-2xl bg-surface-850 border border-surface-700 text-xs text-white space-y-2 shadow-lg transition-all';
                 currentAgentDiv.style.borderLeft = \`4px solid \${event.agentColor || '#8B5CF6'}\`;
@@ -5380,14 +5393,21 @@ for chunk in response:
                     </div>
                     <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 font-mono">Pantheon Agent</span>
                   </div>
-                  <pre class="mt-2 text-slate-200 font-sans text-xs whitespace-pre-wrap break-words leading-relaxed pl-7"></pre>
+                  <div class="agent-markdown-body mt-2 text-slate-200 font-sans text-xs whitespace-normal break-words leading-relaxed pl-7 space-y-2"></div>
                 \`;
                 timeline.appendChild(currentAgentDiv);
-                currentAgentTextPre = currentAgentDiv.querySelector('pre');
+                currentAgentContentDiv = currentAgentDiv.querySelector('.agent-markdown-body');
                 timeline.scrollTop = timeline.scrollHeight;
                 lucide.createIcons();
-              } else if (event.type === 'delta' && currentAgentTextPre) {
-                currentAgentTextPre.innerText += event.delta || '';
+              } else if (event.type === 'delta' && currentAgentContentDiv) {
+                currentAgentFullText += event.delta || '';
+                const cleaned = cleanPantheonOutput(currentAgentFullText);
+                currentAgentContentDiv.innerHTML = formatMarkdown(cleaned);
+                timeline.scrollTop = timeline.scrollHeight;
+              } else if (event.type === 'agent_finish' && currentAgentContentDiv) {
+                const cleaned = cleanPantheonOutput(currentAgentFullText);
+                currentAgentContentDiv.innerHTML = formatMarkdown(cleaned);
+                lucide.createIcons();
                 timeline.scrollTop = timeline.scrollHeight;
               } else if (event.type === 'delegation') {
                 const delDiv = document.createElement('div');
