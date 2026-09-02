@@ -147,87 +147,116 @@ export class PantheonOrchestrator {
 			});
 		} catch {}
 
-		// Build Context Prompt for the primary agent
-		const systemPrompt = this.buildAgentSystemPrompt(primaryAgent, squad, graftContextData, projectContext);
+		const allTurnMessages: PantheonMessage[] = [userMsg];
+		const agentsQueue: PantheonAgentProfile[] = [primaryAgent];
+		const executionCounts: Record<string, number> = {};
+		const maxTotalSteps = 5;
+		let currentStep = 0;
 
-		// Format conversation history
-		const historyContext = roomState.messages.slice(-8).map((m) => ({
-			role: m.senderId === "user" ? "user" : "assistant",
-			content: `[${m.senderName} (${m.senderRole})]: ${m.content}`,
-		}));
+		while (agentsQueue.length > 0 && currentStep < maxTotalSteps) {
+			const currentAgent = agentsQueue.shift()!;
+			executionCounts[currentAgent.id] = (executionCounts[currentAgent.id] || 0) + 1;
+			currentStep++;
 
-		await onEvent({
-			type: "agent_start",
-			agentId: primaryAgent.id,
-			agentName: primaryAgent.name,
-			agentAvatar: primaryAgent.avatar,
-			agentColor: primaryAgent.color,
-			agentRole: primaryAgent.role,
-		});
+			// Build Context Prompt for the current agent
+			const systemPrompt = this.buildAgentSystemPrompt(
+				currentAgent,
+				squad,
+				graftContextData,
+				projectContext,
+				currentStep > 1,
+			);
 
-		let fullResponseText = "";
+			// Format conversation history
+			const historyContext = roomState.messages.slice(-10).map((m) => ({
+				role: m.senderId === "user" ? "user" : "assistant",
+				content: `[${m.senderName} (${m.senderRole})]: ${m.content}`,
+			}));
 
-		if (options.llmCaller) {
-			try {
-				const responseStream = await options.llmCaller(
-					historyContext,
-					primaryAgent.model,
-					primaryAgent.temperature,
-					systemPrompt,
-				);
+			await onEvent({
+				type: "agent_start",
+				agentId: currentAgent.id,
+				agentName: currentAgent.name,
+				agentAvatar: currentAgent.avatar,
+				agentColor: currentAgent.color,
+				agentRole: currentAgent.role,
+			});
 
-				if (typeof responseStream === "string") {
-					fullResponseText = responseStream;
-					await onEvent({ type: "delta", agentId: primaryAgent.id, delta: fullResponseText });
-				} else {
-					for await (const chunk of responseStream) {
-						fullResponseText += chunk;
-						await onEvent({ type: "delta", agentId: primaryAgent.id, delta: chunk });
+			let fullResponseText = "";
+
+			if (options.llmCaller) {
+				try {
+					const responseStream = await options.llmCaller(
+						historyContext,
+						currentAgent.model,
+						currentAgent.temperature,
+						systemPrompt,
+					);
+
+					if (typeof responseStream === "string") {
+						fullResponseText = responseStream;
+						await onEvent({ type: "delta", agentId: currentAgent.id, delta: fullResponseText });
+					} else if (responseStream && Symbol.asyncIterator in responseStream) {
+						for await (const chunk of responseStream) {
+							fullResponseText += chunk;
+							await onEvent({ type: "delta", agentId: currentAgent.id, delta: chunk });
+						}
+					}
+				} catch (err: any) {
+					fullResponseText = `Error al generar respuesta de ${currentAgent.name}: ${err.message || String(err)}`;
+					await onEvent({ type: "error", agentId: currentAgent.id, error: err.message || String(err) });
+				}
+			} else {
+				// Fallback simulated multi-agent synthesis
+				fullResponseText = `[${currentAgent.name}] He analizado la solicitud "${userPrompt}". El escuadrón ${squad.name} está listo para actuar sobre el proyecto activo "${projectContext.name}".`;
+				await onEvent({ type: "delta", agentId: currentAgent.id, delta: fullResponseText });
+			}
+
+			const agentMsg: PantheonMessage = {
+				id: randomUUID(),
+				senderId: currentAgent.id,
+				senderName: currentAgent.name,
+				senderRole: currentAgent.role,
+				senderAvatar: currentAgent.avatar,
+				senderColor: currentAgent.color,
+				content: fullResponseText,
+				type: "chat",
+				timestamp: new Date().toISOString(),
+				graftContext: graftContextData,
+			};
+			roomState.messages.push(agentMsg);
+			allTurnMessages.push(agentMsg);
+
+			await onEvent({
+				type: "agent_finish",
+				agentId: currentAgent.id,
+				message: agentMsg,
+			});
+
+			// Check if current agent delegated to peer agents
+			const peerDelegations = this.detectPeerDelegations(fullResponseText, currentAgent.id);
+			for (const del of peerDelegations) {
+				roomState.delegations.push(del);
+				await onEvent({
+					type: "delegation",
+					agentId: del.fromAgentId,
+					delegation: del,
+				});
+
+				const nextAgent = this.registry.getAgent(del.toAgentId);
+				if (nextAgent) {
+					const count = executionCounts[nextAgent.id] || 0;
+					const alreadyInQueue = agentsQueue.some((a) => a.id === nextAgent.id);
+					// Allow up to 2 turns per agent in a single user session to prevent infinite loops
+					if (count < 2 && !alreadyInQueue) {
+						agentsQueue.push(nextAgent);
 					}
 				}
-			} catch (err: any) {
-				fullResponseText = `Error al generar respuesta de ${primaryAgent.name}: ${err.message}`;
-				await onEvent({ type: "error", agentId: primaryAgent.id, error: err.message });
 			}
-		} else {
-			// Fallback simulated multi-agent synthesis
-			fullResponseText = `[${primaryAgent.name}] He analizado la solicitud "${userPrompt}". El escuadrón ${squad.name} está listo para actuar con soporte de Graft y RLM sobre el proyecto activo "${projectContext.name}".`;
-			await onEvent({ type: "delta", agentId: primaryAgent.id, delta: fullResponseText });
-		}
-
-		const agentMsg: PantheonMessage = {
-			id: randomUUID(),
-			senderId: primaryAgent.id,
-			senderName: primaryAgent.name,
-			senderRole: primaryAgent.role,
-			senderAvatar: primaryAgent.avatar,
-			senderColor: primaryAgent.color,
-			content: fullResponseText,
-			type: "chat",
-			timestamp: new Date().toISOString(),
-			graftContext: graftContextData,
-		};
-		roomState.messages.push(agentMsg);
-
-		await onEvent({
-			type: "agent_finish",
-			agentId: primaryAgent.id,
-			message: agentMsg,
-		});
-
-		// Check if primary agent delegated to a peer agent (e.g. "@Hephaestus", "@Argos")
-		const peerDelegations = this.detectPeerDelegations(fullResponseText, primaryAgent.id);
-		for (const del of peerDelegations) {
-			roomState.delegations.push(del);
-			await onEvent({
-				type: "delegation",
-				agentId: del.fromAgentId,
-				delegation: del,
-			});
 		}
 
 		await onEvent({ type: "done" });
-		return [userMsg, agentMsg];
+		return allTurnMessages;
 	}
 
 	private loadProjectContext(projectInfo?: PantheonProjectInfo): PantheonProjectContext {
@@ -330,6 +359,7 @@ export class PantheonOrchestrator {
 		squad: PantheonSquad,
 		graftContext?: any,
 		projectContext?: PantheonProjectContext,
+		isDelegatedStep?: boolean,
 	): string {
 		const members = this.registry
 			.getAgents()
@@ -359,6 +389,11 @@ ${graftContext.map}
 - Diagnósticos estáticos pendientes: ${graftContext.diagnosticsCount || 0}`
 			: "";
 
+		const delegationSection = isDelegatedStep
+			? `\n\n# INTERVENCIÓN POR DELEGACIÓN DEL ESCUADRÓN
+Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una tarea o solicitó tu análisis en los mensajes inmediatamente anteriores. Lee atentamente sus conclusiones o instrucciones previas en el historial, asume el control inmediato y entrega tus resultados según tu especialidad sin repetir lo que ya se dijo.`
+			: "";
+
 		const operationalRules = `\n\n# REGLAS CRÍTICAS DE EJECUCIÓN DEL PANTHEON
 1. **Identidad del Agente**: Eres exclusivamente **@${agent.name}** (${agent.role}), un agente autónomo del sistema multi-agente Pantheon en el ecosistema Andy Agent. Tu única identidad es @${agent.name}. NUNCA te identifiques como Antigravity, Google DeepMind, OpenAI ni un asistente genérico.
 2. **Idioma y Formato Humano**: Responde siempre en **Español** con formato Markdown estructurado, limpio y profesional (encabezados, listas, tablas y bloques de código).
@@ -379,7 +414,7 @@ Otros agentes en tu escuadrón:
 ${members}
 
 Puedes delegar tareas mencionando a otro agente con @Nombre y describiendo la subtarea exacta que debe realizar.
-${projectSection}${graftSection}${operationalRules}`;
+${projectSection}${graftSection}${delegationSection}${operationalRules}`;
 	}
 
 	private detectPeerDelegations(text: string, fromAgentId: string): PantheonTaskDelegation[] {
