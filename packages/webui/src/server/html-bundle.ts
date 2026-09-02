@@ -473,10 +473,36 @@ export function getWebUiHtml(): string {
 
       <div class="p-2 sm:p-4 bg-surface-900/95 border-t border-surface-750/80 shrink-0 safe-bottom">
         <div class="max-w-4xl mx-auto relative bg-surface-800 border border-surface-700 rounded-2xl shadow-xl focus-within:border-purple-500 transition-all duration-200 overflow-hidden">
-          <!-- Chat Quick Mention Chips Bar -->
-          <div id="chatMentionChips" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-3 pt-2 pb-1 text-xs border-b border-surface-750/40 bg-surface-850/60">
-            <span class="text-[10px] text-slate-400 font-semibold shrink-0 mr-0.5">Mencionar:</span>
-            <!-- Dynamically populated via JS -->
+          <!-- Chat Quick Mention Chips Bar with Horizontal Scroll and Arrow Controls -->
+          <div class="relative flex items-center border-b border-surface-750/50 bg-surface-850/70 px-1 py-1 overflow-hidden">
+            <button
+              id="mentionScrollLeftBtn"
+              onclick="scrollMentionChips('left')"
+              type="button"
+              class="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-surface-700/80 transition-colors shrink-0 cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+              title="Desplazar agentes a la izquierda"
+            >
+              <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+            </button>
+
+            <div
+              id="chatMentionChips"
+              onscroll="updateMentionScrollArrows()"
+              class="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth px-1.5 py-0.5 text-xs flex-1 select-none"
+            >
+              <span class="text-[10px] text-slate-400 font-semibold shrink-0 mr-0.5">Mencionar:</span>
+              <!-- Dynamically populated via JS -->
+            </div>
+
+            <button
+              id="mentionScrollRightBtn"
+              onclick="scrollMentionChips('right')"
+              type="button"
+              class="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-surface-700/80 transition-colors shrink-0 cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
+              title="Desplazar agentes a la derecha"
+            >
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+            </button>
           </div>
 
           <textarea
@@ -5512,18 +5538,68 @@ for chunk in response:
       lucide.createIcons();
     }
 
+    function scrollMentionChips(direction) {
+      const container = document.getElementById('chatMentionChips');
+      if (!container) return;
+      const step = 200;
+      container.scrollBy({ left: direction === 'left' ? -step : step, behavior: 'smooth' });
+      setTimeout(updateMentionScrollArrows, 250);
+    }
+
+    function updateMentionScrollArrows() {
+      const container = document.getElementById('chatMentionChips');
+      const leftBtn = document.getElementById('mentionScrollLeftBtn');
+      const rightBtn = document.getElementById('mentionScrollRightBtn');
+      if (!container || !leftBtn || !rightBtn) return;
+
+      const isScrollable = container.scrollWidth > (container.clientWidth + 10);
+      if (!isScrollable) {
+        leftBtn.classList.add('opacity-30', 'pointer-events-none');
+        rightBtn.classList.add('opacity-30', 'pointer-events-none');
+        leftBtn.disabled = true;
+        rightBtn.disabled = true;
+        return;
+      }
+
+      leftBtn.classList.remove('opacity-30', 'pointer-events-none');
+      rightBtn.classList.remove('opacity-30', 'pointer-events-none');
+
+      leftBtn.disabled = container.scrollLeft <= 5;
+      rightBtn.disabled = container.scrollLeft + container.clientWidth >= container.scrollWidth - 5;
+
+      if (leftBtn.disabled) leftBtn.classList.add('opacity-30');
+      else leftBtn.classList.remove('opacity-30');
+
+      if (rightBtn.disabled) rightBtn.classList.add('opacity-30');
+      else rightBtn.classList.remove('opacity-30');
+    }
+
     function renderChatMentionChips() {
       const container = document.getElementById('chatMentionChips');
       if (!container) return;
-      container.innerHTML = '<span class="text-[10px] text-slate-400 font-semibold shrink-0 mr-0.5">Mencionar:</span>';
+      container.innerHTML = '<span class="text-[10px] text-slate-400 font-semibold shrink-0 mr-0.5 flex items-center gap-1"><i data-lucide="at-sign" class="w-3 h-3 text-purple-400"></i> Mencionar:</span>';
+
+      if (!pantheonState.agents || pantheonState.agents.length === 0) {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'text-[11px] text-slate-500 italic shrink-0';
+        placeholder.innerText = 'Cargando agentes...';
+        container.appendChild(placeholder);
+        return;
+      }
+
       pantheonState.agents.forEach(a => {
         const btn = document.createElement('button');
-        btn.className = 'px-2 py-0.5 rounded-lg bg-surface-800 hover:bg-surface-750 border border-surface-700 font-mono text-[11px] transition-colors flex items-center gap-1 cursor-pointer shrink-0';
+        btn.type = 'button';
+        btn.className = 'px-2 py-0.5 rounded-lg bg-surface-800 hover:bg-surface-750 border border-surface-700/80 font-mono text-[11px] transition-all hover:scale-105 flex items-center gap-1.5 cursor-pointer shrink-0 shadow-sm';
         btn.style.color = a.color || '#A78BFA';
-        btn.innerHTML = \`<span>\${a.avatar}</span> <span>@\${a.name}</span>\`;
+        btn.style.borderColor = (a.color || '#8B5CF6') + '40';
+        btn.title = \`Mencionar a @\${a.name} (\${a.role || 'Especialista'})\`;
+        btn.innerHTML = \`<span class="text-xs">\${a.avatar || '🤖'}</span> <span class="font-semibold text-white">@\${a.name}</span> <span class="text-[9px] text-slate-400 font-sans truncate max-w-[120px]">(\${a.role || 'Agente'})</span>\`;
         btn.onclick = () => insertChatMention(a.name);
         container.appendChild(btn);
       });
+      lucide.createIcons();
+      setTimeout(updateMentionScrollArrows, 100);
     }
 
     function insertChatMention(name) {
@@ -5896,7 +5972,7 @@ for chunk in response:
           closePantheonAgentModal();
           await fetchPantheonAgents();
           renderPantheonAgents();
-          renderPantheonMentionChips();
+          renderChatMentionChips();
         } else {
           alert('Error al guardar agente: ' + (data.error || 'Desconocido'));
         }
@@ -5915,7 +5991,7 @@ for chunk in response:
         if (data.success) {
           await fetchPantheonAgents();
           renderPantheonAgents();
-          renderPantheonMentionChips();
+          renderChatMentionChips();
         } else {
           alert('No se puede eliminar este agente.');
         }
@@ -7288,6 +7364,10 @@ for chunk in response:
         alert('Error: ' + e.message);
       }
     }
+
+    window.addEventListener('resize', () => {
+      updateMentionScrollArrows();
+    });
 
     document.addEventListener('click', (e) => {
       const pMenu = document.getElementById('pantheonModelDropdownMenu');
