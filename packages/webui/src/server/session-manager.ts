@@ -8,7 +8,9 @@ import {
 	createAgentSession,
 	GraftEngine,
 	ModelRegistry,
+	PantheonCronEngine,
 	PantheonOrchestrator,
+	PantheonPeerManager,
 	PantheonRegistry,
 	SessionManager as PiSessionManager,
 	SettingsManager,
@@ -512,7 +514,33 @@ export class WebUiSessionPool {
 		return orch;
 	}
 
+	public getPantheonPeerManager(projectId?: string): PantheonPeerManager {
+		const pId = projectId || this.activeProjectId;
+		const project = this.projects.get(pId);
+		const targetPath = project?.path || this.cwd;
+		let pm = this.pantheonPeerManagers.get(pId);
+		if (!pm) {
+			pm = new PantheonPeerManager(targetPath);
+			this.pantheonPeerManagers.set(pId, pm);
+		}
+		return pm;
+	}
+
+	public getPantheonCronEngine(projectId?: string): PantheonCronEngine {
+		const pId = projectId || this.activeProjectId;
+		const project = this.projects.get(pId);
+		const targetPath = project?.path || this.cwd;
+		let ce = this.pantheonCronEngines.get(pId);
+		if (!ce) {
+			ce = new PantheonCronEngine(targetPath);
+			this.pantheonCronEngines.set(pId, ce);
+		}
+		return ce;
+	}
+
 	private pantheonOrchestrators: Map<string, PantheonOrchestrator> = new Map();
+	private pantheonPeerManagers: Map<string, PantheonPeerManager> = new Map();
+	private pantheonCronEngines: Map<string, PantheonCronEngine> = new Map();
 
 	public getAvailableModels(): Model<any>[] {
 		return this.modelRegistry.getAll();

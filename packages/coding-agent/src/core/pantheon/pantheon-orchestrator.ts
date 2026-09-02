@@ -9,6 +9,7 @@ import type {
 	PantheonMessage,
 	PantheonRoomState,
 	PantheonSquad,
+	PantheonTaskControl,
 	PantheonTaskDelegation,
 } from "./pantheon-types.js";
 
@@ -67,6 +68,7 @@ export class PantheonOrchestrator {
 	private readonly graft: GraftEngine;
 	private readonly cwd: string;
 	private readonly roomStates: Map<string, PantheonRoomState> = new Map();
+	private readonly activeTaskControls: Map<string, PantheonTaskControl> = new Map();
 
 	constructor(cwd: string = process.cwd()) {
 		this.cwd = path.resolve(cwd);
@@ -76,6 +78,44 @@ export class PantheonOrchestrator {
 
 	public getRegistry(): PantheonRegistry {
 		return this.registry;
+	}
+
+	public steerTask(taskId: string, instruction: string, steeredBy: string = "user"): boolean {
+		const ctrl = this.activeTaskControls.get(taskId);
+		if (ctrl && ctrl.status === "running") {
+			ctrl.steerQueue.push(`[Steered by @${steeredBy}]: ${instruction}`);
+			return true;
+		}
+		return false;
+	}
+
+	public abortTask(taskId: string): boolean {
+		const ctrl = this.activeTaskControls.get(taskId);
+		if (ctrl && (ctrl.status === "running" || ctrl.status === "paused")) {
+			ctrl.status = "aborted";
+			ctrl.abortController.abort();
+			return true;
+		}
+		return false;
+	}
+
+	public getActiveTaskControls(): PantheonTaskControl[] {
+		return Array.from(this.activeTaskControls.values());
+	}
+
+	public isDangerousDestructiveCommand(cmd: string): boolean {
+		const lower = cmd.toLowerCase().trim();
+		const patterns = [
+			/\b(rmdir|rd)\s+\/[sq]/i,
+			/\bdel\s+\/[sqfa]/i,
+			/\bformat\s+[a-z]:/i,
+			/\brm\s+-(?:r[fF]|f[rR]|rf)\s+[/\\]/i,
+			/\bmkfs\b/i,
+			/\bdd\s+if=/i,
+			/\bdrop\s+database\b/i,
+			/\bremove-item\s+.*-recurse\s+.*-force\s+c:[\\/]/i,
+		];
+		return patterns.some((p) => p.test(lower));
 	}
 
 	public getRoomState(squadId: string): PantheonRoomState {
@@ -100,6 +140,8 @@ export class PantheonOrchestrator {
 		onEvent: PantheonEventCallback,
 		options: {
 			targetAgentId?: string;
+			taskId?: string;
+			abortController?: AbortController;
 			projectInfo?: PantheonProjectInfo;
 			llmCaller?: (
 				messages: any[],
@@ -111,6 +153,19 @@ export class PantheonOrchestrator {
 	): Promise<PantheonMessage[]> {
 		const squad = this.registry.getSquad(squadId) || this.registry.getSquads()[0];
 		const roomState = this.getRoomState(squad.id);
+
+		const taskId = options.taskId || `task-${randomUUID().slice(0, 8)}`;
+		const abortController = options.abortController || new AbortController();
+		const taskControl: PantheonTaskControl = {
+			taskId,
+			status: "running",
+			abortController,
+			steerQueue: [],
+			tokensUsed: 0,
+			toolCallsCount: 0,
+			startedAt: Date.now(),
+		};
+		this.activeTaskControls.set(taskId, taskControl);
 
 		// Record user message
 		const userMsg: PantheonMessage = {
@@ -209,9 +264,32 @@ export class PantheonOrchestrator {
 		const isExplicitDirectTarget = Boolean(targetAgentId);
 
 		while (agentsQueue.length > 0 && currentStep < maxTotalSteps) {
+			if (taskControl.status === "aborted" || abortController.signal.aborted) {
+				await onEvent({ type: "error", error: "Tarea cancelada por el usuario (Live Steering: Aborted)." });
+				break;
+			}
+
 			const currentAgent = agentsQueue.shift()!;
 			executionCounts[currentAgent.id] = (executionCounts[currentAgent.id] || 0) + 1;
 			currentStep++;
+
+			// If steering directives were queued, inject them into conversation history
+			if (taskControl.steerQueue.length > 0) {
+				const steeredDirectives = taskControl.steerQueue.splice(0, taskControl.steerQueue.length);
+				for (const sDir of steeredDirectives) {
+					roomState.messages.push({
+						id: randomUUID(),
+						senderId: "system",
+						senderName: "Steering Controller",
+						senderRole: "Live Steering",
+						senderAvatar: "🎛️",
+						senderColor: "#06B6D4",
+						content: sDir,
+						type: "system",
+						timestamp: new Date().toISOString(),
+					});
+				}
+			}
 
 			// Build Context Prompt for the current agent
 			const systemPrompt = this.buildAgentSystemPrompt(
@@ -224,7 +302,7 @@ export class PantheonOrchestrator {
 
 			// Format conversation history
 			const historyContext = roomState.messages.slice(-10).map((m) => ({
-				role: m.senderId === "user" ? "user" : "assistant",
+				role: m.senderId === "user" || m.senderId === "system" ? "user" : "assistant",
 				content: `[${m.senderName} (${m.senderRole})]: ${m.content}`,
 			}));
 
@@ -544,27 +622,37 @@ export class PantheonOrchestrator {
 				if (body && !cmd) cmd = body;
 
 				if (cmd) {
-					await onEvent({
-						type: "tool_start",
-						agentId: agent.id,
-						tool: "bash",
-						input: { command: cmd },
-					});
+					if (this.isDangerousDestructiveCommand(cmd)) {
+						const safetyMsg = `🛡️ [Guardrail de Seguridad Hermes 0.21.0]: Comando destructivo bloqueado automáticamente por seguridad: "${cmd}". Requiere confirmación manual del usuario.`;
+						await onEvent({
+							type: "error",
+							agentId: agent.id,
+							error: safetyMsg,
+						});
+						extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió la ejecución automática del comando destructivo \`${cmd}\`.`;
+					} else {
+						await onEvent({
+							type: "tool_start",
+							agentId: agent.id,
+							tool: "bash",
+							input: { command: cmd },
+						});
 
-					const res = await this.executeCommandLine(cmd, targetCwd);
-					const combinedOutput =
-						(res.stdout + (res.stderr ? `\nSTDERR:\n${res.stderr}` : "")).trim() ||
-						"(Comando completado sin salida)";
-					const isSuccess = res.exitCode === 0;
+						const res = await this.executeCommandLine(cmd, targetCwd);
+						const combinedOutput =
+							(res.stdout + (res.stderr ? `\nSTDERR:\n${res.stderr}` : "")).trim() ||
+							"(Comando completado sin salida)";
+						const isSuccess = res.exitCode === 0;
 
-					await onEvent({
-						type: "tool_result",
-						agentId: agent.id,
-						tool: "bash",
-						output: `Exit Code ${res.exitCode}\n${combinedOutput.slice(0, 2000)}`,
-					});
+						await onEvent({
+							type: "tool_result",
+							agentId: agent.id,
+							tool: "bash",
+							output: `Exit Code ${res.exitCode}\n${combinedOutput.slice(0, 2000)}`,
+						});
 
-					extraResultsText += `\n\n### 🩺 Resultado de Ejecución en Terminal (\`${cmd}\`)\n- **Estado**: ${isSuccess ? "✅ Éxito (Exit Code 0)" : `❌ Fallo (Exit Code ${res.exitCode})`}\n\`\`\`text\n${combinedOutput.slice(0, 1500)}\n\`\`\``;
+						extraResultsText += `\n\n### 🩺 Resultado de Ejecución en Terminal (\`${cmd}\`)\n- **Estado**: ${isSuccess ? "✅ Éxito (Exit Code 0)" : `❌ Fallo (Exit Code ${res.exitCode})`}\n\`\`\`text\n${combinedOutput.slice(0, 1500)}\n\`\`\``;
+					}
 				}
 				match = bashBlockRegex.exec(text);
 			}

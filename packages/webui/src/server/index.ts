@@ -2186,6 +2186,219 @@ ${prompt || ""}`;
 				return;
 			}
 
+			// --- 14. PANTHEON PEER MESSAGING API (HERMES 0.21.0 `hermes peer`) ---
+			if (method === "POST" && (url === "/v1/pantheon/peer" || url === "/api/pantheon/peer")) {
+				const body = await this.readJsonBody<any>(req);
+				const { fromAgentId, toAgentId, content, autoReply, projectId } = body || {};
+
+				if (!fromAgentId || !toAgentId || !content) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Parameters fromAgentId, toAgentId, and content are required." }));
+					return;
+				}
+
+				const peerMgr = this.pool.getPantheonPeerManager(projectId);
+
+				const llmCaller = async (
+					messages: Array<{ role: string; content: string }>,
+					modelId?: string,
+					temp?: number,
+					systemPrompt?: string,
+				) => {
+					const resolvedModel =
+						this.pool.findModel(modelId || "auto/best-coding") || this.pool.getAvailableModels()[0];
+					const pContext: Context = {
+						systemPrompt,
+						messages: messages.map((m) => ({
+							role: (m.role as any) || "user",
+							content: m.content,
+							timestamp: Date.now(),
+						})),
+					};
+					const auth = await this.pool.getModelRegistry().getApiKeyAndHeaders(resolvedModel);
+					const apiKey = auth.ok ? auth.apiKey : undefined;
+					const resp = await complete(resolvedModel, pContext, { apiKey, temperature: temp ?? 0.2 });
+					return resp.content
+						.filter((c: any) => c.type === "text")
+						.map((c: any) => c.text)
+						.join("\n");
+				};
+
+				const peerMsg = await peerMgr.sendPeerMessage(fromAgentId, toAgentId, content, {
+					llmCaller,
+					autoReply: autoReply !== false,
+				});
+
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, message: peerMsg }, null, 2));
+				return;
+			}
+
+			if (method === "GET" && (url === "/v1/pantheon/peer/history" || url === "/api/pantheon/peer/history")) {
+				const from = parsedUrl.searchParams.get("from") || "";
+				const to = parsedUrl.searchParams.get("to") || "";
+				const projectId = parsedUrl.searchParams.get("projectId") || undefined;
+
+				if (!from || !to) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Parameters 'from' and 'to' are required." }));
+					return;
+				}
+
+				const peerMgr = this.pool.getPantheonPeerManager(projectId);
+				const conv = peerMgr.getConversation(from, to);
+
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, conversation: conv }, null, 2));
+				return;
+			}
+
+			if (
+				method === "GET" &&
+				(url === "/v1/pantheon/peer/conversations" || url === "/api/pantheon/peer/conversations")
+			) {
+				const projectId = parsedUrl.searchParams.get("projectId") || undefined;
+				const peerMgr = this.pool.getPantheonPeerManager(projectId);
+				const convs = peerMgr.listAllConversations();
+
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, conversations: convs }, null, 2));
+				return;
+			}
+
+			// --- 15. PANTHEON MEMORY-AWARE CRON API (HERMES 0.21.0 `continuity=true`) ---
+			if (method === "POST" && (url === "/v1/pantheon/cron" || url === "/api/pantheon/cron")) {
+				const body = await this.readJsonBody<any>(req);
+				const { name, agentId, cronExpression, instruction, options, projectId } = body || {};
+
+				if (!name || !agentId || !instruction) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Parameters name, agentId, and instruction are required." }));
+					return;
+				}
+
+				const cronEngine = this.pool.getPantheonCronEngine(projectId);
+				const job = cronEngine.registerJob(
+					name,
+					agentId,
+					cronExpression || "*/15 * * * *",
+					instruction,
+					options || {},
+				);
+
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, job }, null, 2));
+				return;
+			}
+
+			if (method === "GET" && (url === "/v1/pantheon/cron" || url === "/api/pantheon/cron")) {
+				const projectId = parsedUrl.searchParams.get("projectId") || undefined;
+				const cronEngine = this.pool.getPantheonCronEngine(projectId);
+				const jobs = cronEngine.listJobs();
+
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, jobs }, null, 2));
+				return;
+			}
+
+			if (method === "POST" && (url === "/v1/pantheon/cron/tick" || url === "/api/pantheon/cron/tick")) {
+				const body = await this.readJsonBody<any>(req);
+				const { jobId, workspaceDir, projectId } = body || {};
+
+				if (!jobId) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Parameter 'jobId' is required." }));
+					return;
+				}
+
+				const cronEngine = this.pool.getPantheonCronEngine(projectId);
+				const activeProj = this.pool.getProject(projectId || "") || this.pool.getActiveProject();
+				const targetDir = workspaceDir || activeProj.path || this.pool.cwd;
+
+				const llmCaller = async (
+					messages: Array<{ role: string; content: string }>,
+					modelId?: string,
+					temp?: number,
+					systemPrompt?: string,
+				) => {
+					const resolvedModel =
+						this.pool.findModel(modelId || "auto/best-coding") || this.pool.getAvailableModels()[0];
+					const pContext: Context = {
+						systemPrompt,
+						messages: messages.map((m) => ({
+							role: (m.role as any) || "user",
+							content: m.content,
+							timestamp: Date.now(),
+						})),
+					};
+					const auth = await this.pool.getModelRegistry().getApiKeyAndHeaders(resolvedModel);
+					const apiKey = auth.ok ? auth.apiKey : undefined;
+					const resp = await complete(resolvedModel, pContext, { apiKey, temperature: temp ?? 0.2 });
+					return resp.content
+						.filter((c: any) => c.type === "text")
+						.map((c: any) => c.text)
+						.join("\n");
+				};
+
+				const execution = await cronEngine.executeTick(jobId, targetDir, llmCaller);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, execution }, null, 2));
+				return;
+			}
+
+			// --- 16. PANTHEON LIVE TASK STEERING & LIFECYCLE API ---
+			if (method === "POST" && (url === "/v1/pantheon/tasks/steer" || url === "/api/pantheon/tasks/steer")) {
+				const body = await this.readJsonBody<any>(req);
+				const { taskId, instruction, steeredBy, projectId } = body || {};
+
+				if (!taskId || !instruction) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Parameters 'taskId' and 'instruction' are required." }));
+					return;
+				}
+
+				const orch = this.pool.getPantheonOrchestrator(projectId);
+				const steered = orch.steerTask(taskId, instruction, steeredBy || "human");
+
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: steered, taskId, steeredBy: steeredBy || "human" }));
+				return;
+			}
+
+			if (method === "POST" && (url === "/v1/pantheon/tasks/abort" || url === "/api/pantheon/tasks/abort")) {
+				const body = await this.readJsonBody<any>(req);
+				const { taskId, projectId } = body || {};
+
+				if (!taskId) {
+					res.writeHead(400, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Parameter 'taskId' is required." }));
+					return;
+				}
+
+				const orch = this.pool.getPantheonOrchestrator(projectId);
+				const aborted = orch.abortTask(taskId);
+
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: aborted, taskId, status: "aborted" }));
+				return;
+			}
+
+			if (method === "GET" && (url === "/v1/pantheon/tasks" || url === "/api/pantheon/tasks")) {
+				const projectId = parsedUrl.searchParams.get("projectId") || undefined;
+				const orch = this.pool.getPantheonOrchestrator(projectId);
+				const tasks = orch.getActiveTaskControls().map((t) => ({
+					taskId: t.taskId,
+					status: t.status,
+					tokensUsed: t.tokensUsed,
+					toolCallsCount: t.toolCallsCount,
+					startedAt: t.startedAt,
+				}));
+
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, tasks }, null, 2));
+				return;
+			}
+
 			// --- 404 NOT FOUND ---
 			res.writeHead(404, { "Content-Type": "application/json" });
 			res.end(JSON.stringify({ error: { message: `Route not found: ${method} ${url}`, code: 404 } }));
