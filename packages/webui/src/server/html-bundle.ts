@@ -498,7 +498,18 @@ export function getWebUiHtml(): string {
     <!-- ======================================================================= -->
     <!-- VIEW: MULTI-PROVIDER HUB (AUTO-FETCH MODELS DROPDOWNS) -->
     <!-- ======================================================================= -->
+    <!-- VIEW: MULTI-PROVIDER HUB (AUTO-FETCH MODELS DROPDOWNS) -->
+    <!-- ======================================================================= -->
     <div id="viewProviders" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-6">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-amber-400 font-mono">Proveedores</span>
+      </div>
+
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -527,6 +538,15 @@ export function getWebUiHtml(): string {
     <!-- VIEW: MEMORY & AGENT RULES (MEMORY.MD & AGENTS.MD) -->
     <!-- ======================================================================= -->
     <div id="viewMemory" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-purple-400 font-mono">Memoria</span>
+      </div>
+
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -578,6 +598,15 @@ export function getWebUiHtml(): string {
     <!-- VIEW: SKILLS & PROMPTS STUDIO -->
     <!-- ======================================================================= -->
     <div id="viewSkills" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-indigo-300 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-indigo-400 font-mono">Skills Studio</span>
+      </div>
+
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -620,6 +649,15 @@ export function getWebUiHtml(): string {
     <!-- VIEW: BRANCH TREE (TIME TRAVEL DAG) -->
     <!-- ======================================================================= -->
     <div id="viewTree" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-rose-300 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-rose-400 font-mono">Árbol DAG</span>
+      </div>
+
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -644,6 +682,15 @@ export function getWebUiHtml(): string {
     <!-- VIEW: LOGS & TRAZAS -->
     <!-- ======================================================================= -->
     <div id="viewLogs" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-emerald-400 font-mono">Consola Logs</span>
+      </div>
+
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -674,6 +721,15 @@ export function getWebUiHtml(): string {
     <!-- VIEW: GRAFT STUDIO (GRAPH ENGINEERING & CODE KNOWLEDGE GRAPH) -->
     <!-- ======================================================================= -->
     <div id="viewGraft" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-cyan-300 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-cyan-400 font-mono">Graft Studio</span>
+      </div>
+
       <!-- Header with sub-tabs -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-750 pb-3">
         <div>
@@ -911,6 +967,15 @@ export function getWebUiHtml(): string {
     <!-- VIEW: PANTHEON STUDIO (MULTI-AGENT SOCIETY & SQUADS) -->
     <!-- ======================================================================= -->
     <div id="viewPantheon" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-purple-300 bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-purple-400 font-mono">Pantheon 2.0</span>
+      </div>
+
       <!-- Header with subtabs -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-750 pb-3 shrink-0">
         <div>
@@ -922,24 +987,24 @@ export function getWebUiHtml(): string {
           <p class="text-xs text-slate-400 mt-0.5">Sociedad coordinada de agentes especializados con identidades persistentes, mensajería peer-to-peer y contexto Graft/RLM.</p>
         </div>
 
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           <!-- Sub-Tab switcher -->
-          <div class="bg-surface-800 p-1 rounded-xl border border-surface-700 flex items-center text-xs">
-            <button id="pantheonSubTabRoomBtn" onclick="switchPantheonSubTab('room')" class="px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer">
+          <div class="bg-surface-800 p-1 rounded-xl border border-surface-700 flex items-center text-xs w-full sm:w-auto overflow-x-auto no-scrollbar">
+            <button id="pantheonSubTabRoomBtn" onclick="switchPantheonSubTab('room')" class="px-3 py-1.5 rounded-lg font-semibold bg-purple-600 text-white shadow-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
               <i data-lucide="messages-square" class="w-3.5 h-3.5"></i>
-              Squad War Room
+              War Room
             </button>
-            <button id="pantheonSubTabRosterBtn" onclick="switchPantheonSubTab('roster')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer">
+            <button id="pantheonSubTabRosterBtn" onclick="switchPantheonSubTab('roster')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
               <i data-lucide="users" class="w-3.5 h-3.5"></i>
-              Roster de Agentes
+              Agentes & Escuadrones
             </button>
-            <button id="pantheonSubTabTopologyBtn" onclick="switchPantheonSubTab('topology')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer">
+            <button id="pantheonSubTabTopologyBtn" onclick="switchPantheonSubTab('topology')" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer shrink-0">
               <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
-              Malla & Topología
+              Topología
             </button>
           </div>
 
-          <button onclick="loadPantheonData()" title="Refrescar datos Pantheon" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 text-xs font-medium px-3 py-2 rounded-xl text-slate-200 hover:text-white flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer">
+          <button onclick="loadPantheonData()" title="Refrescar datos Pantheon" class="bg-surface-800 hover:bg-surface-750 border border-surface-700 text-xs font-medium px-3 py-2 rounded-xl text-slate-200 hover:text-white flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer shrink-0 ml-auto sm:ml-0">
             <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-purple-400"></i>
             <span class="hidden sm:inline">Actualizar</span>
           </button>
@@ -947,40 +1012,40 @@ export function getWebUiHtml(): string {
       </div>
 
       <!-- SUBTAB 1: SQUAD WAR ROOM (COLLABORATIVE MULTI-AGENT CHAT) -->
-      <div id="pantheonSubTabRoom" class="flex flex-col flex-1 min-h-[500px] space-y-3">
+      <div id="pantheonSubTabRoom" class="flex flex-col flex-1 min-h-[400px] space-y-3">
         <!-- Controls Bar -->
-        <div class="bg-surface-850 border border-surface-750 rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div class="flex items-center gap-2 flex-1 min-w-[240px]">
-            <span class="text-slate-400 font-medium">Escuadrón Activo:</span>
-            <select id="pantheonSquadSelect" onchange="switchActivePantheonSquad(this.value)" class="bg-surface-750 border border-surface-700 text-xs text-white px-3 py-1.5 rounded-xl font-medium focus:outline-none focus:border-purple-500 cursor-pointer">
-              <option value="fullstack-squad">FullStack Engineering Squad (Hermes, Athena, Hephaestus, Argos)</option>
-              <option value="audit-fix-squad">Auditoría & Auto-Refactor Squad (Argos, Hephaestus)</option>
-              <option value="research-squad">Exploración & Investigación Squad (Hermes, Pythia, Athena)</option>
+        <div class="bg-surface-850 border border-surface-750 rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+          <div class="flex items-center gap-2 flex-1 min-w-[220px]">
+            <span class="text-slate-400 font-medium shrink-0">Escuadrón:</span>
+            <select id="pantheonSquadSelect" onchange="switchActivePantheonSquad(this.value)" class="w-full bg-surface-750 border border-surface-700 text-xs text-white px-2.5 py-1.5 rounded-xl font-medium focus:outline-none focus:border-purple-500 cursor-pointer truncate">
+              <option value="fullstack-squad">FullStack Engineering Squad</option>
+              <option value="audit-fix-squad">Auditoría & Auto-Refactor</option>
+              <option value="research-squad">Exploración & Investigación</option>
             </select>
           </div>
 
           <!-- Quick Flow Action Buttons -->
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <button onclick="runSquadPreset('fullstack')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-purple-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer" title="Flujo completo: Arquitectura -> Coder -> Auditor">
+          <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto py-0.5">
+            <button onclick="runSquadPreset('fullstack')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-purple-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0" title="Flujo completo: Arquitectura -> Coder -> Auditor">
               <i data-lucide="zap" class="w-3.5 h-3.5 text-purple-400"></i>
               Flujo FullStack
             </button>
-            <button onclick="runSquadPreset('audit')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-emerald-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer" title="Auditoría Graft + Auto-Fix">
+            <button onclick="runSquadPreset('audit')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-emerald-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0" title="Auditoría Graft + Auto-Fix">
               <i data-lucide="stethoscope" class="w-3.5 h-3.5 text-emerald-400"></i>
               Auditoría & Fix
             </button>
-            <button onclick="runSquadPreset('research')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-pink-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer" title="Exploración RLM">
+            <button onclick="runSquadPreset('research')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-pink-300 hover:text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer shrink-0" title="Exploración RLM">
               <i data-lucide="search" class="w-3.5 h-3.5 text-pink-400"></i>
-              Investigar RLM
+              RLM
             </button>
-            <button onclick="clearPantheonRoom()" class="p-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer" title="Limpiar sala">
+            <button onclick="clearPantheonRoom()" class="p-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer shrink-0 ml-auto" title="Limpiar sala">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           </div>
         </div>
 
         <!-- Collaborative Messages Container -->
-        <div id="pantheonChatTimeline" class="flex-1 bg-surface-950 border border-surface-750 rounded-2xl p-4 sm:p-5 overflow-y-auto space-y-3.5 select-text min-h-[360px] shadow-2xl">
+        <div id="pantheonChatTimeline" class="flex-1 bg-surface-950 border border-surface-750 rounded-2xl p-3 sm:p-5 overflow-y-auto space-y-3.5 select-text min-h-[260px] max-h-[calc(100dvh-320px)] sm:max-h-none shadow-2xl">
           <div class="text-center text-slate-500 text-xs py-8 italic">
             Bienvenido a la Sala de Guerra del Pantheon. Envía una tarea o etiqueta a un agente con <code class="text-purple-300">@Hermes</code>, <code class="text-blue-300">@Athena</code>, <code class="text-amber-300">@Hephaestus</code>, <code class="text-emerald-300">@Argos</code> o <code class="text-pink-300">@Pythia</code>.
           </div>
@@ -1085,6 +1150,15 @@ export function getWebUiHtml(): string {
     <!-- VIEW: WORKSPACE FILES -->
     <!-- ======================================================================= -->
     <div id="viewFiles" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-4">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-brand-300 bg-brand-500/15 hover:bg-brand-500/25 border border-brand-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-brand-400 font-mono">Archivos</span>
+      </div>
+
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -1121,6 +1195,15 @@ export function getWebUiHtml(): string {
     <!-- VIEW: API KEYS & IDE INTEGRATION -->
     <!-- ======================================================================= -->
     <div id="viewApiKeys" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-6xl w-full mx-auto space-y-5">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-yellow-300 bg-yellow-500/15 hover:bg-yellow-500/25 border border-yellow-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-yellow-400 font-mono">API Keys</span>
+      </div>
+
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -1296,6 +1379,15 @@ for chunk in response:
     <!-- VIEW: USERS & SECURITY MANAGEMENT (ADMIN ONLY) -->
     <!-- ======================================================================= -->
     <div id="viewUsers" class="hidden flex-1 flex flex-col min-h-0 overflow-y-auto p-3 sm:p-6 max-w-7xl w-full mx-auto space-y-4 sm:space-y-6">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-cyan-300 bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-cyan-400 font-mono">Usuarios</span>
+      </div>
+
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 class="text-xl font-bold text-white flex items-center gap-2">
@@ -1345,19 +1437,20 @@ for chunk in response:
     </div>
 
     <!-- CREATE USER MODAL -->
-    <div id="createUserModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
-        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+    <!-- CREATE USER MODAL -->
+    <div id="createUserModal" onclick="if (event.target === this) closeCreateUserModal()" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md max-h-[92dvh] sm:max-h-[85vh] flex flex-col overflow-hidden shadow-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3 shrink-0">
           <h3 class="font-bold text-sm text-white flex items-center gap-2">
             <i data-lucide="user-plus" class="w-4 h-4 text-cyan-400"></i>
             Crear Nuevo Usuario
           </h3>
-          <button onclick="closeCreateUserModal()" class="text-slate-400 hover:text-white p-1 rounded">
+          <button onclick="closeCreateUserModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-surface-750 cursor-pointer">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
-        <div class="space-y-3 text-xs">
+        <div class="space-y-3 text-xs flex-1 overflow-y-auto min-h-0 pr-1">
           <div>
             <label class="block text-slate-300 font-medium mb-1">Nombre de Usuario (Login) <span class="text-rose-400">*</span></label>
             <input id="newUsernameInput" type="text" placeholder="ej: developer1, ana_dev" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500">
@@ -1382,29 +1475,29 @@ for chunk in response:
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
-          <button onclick="closeCreateUserModal()" class="px-3 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750 shrink-0">
+          <button onclick="closeCreateUserModal()" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
           <button onclick="submitCreateUser()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md shadow-cyan-600/25">Guardar Usuario</button>
         </div>
       </div>
     </div>
 
     <!-- EDIT USER / RESET PASSWORD MODAL -->
-    <div id="editUserModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
-        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+    <div id="editUserModal" onclick="if (event.target === this) closeEditUserModal()" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md max-h-[92dvh] sm:max-h-[85vh] flex flex-col overflow-hidden shadow-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3 shrink-0">
           <h3 class="font-bold text-sm text-white flex items-center gap-2">
             <i data-lucide="user-cog" class="w-4 h-4 text-cyan-400"></i>
             Editar Usuario: <span id="editUserModalTitleName" class="font-mono text-cyan-300">...</span>
           </h3>
-          <button onclick="closeEditUserModal()" class="text-slate-400 hover:text-white p-1 rounded">
+          <button onclick="closeEditUserModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-surface-750 cursor-pointer">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
         <input type="hidden" id="editUserIdHidden">
 
-        <div class="space-y-3 text-xs">
+        <div class="space-y-3 text-xs flex-1 overflow-y-auto min-h-0 pr-1">
           <div>
             <label class="block text-slate-300 font-medium mb-1">Nombre para Mostrar</label>
             <input id="editDisplayNameInput" type="text" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-cyan-500">
@@ -1433,7 +1526,7 @@ for chunk in response:
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750 shrink-0">
           <button onclick="closeEditUserModal()" class="px-3 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
           <button onclick="submitEditUser()" class="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold shadow-md shadow-cyan-600/25">Guardar Cambios</button>
         </div>
@@ -1441,24 +1534,24 @@ for chunk in response:
     </div>
 
     <!-- CHANGE PASSWORD MODAL (FOR CURRENT USER) -->
-    <div id="changePasswordModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
-        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+    <div id="changePasswordModal" onclick="if (event.target === this) closeChangePasswordModal()" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md max-h-[92dvh] sm:max-h-[85vh] flex flex-col overflow-hidden shadow-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3 shrink-0">
           <h3 class="font-bold text-sm text-white flex items-center gap-2">
             <i data-lucide="key-round" class="w-4 h-4 text-yellow-400"></i>
             Cambiar Mi Contraseña
           </h3>
-          <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-white p-1 rounded">
+          <button onclick="closeChangePasswordModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-surface-750 cursor-pointer">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
-        <div id="changePasswordErrorAlert" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+        <div id="changePasswordErrorAlert" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 shrink-0">
           <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-rose-400"></i>
           <span id="changePasswordErrorText">Error al cambiar contraseña</span>
         </div>
 
-        <div class="space-y-3 text-xs">
+        <div class="space-y-3 text-xs flex-1 overflow-y-auto min-h-0 pr-1">
           <div>
             <label class="block text-slate-300 font-medium mb-1">Contraseña Actual <span class="text-rose-400">*</span></label>
             <input id="currPasswordInput" type="password" placeholder="Tu contraseña actual" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-brand-500">
@@ -1475,7 +1568,7 @@ for chunk in response:
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750 shrink-0">
           <button onclick="closeChangePasswordModal()" class="px-3 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
           <button onclick="submitChangePassword()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md shadow-brand-600/20">Actualizar Contraseña</button>
         </div>
@@ -1547,6 +1640,15 @@ for chunk in response:
     <!-- VIEW: INTERACTIVE WEB TERMINAL & SHELL -->
     <!-- ======================================================================= -->
     <div id="viewTerminal" class="hidden flex-1 flex flex-col min-h-0 overflow-hidden p-3 sm:p-5 max-w-7xl w-full mx-auto space-y-3">
+      <!-- Mobile Back to Chat Button -->
+      <div class="sm:hidden flex items-center justify-between gap-2 shrink-0 pb-1">
+        <button onclick="switchView('chat')" class="flex items-center gap-1.5 text-xs text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 px-3 py-1.5 rounded-xl font-semibold cursor-pointer shadow-sm transition-colors">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          <span>Volver al Chat</span>
+        </button>
+        <span class="text-[11px] font-bold text-emerald-400 font-mono">Terminal Web</span>
+      </div>
+
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div>
           <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
@@ -1616,19 +1718,19 @@ for chunk in response:
     </div>
 
     <!-- CYCLE AUTO-FIX REFACTOR MODAL -->
-    <div id="cycleAutoFixModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl p-5 space-y-4">
-        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+    <div id="cycleAutoFixModal" onclick="if (event.target === this) closeCycleAutoFixModal()" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl sm:rounded-3xl w-full max-w-xl max-h-[92dvh] sm:max-h-[88vh] flex flex-col overflow-hidden shadow-2xl p-4 sm:p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3 shrink-0">
           <h3 class="font-bold text-sm text-white flex items-center gap-2">
             <i data-lucide="wrench" class="w-4 h-4 text-rose-400"></i>
             Auto-Fix: Propuesta de Refactorización de Ciclo
           </h3>
-          <button onclick="closeCycleAutoFixModal()" class="text-slate-400 hover:text-white p-1 rounded">
+          <button onclick="closeCycleAutoFixModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-surface-750 cursor-pointer">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
-        <div class="space-y-3 text-xs">
+        <div class="space-y-3 text-xs flex-1 overflow-y-auto min-h-0 pr-1">
           <div>
             <label class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Estrategia Recomendada</label>
             <div id="autoFixStrategy" class="font-semibold text-white bg-surface-800 p-2.5 rounded-xl border border-surface-700 mt-1"></div>
@@ -1662,19 +1764,26 @@ for chunk in response:
     </div>
 
     <!-- PANTHEON AGENT CREATOR / EDITOR MODAL -->
-    <div id="pantheonAgentModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-surface-850 border border-surface-700 rounded-3xl w-full max-w-xl overflow-hidden shadow-2xl p-5 sm:p-6 space-y-4">
-        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
-          <h3 id="pantheonAgentModalTitle" class="font-bold text-base text-white flex items-center gap-2">
-            <i data-lucide="bot" class="w-5 h-5 text-purple-400"></i>
-            Configurar Agente Pantheon
-          </h3>
-          <button onclick="closePantheonAgentModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
-            <i data-lucide="x" class="w-4 h-4"></i>
+    <div id="pantheonAgentModal" onclick="if (event.target === this) closePantheonAgentModal()" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl sm:rounded-3xl w-full max-w-xl max-h-[92dvh] sm:max-h-[88vh] flex flex-col overflow-hidden shadow-2xl">
+        <!-- Sticky Header with big close & back for mobile -->
+        <div class="flex items-center justify-between border-b border-surface-750 p-3.5 sm:p-4 bg-surface-850 shrink-0">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closePantheonAgentModal()" class="p-1.5 -ml-1 text-slate-400 hover:text-white rounded-lg hover:bg-surface-750 cursor-pointer sm:hidden" title="Cerrar modal">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            </button>
+            <h3 id="pantheonAgentModalTitle" class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
+              <i data-lucide="bot" class="w-4 h-4 sm:w-5 sm:h-5 text-purple-400"></i>
+              Configurar Agente Pantheon
+            </h3>
+          </div>
+          <button type="button" onclick="closePantheonAgentModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-750 cursor-pointer" title="Cerrar modal">
+            <i data-lucide="x" class="w-4 h-4 sm:w-5 sm:h-5"></i>
           </button>
         </div>
 
-        <form onsubmit="event.preventDefault(); submitSavePantheonAgent();" class="space-y-3.5 text-xs">
+        <!-- Scrollable Form Body -->
+        <form id="pantheonAgentForm" onsubmit="event.preventDefault(); submitSavePantheonAgent();" class="flex-1 overflow-y-auto min-h-0 p-3.5 sm:p-5 space-y-3.5 text-xs">
           <input type="hidden" id="pAgentIsSystem" value="false">
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1724,7 +1833,7 @@ for chunk in response:
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
               <label class="flex items-center gap-1.5 text-slate-300 bg-surface-800 p-2 rounded-lg border border-surface-700 cursor-pointer">
                 <input id="pCapWrite" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-purple-500">
-                <span>Edición de Archivos</span>
+                <span>Edición Archivos</span>
               </label>
               <label class="flex items-center gap-1.5 text-slate-300 bg-surface-800 p-2 rounded-lg border border-surface-700 cursor-pointer">
                 <input id="pCapTerminal" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-purple-500">
@@ -1748,29 +1857,37 @@ for chunk in response:
               </label>
             </div>
           </div>
-
-          <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
-            <button type="button" onclick="closePantheonAgentModal()" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
-            <button type="submit" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/25">Guardar Agente</button>
-          </div>
         </form>
+
+        <!-- Sticky Footer -->
+        <div class="flex items-center justify-between sm:justify-end gap-2 p-3 sm:p-4 border-t border-surface-750 bg-surface-850 shrink-0">
+          <button type="button" onclick="closePantheonAgentModal()" class="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white text-xs font-medium bg-surface-800 sm:bg-transparent cursor-pointer flex-1 sm:flex-initial text-center">Cancelar</button>
+          <button type="button" onclick="submitSavePantheonAgent()" class="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/25 cursor-pointer flex-1 sm:flex-initial text-center">Guardar Agente</button>
+        </div>
       </div>
     </div>
 
     <!-- PANTHEON SQUAD CREATOR / EDITOR MODAL -->
-    <div id="pantheonSquadModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-surface-850 border border-surface-700 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl p-5 sm:p-6 space-y-4">
-        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
-          <h3 id="pantheonSquadModalTitle" class="font-bold text-base text-white flex items-center gap-2">
-            <i data-lucide="shield" class="w-5 h-5 text-indigo-400"></i>
-            Configurar Escuadrón Pantheon
-          </h3>
-          <button onclick="closePantheonSquadModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
-            <i data-lucide="x" class="w-4 h-4"></i>
+    <div id="pantheonSquadModal" onclick="if (event.target === this) closePantheonSquadModal()" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl sm:rounded-3xl w-full max-w-lg max-h-[92dvh] sm:max-h-[88vh] flex flex-col overflow-hidden shadow-2xl">
+        <!-- Sticky Header -->
+        <div class="flex items-center justify-between border-b border-surface-750 p-3.5 sm:p-4 bg-surface-850 shrink-0">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="closePantheonSquadModal()" class="p-1.5 -ml-1 text-slate-400 hover:text-white rounded-lg hover:bg-surface-750 cursor-pointer sm:hidden" title="Cerrar modal">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            </button>
+            <h3 id="pantheonSquadModalTitle" class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
+              <i data-lucide="shield" class="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400"></i>
+              Configurar Escuadrón Pantheon
+            </h3>
+          </div>
+          <button type="button" onclick="closePantheonSquadModal()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-750 cursor-pointer" title="Cerrar modal">
+            <i data-lucide="x" class="w-4 h-4 sm:w-5 sm:h-5"></i>
           </button>
         </div>
 
-        <form onsubmit="event.preventDefault(); submitSavePantheonSquad();" class="space-y-3.5 text-xs">
+        <!-- Scrollable Form Body -->
+        <form id="pantheonSquadForm" onsubmit="event.preventDefault(); submitSavePantheonSquad();" class="flex-1 overflow-y-auto min-h-0 p-3.5 sm:p-5 space-y-3.5 text-xs">
           <div>
             <label class="block text-slate-300 font-medium mb-1">ID Único del Escuadrón</label>
             <input id="pSquadId" type="text" placeholder="ej: backend-security-squad" required class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500">
@@ -1799,31 +1916,32 @@ for chunk in response:
           </div>
           <div>
             <label class="block text-slate-300 font-medium mb-1.5">Miembros Asignados</label>
-            <div id="pSquadMembersCheckboxes" class="grid grid-cols-2 gap-2 bg-surface-800 p-2.5 rounded-xl border border-surface-700 max-h-40 overflow-y-auto"></div>
-          </div>
-
-          <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
-            <button type="button" onclick="closePantheonSquadModal()" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
-            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/25">Guardar Escuadrón</button>
+            <div id="pSquadMembersCheckboxes" class="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-surface-800 p-2.5 rounded-xl border border-surface-700 max-h-40 overflow-y-auto"></div>
           </div>
         </form>
+
+        <!-- Sticky Footer -->
+        <div class="flex items-center justify-between sm:justify-end gap-2 p-3 sm:p-4 border-t border-surface-750 bg-surface-850 shrink-0">
+          <button type="button" onclick="closePantheonSquadModal()" class="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white text-xs font-medium bg-surface-800 sm:bg-transparent cursor-pointer flex-1 sm:flex-initial text-center">Cancelar</button>
+          <button type="button" onclick="submitSavePantheonSquad()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/25 cursor-pointer flex-1 sm:flex-initial text-center">Guardar Escuadrón</button>
+        </div>
       </div>
     </div>
 
     <!-- CREATE API KEY MODAL -->
-    <div id="createApiKeyModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
-        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+    <div id="createApiKeyModal" onclick="if (event.target === this) closeCreateApiKeyModal()" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md max-h-[92dvh] sm:max-h-[85vh] flex flex-col overflow-hidden shadow-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3 shrink-0">
           <h3 class="font-bold text-sm text-white flex items-center gap-2">
             <i data-lucide="key" class="w-4 h-4 text-yellow-400"></i>
             Crear Nueva API Key
           </h3>
-          <button onclick="closeCreateApiKeyModal()" class="text-slate-400 hover:text-white p-1 rounded">
+          <button onclick="closeCreateApiKeyModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-surface-750 cursor-pointer">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
-        <div class="space-y-3 text-xs">
+        <div class="space-y-3 text-xs flex-1 overflow-y-auto min-h-0 pr-1">
           <div>
             <label class="block text-slate-300 font-medium mb-1">Nombre / Identificador</label>
             <input id="newKeyNameInput" type="text" placeholder="Ej: VS Code Laptop, Kilo Code Desktop..." class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-500">
@@ -1840,8 +1958,8 @@ for chunk in response:
           </div>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
-          <button onclick="closeCreateApiKeyModal()" class="px-3 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750 shrink-0">
+          <button onclick="closeCreateApiKeyModal()" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
           <button onclick="saveNewApiKey()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow-md shadow-amber-500/20">Crear Clave</button>
         </div>
       </div>
@@ -1918,8 +2036,8 @@ for chunk in response:
   <!-- ========================================================================= -->
   <!-- SETTINGS MODAL -->
   <!-- ========================================================================= -->
-  <div id="settingsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-surface-850 border border-surface-700 rounded-t-2xl sm:rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+  <div id="settingsModal" onclick="if (event.target === this) closeSettingsModal()" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[90vh]">
       <div class="p-3 sm:p-4 border-b border-surface-750 flex items-center justify-between">
         <h3 class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
           <i data-lucide="settings" class="w-5 h-5 text-brand-400"></i>
@@ -2138,8 +2256,8 @@ for chunk in response:
   <!-- ========================================================================= -->
   <!-- PROJECTS MANAGER MODAL -->
   <!-- ========================================================================= -->
-  <div id="projectsModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-    <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh]">
+  <div id="projectsModal" onclick="if (event.target === this) closeProjectsModal()" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[92dvh] sm:max-h-[85vh]">
       <div class="p-3 sm:p-4 border-b border-surface-750 flex items-center justify-between">
         <h3 class="font-bold text-sm sm:text-base text-white flex items-center gap-2">
           <i data-lucide="folder-kanban" class="w-5 h-5 text-cyan-400"></i>
