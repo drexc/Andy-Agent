@@ -205,11 +205,32 @@ export function getWebUiHtml(): string {
     </div>
 
     <!-- New Chat Button -->
-    <div class="p-3">
-      <button onclick="createNewSession()" class="w-full bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-medium text-xs py-2.5 px-3 rounded-lg flex items-center justify-center gap-2 shadow-md shadow-brand-600/20 transition-all duration-150">
+    <div class="p-3 pb-1.5 space-y-2">
+      <button onclick="createNewSession()" class="w-full bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-medium text-xs py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-brand-600/20 transition-all duration-150 cursor-pointer">
         <i data-lucide="plus" class="w-4 h-4"></i>
         Nueva Conversación
       </button>
+
+      <!-- Pantheon Studio Quick Navigation Card in Sidebar -->
+      <div class="bg-surface-800/90 border border-purple-500/30 rounded-xl p-2.5 space-y-2 shadow-md">
+        <div class="flex items-center justify-between">
+          <button onclick="switchView('pantheon')" class="flex items-center gap-1.5 text-xs font-bold text-white hover:text-purple-300 transition-colors cursor-pointer">
+            <i data-lucide="crown" class="w-4 h-4 text-purple-400"></i>
+            <span>Pantheon Studio</span>
+          </button>
+          <span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 font-mono">Swarm</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button onclick="openCreateAgentModal()" title="Crear Nuevo Agente Bot" class="flex-1 bg-surface-750 hover:bg-purple-600/30 border border-surface-700 hover:border-purple-500/40 text-[11px] font-medium py-1.5 px-2 rounded-lg text-slate-200 hover:text-white flex items-center justify-center gap-1 transition-all cursor-pointer">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span>+ Agente</span>
+          </button>
+          <button onclick="openCreateSquadModal()" title="Crear Nuevo Escuadrón" class="flex-1 bg-surface-750 hover:bg-indigo-600/30 border border-surface-700 hover:border-indigo-500/40 text-[11px] font-medium py-1.5 px-2 rounded-lg text-slate-200 hover:text-white flex items-center justify-center gap-1 transition-all cursor-pointer">
+            <i data-lucide="shield-plus" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span>+ Escuadrón</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Sessions List -->
@@ -877,6 +898,15 @@ export function getWebUiHtml(): string {
               Visor de Resultados Estructurales
             </span>
             <button onclick="copyGraftResult()" class="text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              Copiar
+            </button>
+          </div>
+          <pre id="graftResultContent" class="flex-1 p-3 sm:p-4 overflow-auto text-xs font-mono text-slate-200 leading-relaxed bg-surface-900/60 select-text min-h-[200px]"></pre>
+        </div>
+      </div>
+    </div>
+
     <!-- ======================================================================= -->
     <!-- VIEW: PANTHEON STUDIO (MULTI-AGENT SOCIETY & SQUADS) -->
     <!-- ======================================================================= -->
@@ -985,25 +1015,50 @@ export function getWebUiHtml(): string {
         </div>
       </div>
 
-      <!-- SUBTAB 2: AGENT ROSTER (VISUAL AGENT BUILDER & PROFILES) -->
-      <div id="pantheonSubTabRoster" class="hidden flex flex-col flex-1 space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="font-bold text-sm text-white flex items-center gap-2">
-              <i data-lucide="users" class="w-4 h-4 text-purple-400"></i>
-              Sociedad de Agentes Registrados
-            </h3>
-            <p class="text-xs text-slate-400 mt-0.5">Define perfiles, roles especializados, modelos de IA y herramientas asignadas a cada bot.</p>
+      <!-- SUBTAB 2: AGENT ROSTER & SQUADS (VISUAL BUILDER) -->
+      <div id="pantheonSubTabRoster" class="hidden flex flex-col flex-1 space-y-6">
+        <!-- Section 1: Specialists Society -->
+        <div class="space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-surface-750 pb-2">
+            <div>
+              <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                <i data-lucide="users" class="w-4 h-4 text-purple-400"></i>
+                Sociedad de Agentes Registrados
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Bots con identidades persistentes, especialidades asignadas, modelos de IA y herramientas independientes.</p>
+            </div>
+
+            <button onclick="openCreateAgentModal()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-purple-600/20 transition-all cursor-pointer shrink-0">
+              <i data-lucide="user-plus" class="w-4 h-4"></i>
+              Crear Nuevo Agente
+            </button>
           </div>
 
-          <button onclick="openCreateAgentModal()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-purple-600/20 transition-all cursor-pointer">
-            <i data-lucide="user-plus" class="w-4 h-4"></i>
-            Nuevo Agente
-          </button>
+          <div id="pantheonAgentsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Populated dynamically via JS -->
+          </div>
         </div>
 
-        <div id="pantheonAgentsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Populated dynamically via JS -->
+        <!-- Section 2: Squads of the Pantheon -->
+        <div class="space-y-3 pt-4 border-t border-surface-750">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-surface-750 pb-2">
+            <div>
+              <h3 class="font-bold text-sm text-white flex items-center gap-2">
+                <i data-lucide="shield" class="w-4 h-4 text-indigo-400"></i>
+                Escuadrones Colaborativos
+              </h3>
+              <p class="text-xs text-slate-400 mt-0.5">Equipos tácticos de agentes con un líder coordinador y flujos jerárquicos o secuenciales.</p>
+            </div>
+
+            <button onclick="openCreateSquadModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0">
+              <i data-lucide="shield-plus" class="w-4 h-4"></i>
+              Crear Nuevo Escuadrón
+            </button>
+          </div>
+
+          <div id="pantheonSquadsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Populated dynamically via JS -->
+          </div>
         </div>
       </div>
 
@@ -1684,6 +1739,59 @@ for chunk in response:
       </div>
     </div>
 
+    <!-- PANTHEON SQUAD CREATOR / EDITOR MODAL -->
+    <div id="pantheonSquadModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-surface-850 border border-surface-700 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl p-5 sm:p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-surface-750 pb-3">
+          <h3 id="pantheonSquadModalTitle" class="font-bold text-base text-white flex items-center gap-2">
+            <i data-lucide="shield" class="w-5 h-5 text-indigo-400"></i>
+            Configurar Escuadrón Pantheon
+          </h3>
+          <button onclick="closePantheonSquadModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <form onsubmit="event.preventDefault(); submitSavePantheonSquad();" class="space-y-3.5 text-xs">
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">ID Único del Escuadrón</label>
+            <input id="pSquadId" type="text" placeholder="ej: backend-security-squad" required class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Nombre del Escuadrón</label>
+            <input id="pSquadName" type="text" placeholder="ej: Security & Audit Squad" required class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">Descripción del Propósito</label>
+            <textarea id="pSquadDesc" rows="2" placeholder="Describe el objetivo y dinámica de este escuadrón..." class="w-full bg-surface-750 border border-surface-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-indigo-500"></textarea>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">Líder del Escuadrón</label>
+              <select id="pSquadLeaderSelect" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500 cursor-pointer"></select>
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">Modo de Flujo</label>
+              <select id="pSquadWorkflowMode" class="w-full bg-surface-750 border border-surface-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500 cursor-pointer">
+                <option value="hierarchical">Jerárquico (Líder coordina y delega)</option>
+                <option value="collaborative">Colaborativo (Malla abierta)</option>
+                <option value="sequential">Secuencial (Cadena de relevos)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-slate-300 font-medium mb-1.5">Miembros Asignados</label>
+            <div id="pSquadMembersCheckboxes" class="grid grid-cols-2 gap-2 bg-surface-800 p-2.5 rounded-xl border border-surface-700 max-h-40 overflow-y-auto"></div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 pt-2 border-t border-surface-750">
+            <button type="button" onclick="closePantheonSquadModal()" class="px-3.5 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-medium">Cancelar</button>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/25">Guardar Escuadrón</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- CREATE API KEY MODAL -->
     <div id="createApiKeyModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div class="bg-surface-850 border border-surface-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
@@ -2175,6 +2283,7 @@ for chunk in response:
       }
 
       await fetchSessions();
+      await loadPantheonData();
       initLogsStream();
       setTimeout(updateFooterNavScrollButtons, 150);
     }
@@ -4849,8 +4958,9 @@ for chunk in response:
       ]);
       renderPantheonSquadSelect();
       renderPantheonMentionChips();
-      if (pantheonState.activeSubTab === 'roster') renderPantheonAgents();
-      if (pantheonState.activeSubTab === 'topology') renderPantheonTopology();
+      renderPantheonAgents();
+      renderPantheonSquadsList();
+      renderPantheonTopology();
     }
 
     async function fetchPantheonAgents() {
@@ -5319,6 +5429,201 @@ for chunk in response:
       \`;
       container.appendChild(wrapper);
       lucide.createIcons();
+    }
+
+    function renderPantheonSquadsList() {
+      const container = document.getElementById('pantheonSquadsGrid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (pantheonState.squads.length === 0) {
+        container.innerHTML = '<div class="col-span-full p-6 text-center text-slate-400">Cargando escuadrones...</div>';
+        return;
+      }
+
+      pantheonState.squads.forEach(s => {
+        const leader = pantheonState.agents.find(a => a.id === s.leaderId) || { name: s.leaderId, avatar: '👑', color: '#8B5CF6' };
+        const members = pantheonState.agents.filter(a => s.memberIds.includes(a.id));
+
+        const card = document.createElement('div');
+        card.className = 'bg-surface-850 border border-surface-750 hover:border-indigo-500/40 rounded-2xl p-4 flex flex-col justify-between space-y-3 shadow-lg transition-all';
+        card.style.borderTop = '3px solid #6366F1';
+
+        card.innerHTML = \`
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-base">
+                  🛡️
+                </div>
+                <div>
+                  <h4 class="font-bold text-sm text-white flex items-center gap-1.5">
+                    \${s.name}
+                    \${s.isSystem ? '<span class="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Preset</span>' : ''}
+                  </h4>
+                  <span class="text-[10px] text-indigo-300 font-mono">Modo: \${s.workflowMode}</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-slate-300 mt-2 line-clamp-2 leading-relaxed">\${s.description || 'Sin descripción'}</p>
+
+            <div class="space-y-1.5 pt-2.5 border-t border-surface-800 text-[11px]">
+              <div class="flex items-center justify-between text-slate-400">
+                <span>Líder:</span>
+                <span class="font-semibold text-white flex items-center gap-1">
+                  <span>\${leader.avatar}</span>
+                  <span>@\${leader.name}</span>
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-slate-400">
+                <span>Miembros (\${members.length}):</span>
+                <div class="flex items-center gap-1">
+                  \${members.map(m => \`<span title="\${m.name}" class="text-sm">\${m.avatar}</span>\`).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2 flex items-center justify-end gap-1.5 border-t border-surface-800">
+            <button onclick="switchActivePantheonSquad('\${s.id}'); switchPantheonSubTab('room');" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer">
+              <i data-lucide="play" class="w-3 h-3 fill-current"></i>
+              <span>Activar Sala</span>
+            </button>
+            <button onclick="openEditSquadModal('\${s.id}')" class="px-2 py-1 rounded-lg bg-surface-800 hover:bg-surface-700 text-slate-300 text-xs flex items-center gap-1 transition-colors cursor-pointer">
+              <i data-lucide="edit-3" class="w-3 h-3"></i>
+            </button>
+            \${!s.isSystem ? \`
+              <button onclick="deletePantheonSquad('\${s.id}')" class="p-1 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            \` : ''}
+          </div>
+        \`;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    function openCreateSquadModal() {
+      document.getElementById('pantheonSquadModalTitle').innerText = 'Crear Nuevo Escuadrón Pantheon';
+      document.getElementById('pSquadId').value = 'squad_' + Math.random().toString(36).substring(2, 7);
+      document.getElementById('pSquadName').value = '';
+      document.getElementById('pSquadDesc').value = '';
+      document.getElementById('pSquadWorkflowMode').value = 'hierarchical';
+
+      const leaderSelect = document.getElementById('pSquadLeaderSelect');
+      const membersContainer = document.getElementById('pSquadMembersCheckboxes');
+      leaderSelect.innerHTML = '';
+      membersContainer.innerHTML = '';
+
+      pantheonState.agents.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.innerText = \`\${a.avatar} @\${a.name} (\${a.role})\`;
+        leaderSelect.appendChild(opt);
+
+        const label = document.createElement('label');
+        label.className = 'flex items-center gap-1.5 text-slate-300 text-xs cursor-pointer';
+        label.innerHTML = \`
+          <input type="checkbox" value="\${a.id}" checked class="rounded bg-surface-700 border-surface-600 text-indigo-500">
+          <span>\${a.avatar} @\${a.name}</span>
+        \`;
+        membersContainer.appendChild(label);
+      });
+
+      document.getElementById('pantheonSquadModal').classList.remove('hidden');
+    }
+
+    function openEditSquadModal(squadId) {
+      const squad = pantheonState.squads.find(s => s.id === squadId);
+      if (!squad) return;
+
+      document.getElementById('pantheonSquadModalTitle').innerText = \`Editar Escuadrón: \${squad.name}\`;
+      document.getElementById('pSquadId').value = squad.id;
+      document.getElementById('pSquadName').value = squad.name;
+      document.getElementById('pSquadDesc').value = squad.description || '';
+      document.getElementById('pSquadWorkflowMode').value = squad.workflowMode || 'hierarchical';
+
+      const leaderSelect = document.getElementById('pSquadLeaderSelect');
+      const membersContainer = document.getElementById('pSquadMembersCheckboxes');
+      leaderSelect.innerHTML = '';
+      membersContainer.innerHTML = '';
+
+      pantheonState.agents.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.innerText = \`\${a.avatar} @\${a.name} (\${a.role})\`;
+        if (a.id === squad.leaderId) opt.selected = true;
+        leaderSelect.appendChild(opt);
+
+        const isMember = squad.memberIds.includes(a.id);
+        const label = document.createElement('label');
+        label.className = 'flex items-center gap-1.5 text-slate-300 text-xs cursor-pointer';
+        label.innerHTML = \`
+          <input type="checkbox" value="\${a.id}" \${isMember ? 'checked' : ''} class="rounded bg-surface-700 border-surface-600 text-indigo-500">
+          <span>\${a.avatar} @\${a.name}</span>
+        \`;
+        membersContainer.appendChild(label);
+      });
+
+      document.getElementById('pantheonSquadModal').classList.remove('hidden');
+    }
+
+    function closePantheonSquadModal() {
+      document.getElementById('pantheonSquadModal').classList.add('hidden');
+    }
+
+    async function submitSavePantheonSquad() {
+      const id = document.getElementById('pSquadId').value.trim();
+      const name = document.getElementById('pSquadName').value.trim();
+      const description = document.getElementById('pSquadDesc').value.trim();
+      const leaderId = document.getElementById('pSquadLeaderSelect').value;
+      const workflowMode = document.getElementById('pSquadWorkflowMode').value;
+
+      const checkedBoxes = document.querySelectorAll('#pSquadMembersCheckboxes input[type="checkbox"]:checked');
+      const memberIds = Array.from(checkedBoxes).map(c => c.value);
+      if (!memberIds.includes(leaderId)) memberIds.unshift(leaderId);
+
+      try {
+        const res = await fetch(\`/v1/pantheon/squads?projectId=\${encodeURIComponent(currentProjectId)}\`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, name, description, leaderId, memberIds, workflowMode })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closePantheonSquadModal();
+          await fetchPantheonSquads();
+          renderPantheonSquadSelect();
+          renderPantheonSquadsList();
+          renderPantheonTopology();
+        } else {
+          alert('Error al guardar escuadrón: ' + (data.error || 'Desconocido'));
+        }
+      } catch (err) {
+        alert('Error al conectar: ' + err.message);
+      }
+    }
+
+    async function deletePantheonSquad(squadId) {
+      if (!confirm(\`¿Eliminar escuadrón \${squadId}?\`)) return;
+      try {
+        const res = await fetch(\`/v1/pantheon/squads/\${encodeURIComponent(squadId)}?projectId=\${encodeURIComponent(currentProjectId)}\`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+          await fetchPantheonSquads();
+          renderPantheonSquadSelect();
+          renderPantheonSquadsList();
+          renderPantheonTopology();
+        } else {
+          alert('No se puede eliminar este escuadrón.');
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
     }
 
     // --- WORKSPACE FILES & DIRECT EDITOR ---
