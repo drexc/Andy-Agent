@@ -164,16 +164,16 @@ export function getWebUiHtml(): string {
   <!-- ========================================================================= -->
   <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 transform -translate-x-full md:translate-x-0 md:static transition-all duration-300 ease-in-out w-72 max-w-[85vw] bg-surface-850 border-r border-surface-750 flex flex-col justify-between shrink-0 shadow-2xl md:shadow-none h-full overflow-hidden">
     <div class="p-4 border-b border-surface-750 flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/20 font-bold text-white tracking-wider">
+      <div class="flex items-center gap-2.5 overflow-hidden">
+        <div id="appLogoContainer" class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/20 font-bold text-white tracking-wider shrink-0 overflow-hidden text-base">
           Ψ
         </div>
-        <div>
-          <h1 class="font-bold text-sm leading-tight text-white flex items-center gap-1.5">
-            Andy Agent
-            <span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-100 font-mono">RLM</span>
+        <div class="overflow-hidden">
+          <h1 class="font-bold text-sm leading-tight text-white flex items-center gap-1.5 truncate">
+            <span id="appNameText" class="truncate">Andy Agent</span>
+            <span id="appBadgeText" class="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-100 font-mono shrink-0">RLM</span>
           </h1>
-          <p class="text-[11px] text-slate-400">Context Engine & WebUI</p>
+          <p id="appSloganText" class="text-[11px] text-slate-400 truncate">Context Engine & WebUI</p>
         </div>
       </div>
       <button onclick="toggleSidebar(false)" title="Cerrar menú" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-750 transition-colors md:hidden cursor-pointer">
@@ -2024,8 +2024,7 @@ for chunk in response:
         <button onclick="switchSettingsTab('compaction')" id="setTabCompactionBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Compactación</button>
         <button onclick="switchSettingsTab('mcp')" id="setTabMcpBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Servidores MCP</button>
         <button onclick="switchSettingsTab('shell')" id="setTabShellBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Terminal & Reintentos</button>
-        <button onclick="switchSettingsTab('media')" id="setTabMediaBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Medios & Imágenes</button>
-        <button onclick="switchSettingsTab('appearance')" id="setTabAppearanceBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">Apariencia & Rutas</button>
+        <button onclick="switchSettingsTab('appearance')" id="setTabAppearanceBtn" class="px-3 py-2 font-medium text-slate-400 hover:text-white whitespace-nowrap shrink-0">🎨 Marca & Apariencia</button>
       </div>
 
       <div class="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-6 text-xs flex-1">
@@ -2149,7 +2148,7 @@ for chunk in response:
             <div class="space-y-3">
               <label class="flex items-center gap-2 text-slate-300">
                 <input id="settingCompactionEnabled" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-brand-500">
-                Compactación automática activa
+                Habilitar auto-compactación de contexto en ramas largas
               </label>
             </div>
           </div>
@@ -2157,24 +2156,25 @@ for chunk in response:
 
         <div id="setTabMcp" class="hidden space-y-4">
           <div class="bg-surface-800 p-4 rounded-xl border border-surface-700 space-y-3">
-            <h4 class="font-semibold text-sm text-slate-200 flex items-center gap-2">
-              <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i>
-              Servidores MCP Conectados
-            </h4>
-            <div id="mcpServerList" class="space-y-2"></div>
-            
-            <h5 class="font-medium text-slate-300 pt-2">Añadir Servidor MCP</h5>
-            <div class="grid grid-cols-2 gap-2">
-              <input id="newMcpName" type="text" placeholder="Nombre (ej: gitlab)" class="bg-surface-750 border border-surface-700 rounded-lg p-2 text-white font-mono text-xs">
-              <input id="newMcpUrl" type="text" placeholder="URL o Comando stdio" class="bg-surface-750 border border-surface-700 rounded-lg p-2 text-white font-mono text-xs">
+            <div class="flex items-center justify-between">
+              <h4 class="font-semibold text-sm text-slate-200 flex items-center gap-2">
+                <i data-lucide="plug" class="w-4 h-4 text-indigo-400"></i>
+                Servidores MCP (Model Context Protocol)
+              </h4>
             </div>
-            <button onclick="addMcpServer()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-3 py-1.5 rounded-lg text-xs">Añadir Servidor</button>
+            <p class="text-[11px] text-slate-400">Servidores MCP activos y herramientas conectadas.</p>
+            <div id="mcpServersContainer" class="space-y-2">
+              <div class="text-slate-500 text-xs p-2">Cargando servidores MCP...</div>
+            </div>
           </div>
         </div>
 
         <div id="setTabShell" class="hidden space-y-4">
           <div class="bg-surface-800 p-4 rounded-xl border border-surface-700 space-y-3">
-            <h4 class="font-semibold text-sm text-slate-200">Terminal & Ejecución</h4>
+            <h4 class="font-semibold text-sm text-slate-200 flex items-center gap-2">
+              <i data-lucide="terminal" class="w-4 h-4 text-emerald-400"></i>
+              Configuración de Terminal
+            </h4>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-slate-300 mb-1">Ruta del Shell</label>
@@ -2184,25 +2184,123 @@ for chunk in response:
           </div>
         </div>
 
-        <div id="setTabMedia" class="hidden space-y-4">
-          <div class="bg-surface-800 p-4 rounded-xl border border-surface-700 space-y-3">
-            <h4 class="font-semibold text-sm text-slate-200">Gestión de Imágenes</h4>
-            <div class="space-y-2">
-              <label class="flex items-center gap-2 text-slate-300">
-                <input id="settingAutoResizeImages" type="checkbox" checked class="rounded bg-surface-750 border-surface-700 text-brand-500">
-                Redimensionar imágenes automáticamente
-              </label>
+        <div id="setTabAppearance" class="hidden space-y-4">
+          <!-- Branding / Custom Identity Card -->
+          <div class="bg-surface-800 p-4 rounded-xl border border-brand-500/30 space-y-4 shadow-lg">
+            <div class="flex items-center justify-between border-b border-surface-750 pb-2.5">
+              <div>
+                <h4 class="font-bold text-sm text-white flex items-center gap-2">
+                  <i data-lucide="palette" class="w-4 h-4 text-brand-400"></i>
+                  Identidad Visual, Marca & Logo (Personalización)
+                </h4>
+                <p class="text-[11px] text-slate-400">Modifica el nombre, eslogan, insignia y logotipo de la interfaz WebUI tantas veces como desees.</p>
+              </div>
+              <button onclick="resetBrandingDefaults()" type="button" class="text-[11px] text-slate-400 hover:text-white px-2.5 py-1 rounded-lg bg-surface-750 hover:bg-surface-700 transition-colors flex items-center gap-1 cursor-pointer">
+                <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                Restablecer por Defecto
+              </button>
+            </div>
+
+            <!-- Live Preview Box -->
+            <div class="bg-surface-900/90 border border-surface-700/80 rounded-xl p-3 space-y-1.5">
+              <div class="text-[10px] uppercase font-mono text-slate-400 tracking-wider">Vista Previa en Vivo de la Cabecera</div>
+              <div class="flex items-center gap-2.5 p-2 rounded-lg bg-surface-850 border border-surface-750 max-w-sm">
+                <div id="brandingPreviewLogo" class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/20 font-bold text-white tracking-wider shrink-0 text-base overflow-hidden">
+                  Ψ
+                </div>
+                <div class="overflow-hidden">
+                  <h1 class="font-bold text-sm leading-tight text-white flex items-center gap-1.5 truncate">
+                    <span id="brandingPreviewName" class="truncate">Andy Agent</span>
+                    <span id="brandingPreviewBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-100 font-mono shrink-0">RLM</span>
+                  </h1>
+                  <p id="brandingPreviewSlogan" class="text-[11px] text-slate-400 truncate">Context Engine & WebUI</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Branding Form Fields -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">Nombre de la Aplicación</label>
+                <input id="brandingAppName" type="text" oninput="updateBrandingLivePreview()" placeholder="Ej: Andy Agent" value="Andy Agent" class="w-full bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white font-medium text-xs focus:outline-none focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">Eslogan / Subtítulo</label>
+                <input id="brandingAppSlogan" type="text" oninput="updateBrandingLivePreview()" placeholder="Ej: Context Engine & WebUI" value="Context Engine & WebUI" class="w-full bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-slate-300 mb-1 font-medium">Insignia / Badge (Opcional)</label>
+                <input id="brandingAppBadge" type="text" oninput="updateBrandingLivePreview()" placeholder="Ej: RLM, PRO, AI, v2.0" value="RLM" class="w-full bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-brand-500">
+              </div>
+            </div>
+
+            <!-- Logo Configuration -->
+            <div class="space-y-3 pt-2 border-t border-surface-750/70">
+              <div class="flex items-center justify-between">
+                <label class="block text-slate-200 font-medium">Logotipo / Ícono</label>
+                <div class="flex items-center gap-1 bg-surface-750 p-0.5 rounded-lg text-[11px]">
+                  <button type="button" onclick="setBrandingLogoMode('icon')" id="bModeIconBtn" class="px-2.5 py-1 rounded font-medium bg-brand-600 text-white cursor-pointer">Texto / Emoji</button>
+                  <button type="button" onclick="setBrandingLogoMode('image')" id="bModeImageBtn" class="px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white cursor-pointer">URL / Imagen</button>
+                </div>
+              </div>
+
+              <!-- Mode 1: Icon / Text / Emoji -->
+              <div id="brandingIconModeContainer" class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <input id="brandingLogoValue" type="text" oninput="updateBrandingLivePreview()" placeholder="Ej: Ψ, ⚡, 🤖, 🚀" value="Ψ" maxlength="10" class="w-28 bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white text-center font-bold text-base focus:outline-none focus:border-brand-500">
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="text-[11px] text-slate-400">Atajos rápidos:</span>
+                    <button type="button" onclick="quickSelectLogo('Ψ')" class="w-7 h-7 rounded bg-surface-750 hover:bg-surface-700 text-white text-xs font-bold transition-all cursor-pointer">Ψ</button>
+                    <button type="button" onclick="quickSelectLogo('⚡')" class="w-7 h-7 rounded bg-surface-750 hover:bg-surface-700 text-white text-xs transition-all cursor-pointer">⚡</button>
+                    <button type="button" onclick="quickSelectLogo('🤖')" class="w-7 h-7 rounded bg-surface-750 hover:bg-surface-700 text-white text-xs transition-all cursor-pointer">🤖</button>
+                    <button type="button" onclick="quickSelectLogo('🚀')" class="w-7 h-7 rounded bg-surface-750 hover:bg-surface-700 text-white text-xs transition-all cursor-pointer">🚀</button>
+                    <button type="button" onclick="quickSelectLogo('🧠')" class="w-7 h-7 rounded bg-surface-750 hover:bg-surface-700 text-white text-xs transition-all cursor-pointer">🧠</button>
+                    <button type="button" onclick="quickSelectLogo('👑')" class="w-7 h-7 rounded bg-surface-750 hover:bg-surface-700 text-white text-xs transition-all cursor-pointer">👑</button>
+                    <button type="button" onclick="quickSelectLogo('🔮')" class="w-7 h-7 rounded bg-surface-750 hover:bg-surface-700 text-white text-xs transition-all cursor-pointer">🔮</button>
+                    <button type="button" onclick="quickSelectLogo('🏛️')" class="w-7 h-7 rounded bg-surface-750 hover:bg-surface-700 text-white text-xs transition-all cursor-pointer">🏛️</button>
+                    <button type="button" onclick="quickSelectLogo('🔥')" class="w-7 h-7 rounded bg-surface-750 hover:bg-surface-700 text-white text-xs transition-all cursor-pointer">🔥</button>
+                    <button type="button" onclick="quickSelectLogo('💎')" class="w-7 h-7 rounded bg-surface-750 hover:bg-surface-700 text-white text-xs transition-all cursor-pointer">💎</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mode 2: Image URL / Upload -->
+              <div id="brandingImageModeContainer" class="hidden space-y-2">
+                <div class="flex items-center gap-2">
+                  <input id="brandingImageUrlInput" type="text" oninput="updateBrandingLivePreview()" placeholder="https://ejemplo.com/logo.png o Data URL" class="flex-1 bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-brand-500">
+                  <label class="px-3 py-2 rounded-lg bg-surface-750 hover:bg-surface-700 text-slate-200 hover:text-white font-medium text-xs cursor-pointer border border-surface-700 flex items-center gap-1.5 shrink-0">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>Subir imagen</span>
+                    <input type="file" id="brandingLogoFileInput" accept="image/*" onchange="handleBrandingFileUpload(event)" class="hidden">
+                  </label>
+                </div>
+              </div>
+
+              <!-- Gradient Palette Selector -->
+              <div class="space-y-1.5 pt-2">
+                <label class="block text-slate-300 text-[11px] font-medium">Gradiente / Color de Fondo del Logo</label>
+                <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                  <button type="button" onclick="setLogoGradient('from-brand-600 to-indigo-500')" class="h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 border-2 border-transparent hover:border-white text-[10px] font-bold text-white flex items-center justify-center transition-all shadow-sm cursor-pointer">Púrpura</button>
+                  <button type="button" onclick="setLogoGradient('from-cyan-500 to-blue-600')" class="h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 border-2 border-transparent hover:border-white text-[10px] font-bold text-white flex items-center justify-center transition-all shadow-sm cursor-pointer">Cian/Azul</button>
+                  <button type="button" onclick="setLogoGradient('from-emerald-500 to-teal-500')" class="h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-500 border-2 border-transparent hover:border-white text-[10px] font-bold text-white flex items-center justify-center transition-all shadow-sm cursor-pointer">Esmeralda</button>
+                  <button type="button" onclick="setLogoGradient('from-amber-500 to-rose-500')" class="h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-rose-500 border-2 border-transparent hover:border-white text-[10px] font-bold text-white flex items-center justify-center transition-all shadow-sm cursor-pointer">Ámbar/Fuego</button>
+                  <button type="button" onclick="setLogoGradient('from-pink-500 to-purple-600')" class="h-8 rounded-lg bg-gradient-to-tr from-pink-500 to-purple-600 border-2 border-transparent hover:border-white text-[10px] font-bold text-white flex items-center justify-center transition-all shadow-sm cursor-pointer">Rosa/Magenta</button>
+                  <button type="button" onclick="setLogoGradient('from-slate-700 to-slate-900')" class="h-8 rounded-lg bg-gradient-to-tr from-slate-700 to-slate-900 border-2 border-transparent hover:border-white text-[10px] font-bold text-white flex items-center justify-center transition-all shadow-sm cursor-pointer">Obsidiana</button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div id="setTabAppearance" class="hidden space-y-4">
+          <!-- Theme card -->
           <div class="bg-surface-800 p-4 rounded-xl border border-surface-700 space-y-3">
-            <h4 class="font-semibold text-sm text-slate-200">Apariencia & Directorio de Sesiones</h4>
+            <h4 class="font-semibold text-sm text-slate-200 flex items-center gap-2">
+              <i data-lucide="sun-moon" class="w-4 h-4 text-cyan-400"></i>
+              Tema Visual & Estilo Global
+            </h4>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-slate-300 mb-1">Tema Visual</label>
-                <select id="settingTheme" class="w-full bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs">
+                <label class="block text-slate-300 mb-1">Tema</label>
+                <select id="settingTheme" onchange="switchTheme(this.value)" class="w-full bg-surface-750 border border-surface-700 rounded-lg px-3 py-2 text-white text-xs">
                   <option value="dark" selected>Dark OLED</option>
                   <option value="slate">Slate Dark</option>
                   <option value="cyberpunk">Cyberpunk Neon</option>
@@ -2357,6 +2455,7 @@ for chunk in response:
 
     document.addEventListener('DOMContentLoaded', async () => {
       initTheme();
+      initAppBranding();
       lucide.createIcons();
       const authenticated = await checkAuthSession();
       if (!authenticated) {
@@ -2367,6 +2466,7 @@ for chunk in response:
     });
 
     async function initializeApp() {
+      initAppBranding();
       await fetchProjects();
       await fetchModelCatalogs();
       await fetchProviders();
@@ -6132,6 +6232,197 @@ for chunk in response:
       }
     }
 
+    // --- BRANDING & WHITE-LABEL CUSTOMIZATION LOGIC ---
+    const DEFAULT_BRANDING = {
+      appName: 'Andy Agent',
+      appSlogan: 'Context Engine & WebUI',
+      appBadge: 'RLM',
+      logoType: 'icon',
+      logoValue: 'Ψ',
+      logoGradient: 'from-brand-600 to-indigo-500'
+    };
+
+    let appBrandingState = { ...DEFAULT_BRANDING };
+
+    function initAppBranding() {
+      try {
+        const stored = localStorage.getItem('andy_custom_branding');
+        if (stored) {
+          appBrandingState = { ...DEFAULT_BRANDING, ...JSON.parse(stored) };
+          applyBranding(appBrandingState);
+        }
+      } catch (e) {}
+
+      fetch('/api/branding')
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.branding) {
+            appBrandingState = { ...DEFAULT_BRANDING, ...data.branding };
+            applyBranding(appBrandingState);
+          }
+        })
+        .catch(() => {});
+    }
+
+    function applyBranding(b) {
+      const nameEl = document.getElementById('appNameText');
+      const badgeEl = document.getElementById('appBadgeText');
+      const sloganEl = document.getElementById('appSloganText');
+      const logoEl = document.getElementById('appLogoContainer');
+
+      if (nameEl) nameEl.innerText = b.appName || 'Andy Agent';
+      if (badgeEl) {
+        if (b.appBadge && b.appBadge.trim()) {
+          badgeEl.innerText = b.appBadge.trim();
+          badgeEl.classList.remove('hidden');
+        } else {
+          badgeEl.classList.add('hidden');
+        }
+      }
+      if (sloganEl) {
+        if (b.appSlogan && b.appSlogan.trim()) {
+          sloganEl.innerText = b.appSlogan.trim();
+          sloganEl.classList.remove('hidden');
+        } else {
+          sloganEl.classList.add('hidden');
+        }
+      }
+
+      if (logoEl) {
+        logoEl.className = 'w-8 h-8 rounded-lg bg-gradient-to-tr ' + (b.logoGradient || 'from-brand-600 to-indigo-500') + ' flex items-center justify-center shadow-lg shadow-brand-500/20 font-bold text-white tracking-wider shrink-0 overflow-hidden text-base';
+        if (b.logoType === 'image' && b.logoValue) {
+          logoEl.innerHTML = '<img src="' + b.logoValue + '" alt="Logo" class="w-full h-full object-contain p-0.5 rounded-lg">';
+        } else {
+          logoEl.innerHTML = b.logoValue || 'Ψ';
+        }
+      }
+
+      document.title = (b.appName || 'Andy Agent') + (b.appSlogan ? ' - ' + b.appSlogan : '');
+    }
+
+    function populateBrandingForm(b) {
+      const nameIn = document.getElementById('brandingAppName');
+      const sloganIn = document.getElementById('brandingAppSlogan');
+      const badgeIn = document.getElementById('brandingAppBadge');
+      const logoValIn = document.getElementById('brandingLogoValue');
+      const imgUrlIn = document.getElementById('brandingImageUrlInput');
+
+      if (nameIn) nameIn.value = b.appName || '';
+      if (sloganIn) sloganIn.value = b.appSlogan || '';
+      if (badgeIn) badgeIn.value = b.appBadge || '';
+      if (logoValIn) logoValIn.value = b.logoType === 'icon' ? (b.logoValue || 'Ψ') : 'Ψ';
+      if (imgUrlIn) imgUrlIn.value = b.logoType === 'image' ? (b.logoValue || '') : '';
+
+      setBrandingLogoMode(b.logoType || 'icon', false);
+      updateBrandingLivePreview();
+    }
+
+    function setBrandingLogoMode(mode, updatePreview) {
+      appBrandingState.logoType = mode;
+      const iconContainer = document.getElementById('brandingIconModeContainer');
+      const imageContainer = document.getElementById('brandingImageModeContainer');
+      const iconBtn = document.getElementById('bModeIconBtn');
+      const imageBtn = document.getElementById('bModeImageBtn');
+
+      if (mode === 'image') {
+        if (iconContainer) iconContainer.classList.add('hidden');
+        if (imageContainer) imageContainer.classList.remove('hidden');
+        if (iconBtn) iconBtn.className = 'px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white cursor-pointer';
+        if (imageBtn) imageBtn.className = 'px-2.5 py-1 rounded font-medium bg-brand-600 text-white cursor-pointer';
+      } else {
+        if (iconContainer) iconContainer.classList.remove('hidden');
+        if (imageContainer) imageContainer.classList.add('hidden');
+        if (iconBtn) iconBtn.className = 'px-2.5 py-1 rounded font-medium bg-brand-600 text-white cursor-pointer';
+        if (imageBtn) imageBtn.className = 'px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white cursor-pointer';
+      }
+      if (updatePreview !== false) updateBrandingLivePreview();
+    }
+
+    function quickSelectLogo(char) {
+      const input = document.getElementById('brandingLogoValue');
+      if (input) {
+        input.value = char;
+        setBrandingLogoMode('icon', false);
+        updateBrandingLivePreview();
+      }
+    }
+
+    function setLogoGradient(gradientClass) {
+      appBrandingState.logoGradient = gradientClass;
+      updateBrandingLivePreview();
+    }
+
+    function handleBrandingFileUpload(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        const imgUrlInput = document.getElementById('brandingImageUrlInput');
+        if (imgUrlInput) imgUrlInput.value = dataUrl;
+        setBrandingLogoMode('image', false);
+        updateBrandingLivePreview();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function updateBrandingLivePreview() {
+      const name = (document.getElementById('brandingAppName')?.value || 'Andy Agent').trim();
+      const slogan = (document.getElementById('brandingAppSlogan')?.value || '').trim();
+      const badge = (document.getElementById('brandingAppBadge')?.value || '').trim();
+      const mode = appBrandingState.logoType || 'icon';
+      const logoVal = mode === 'image'
+        ? (document.getElementById('brandingImageUrlInput')?.value || '').trim()
+        : (document.getElementById('brandingLogoValue')?.value || 'Ψ').trim();
+      const gradient = appBrandingState.logoGradient || 'from-brand-600 to-indigo-500';
+
+      const prevName = document.getElementById('brandingPreviewName');
+      const prevSlogan = document.getElementById('brandingPreviewSlogan');
+      const prevBadge = document.getElementById('brandingPreviewBadge');
+      const prevLogo = document.getElementById('brandingPreviewLogo');
+
+      if (prevName) prevName.innerText = name || 'Andy Agent';
+      if (prevBadge) {
+        if (badge) {
+          prevBadge.innerText = badge;
+          prevBadge.classList.remove('hidden');
+        } else {
+          prevBadge.classList.add('hidden');
+        }
+      }
+      if (prevSlogan) {
+        if (slogan) {
+          prevSlogan.innerText = slogan;
+          prevSlogan.classList.remove('hidden');
+        } else {
+          prevSlogan.classList.add('hidden');
+        }
+      }
+      if (prevLogo) {
+        prevLogo.className = 'w-8 h-8 rounded-lg bg-gradient-to-tr ' + gradient + ' flex items-center justify-center shadow-lg shadow-brand-500/20 font-bold text-white tracking-wider shrink-0 text-base overflow-hidden';
+        if (mode === 'image' && logoVal) {
+          prevLogo.innerHTML = '<img src="' + logoVal + '" alt="Logo" class="w-full h-full object-contain p-0.5 rounded-lg">';
+        } else {
+          prevLogo.innerHTML = logoVal || 'Ψ';
+        }
+      }
+    }
+
+    function resetBrandingDefaults() {
+      if (!confirm('¿Restablecer el nombre, eslogan, insignia y logo a los valores por defecto de Andy Agent?')) return;
+      appBrandingState = { ...DEFAULT_BRANDING };
+      populateBrandingForm(appBrandingState);
+      applyBranding(appBrandingState);
+      try {
+        localStorage.removeItem('andy_custom_branding');
+      } catch (e) {}
+      fetch('/api/branding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(DEFAULT_BRANDING)
+      }).catch(() => {});
+    }
+
     // --- SETTINGS MODAL (9 TABS) ---
     function switchSettingsTab(tab) {
       ['setTabModels', 'setTabAutoLearn', 'setTabThinking', 'setTabRlm', 'setTabCompaction', 'setTabMcp', 'setTabShell', 'setTabMedia', 'setTabAppearance'].forEach(t => {
@@ -6211,6 +6502,9 @@ for chunk in response:
           document.getElementById('settingAutoCreateSkills').checked = autoLearnRes.config.autoCreateSkills !== false;
           document.getElementById('settingAutoLearnScope').value = autoLearnRes.config.scope || 'project';
         }
+
+        // Populate Branding form
+        populateBrandingForm(appBrandingState);
       } catch (e) {
         console.error('Error opening settings modal:', e);
       }
@@ -6268,6 +6562,31 @@ for chunk in response:
       const autoCreateSkills = document.getElementById('settingAutoCreateSkills').checked;
       const autoLearnScope = document.getElementById('settingAutoLearnScope').value;
 
+      // Extract Branding Settings
+      const brandingAppName = (document.getElementById('brandingAppName')?.value || 'Andy Agent').trim();
+      const brandingAppSlogan = (document.getElementById('brandingAppSlogan')?.value || '').trim();
+      const brandingAppBadge = (document.getElementById('brandingAppBadge')?.value || '').trim();
+      const brandingMode = appBrandingState.logoType || 'icon';
+      const brandingLogoValue = brandingMode === 'image'
+        ? (document.getElementById('brandingImageUrlInput')?.value || '').trim()
+        : (document.getElementById('brandingLogoValue')?.value || 'Ψ').trim();
+      const brandingLogoGradient = appBrandingState.logoGradient || 'from-brand-600 to-indigo-500';
+
+      const brandingPayload = {
+        appName: brandingAppName || 'Andy Agent',
+        appSlogan: brandingAppSlogan,
+        appBadge: brandingAppBadge,
+        logoType: brandingMode,
+        logoValue: brandingLogoValue || 'Ψ',
+        logoGradient: brandingLogoGradient
+      };
+
+      appBrandingState = brandingPayload;
+      applyBranding(appBrandingState);
+      try {
+        localStorage.setItem('andy_custom_branding', JSON.stringify(brandingPayload));
+      } catch (e) {}
+
       const payload = {
         defaultModel,
         defaultProvider,
@@ -6276,6 +6595,7 @@ for chunk in response:
         customProvider: defaultProvider,
         rlmMaxDepth: Number(rlmMaxDepth),
         compaction: { enabled: compactionEnabled },
+        branding: brandingPayload
       };
 
       try {
@@ -6284,6 +6604,11 @@ for chunk in response:
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
+          }),
+          fetch('/api/branding', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(brandingPayload)
           }),
           fetch('/api/providers', {
             method: 'POST',
@@ -6321,7 +6646,7 @@ for chunk in response:
         await fetchProviders();
 
         closeSettingsModal();
-        alert(\`Configuración guardada: Proveedor '\${defaultProvider}', Modelo '\${defaultModel}', Auto-Learn: \${autoLearnEnabled ? 'Activo' : 'Desactivado'}.\`);
+        alert(\`Configuración guardada exitosamente.\\n\\nMarca: \${brandingPayload.appName}\\nProveedor: \${defaultProvider}\\nModelo: \${defaultModel}\`);
       } catch (e) {
         alert('Error al guardar configuración: ' + e.message);
       }

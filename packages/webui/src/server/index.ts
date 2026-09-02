@@ -595,6 +595,48 @@ export class AndyWebUiServer {
 				return;
 			}
 
+			// --- BRANDING CONFIG API ---
+			const globalBrandingPath = path.join(globalMemoryDir, "branding.json");
+			const defaultBranding = {
+				appName: "Andy Agent",
+				appSlogan: "Context Engine & WebUI",
+				appBadge: "RLM",
+				logoType: "icon",
+				logoValue: "Ψ",
+				logoGradient: "from-brand-600 to-indigo-500",
+			};
+
+			if (method === "GET" && url === "/api/branding") {
+				let branding = { ...defaultBranding };
+				if (existsSync(globalBrandingPath)) {
+					try {
+						branding = { ...defaultBranding, ...JSON.parse(readFileSync(globalBrandingPath, "utf-8")) };
+					} catch {}
+				}
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, branding }));
+				return;
+			}
+
+			if (method === "POST" && url === "/api/branding") {
+				const body = await this.readJsonBody<any>(req);
+				const branding = {
+					appName: (body?.appName || defaultBranding.appName).trim(),
+					appSlogan: (body?.appSlogan || defaultBranding.appSlogan).trim(),
+					appBadge: (body?.appBadge || defaultBranding.appBadge).trim(),
+					logoType: body?.logoType || defaultBranding.logoType,
+					logoValue: body?.logoValue || defaultBranding.logoValue,
+					logoGradient: body?.logoGradient || defaultBranding.logoGradient,
+				};
+				const dir = path.dirname(globalBrandingPath);
+				if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+				writeFileSync(globalBrandingPath, JSON.stringify(branding, null, 2), "utf-8");
+				this.addLog("INFO", "Branding", `Updated branding: ${branding.appName} (${branding.appSlogan})`);
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, branding }));
+				return;
+			}
+
 			// --- 6. SKILLS API (CRUD) ---
 			const projectSkillsDir = existsSync(path.join(this.pool.cwd, ".andy", "skills"))
 				? path.join(this.pool.cwd, ".andy", "skills")
