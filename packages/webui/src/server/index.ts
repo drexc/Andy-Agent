@@ -17,6 +17,7 @@ import {
 	type ToolResultMessage,
 	type UserMessage,
 } from "@earendil-works/pi-ai";
+import type { PantheonMessage } from "@earendil-works/pi-coding-agent";
 import { ApiKeyManager } from "./api-key-manager.js";
 import { AuthManager } from "./auth-manager.js";
 import { AutoLearningEngine } from "./auto-learner.js";
@@ -1450,8 +1451,40 @@ ${prompt || ""}`;
 					created: Math.floor(Date.now() / 1000),
 					owned_by: "pantheon-agent",
 					context_window: 128000,
-					description: `Pantheon Agent: ${a.name} (${a.role})`,
+					description: `🤖 Agente: ${a.name} (${a.role})`,
 				}));
+
+				const settingsMgr = this.pool.getSettingsManager();
+				const _defaultProvider = settingsMgr.getDefaultProvider() || "omniroute";
+				const activeModels = this.pool.getActiveProviderModels();
+
+				// Sort active models: auto/* first, then alphabetically
+				activeModels.sort((a, b) => {
+					const aIsAuto = a.id.startsWith("auto/");
+					const bIsAuto = b.id.startsWith("auto/");
+					if (aIsAuto && !bIsAuto) return -1;
+					if (!aIsAuto && bIsAuto) return 1;
+					return a.id.localeCompare(b.id);
+				});
+
+				const activeProviderModelItems = activeModels.flatMap((m) => [
+					{
+						id: m.id,
+						object: "model",
+						created: Math.floor(Date.now() / 1000),
+						owned_by: m.provider,
+						context_window: m.contextWindow || 128000,
+						description: `⚡ [${m.provider}] ${m.name || m.id}`,
+					},
+					{
+						id: `${m.provider}/${m.id}`,
+						object: "model",
+						created: Math.floor(Date.now() / 1000),
+						owned_by: m.provider,
+						context_window: m.contextWindow || 128000,
+						description: `⚡ ${m.provider}/${m.id}`,
+					},
+				]);
 
 				const regularModelItems = models.map((m) => ({
 					id: m.id,
@@ -1462,7 +1495,12 @@ ${prompt || ""}`;
 				}));
 
 				const seenIds = new Set<string>();
-				const combinedData = [...squadModelItems, ...agentModelItems, ...regularModelItems].filter((item) => {
+				const combinedData = [
+					...squadModelItems,
+					...activeProviderModelItems,
+					...agentModelItems,
+					...regularModelItems,
+				].filter((item) => {
 					if (seenIds.has(item.id)) return false;
 					seenIds.add(item.id);
 					return true;
@@ -1954,8 +1992,38 @@ ${prompt || ""}`;
 
 			if (method === "GET" && (url === "/api/pantheon/squads" || url === "/v1/pantheon/squads")) {
 				const squads = pantheonRegistry.getSquads();
+				const settingsMgr = this.pool.getSettingsManager();
+				const defaultProvider = settingsMgr.getDefaultProvider() || "omniroute";
+				const activeModels = this.pool.getActiveProviderModels();
+
+				// Sort active models: auto/* first, then alphabetically
+				activeModels.sort((a, b) => {
+					const aIsAuto = a.id.startsWith("auto/");
+					const bIsAuto = b.id.startsWith("auto/");
+					if (aIsAuto && !bIsAuto) return -1;
+					if (!aIsAuto && bIsAuto) return 1;
+					return a.id.localeCompare(b.id);
+				});
+
 				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ squads, total: squads.length }, null, 2));
+				res.end(
+					JSON.stringify(
+						{
+							squads,
+							total: squads.length,
+							activeProvider: defaultProvider,
+							activeProviderModels: activeModels.slice(0, 150).map((m) => ({
+								id: m.id,
+								name: m.name || m.id,
+								provider: m.provider,
+								contextWindow: m.contextWindow || 128000,
+								reasoning: Boolean((m as any).reasoning),
+							})),
+						},
+						null,
+						2,
+					),
+				);
 				return;
 			}
 
@@ -2088,27 +2156,121 @@ ${prompt || ""}`;
 				};
 
 				try {
-					const turnMessages = await pantheonOrchestrator.executeTurn(
-						squadId,
-						prompt,
-						async (event) => {
+					const isDirectModel =
+						squadId.startsWith("model:") ||
+						(!pantheonRegistry.getSquad(squadId) && Boolean(this.pool.findModel(squadId)));
+
+					let turnMessages: PantheonMessage[] = [];
+
+					if (isDirectModel) {
+						const directModelId = squadId.startsWith("model:") ? squadId.slice(6) : squadId;
+						const targetModel =
+							this.pool.findModel(directModelId) ||
+							this.pool.findModel("auto/best-coding") ||
+							this.pool.getAvailableModels()[0];
+						const modelName = targetModel?.name || directModelId;
+						const modelProvider = targetModel?.provider || "LLM";
+
+						if (!res.writableEnded) {
+							res.write(
+								`data: ${JSON.stringify({
+									type: "agent_start",
+									agentId: directModelId,
+									agentName: modelName,
+									agentRole: `Modelo Directo (${modelProvider})`,
+								})}\n\n`,
+							);
+						}
+
+						let accumulatedResponse = "";
+						const streamGen = await llmCaller([{ role: "user", content: prompt }], directModelId, 0.2);
+						if (typeof streamGen === "string") {
+							accumulatedResponse = streamGen;
 							if (!res.writableEnded) {
-								try {
-									res.write(`data: ${JSON.stringify(event)}\n\n`);
-								} catch {}
+								res.write(
+									`data: ${JSON.stringify({
+										type: "delta",
+										agentId: directModelId,
+										delta: accumulatedResponse,
+									})}\n\n`,
+								);
 							}
-						},
-						{
-							targetAgentId,
-							llmCaller,
-							projectInfo: {
-								id: activeProj.id,
-								name: activeProj.name,
-								path: activeProj.path,
-								description: activeProj.description,
+						} else if (streamGen && Symbol.asyncIterator in streamGen) {
+							for await (const chunk of streamGen) {
+								accumulatedResponse += chunk;
+								if (!res.writableEnded) {
+									res.write(
+										`data: ${JSON.stringify({
+											type: "delta",
+											agentId: directModelId,
+											delta: chunk,
+										})}\n\n`,
+									);
+								}
+							}
+						}
+
+						const directAgentMsg: PantheonMessage = {
+							id: randomUUID(),
+							senderId: directModelId,
+							senderName: modelName,
+							senderRole: `Modelo Directo (${modelProvider})`,
+							senderAvatar: "⚡",
+							senderColor: "#3B82F6",
+							content: accumulatedResponse,
+							type: "chat",
+							timestamp: new Date().toISOString(),
+						};
+
+						turnMessages = [
+							{
+								id: randomUUID(),
+								senderId: "user",
+								senderName: "Usuario",
+								senderRole: "User",
+								senderAvatar: "👤",
+								senderColor: "#64748B",
+								content: prompt,
+								type: "chat",
+								timestamp: new Date().toISOString(),
 							},
-						},
-					);
+							directAgentMsg,
+						];
+
+						if (!res.writableEnded) {
+							res.write(
+								`data: ${JSON.stringify({
+									type: "agent_finish",
+									agentId: directModelId,
+									message: directAgentMsg,
+								})}\n\n`,
+							);
+							res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+							res.end();
+						}
+					} else {
+						turnMessages = await pantheonOrchestrator.executeTurn(
+							squadId,
+							prompt,
+							async (event) => {
+								if (!res.writableEnded) {
+									try {
+										res.write(`data: ${JSON.stringify(event)}\n\n`);
+									} catch {}
+								}
+							},
+							{
+								targetAgentId,
+								llmCaller,
+								projectInfo: {
+									id: activeProj.id,
+									name: activeProj.name,
+									path: activeProj.path,
+									description: activeProj.description,
+								},
+							},
+						);
+					}
 
 					// Persist Turn Messages into the Project Session
 					const targetSessionId = body?.sessionId || "default";

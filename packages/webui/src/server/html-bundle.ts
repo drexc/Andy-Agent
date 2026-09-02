@@ -328,14 +328,14 @@ export function getWebUiHtml(): string {
             <div class="p-3 border-b border-surface-750 bg-surface-800/80 space-y-2">
               <div class="flex items-center justify-between">
                 <span class="font-bold text-white text-xs flex items-center gap-1.5">
-                  <i data-lucide="shield" class="w-4 h-4 text-purple-400"></i>
-                  Escuadrones Multi-Agente
+                  <i data-lucide="layers" class="w-4 h-4 text-purple-400"></i>
+                  Escuadrones y Modelos
                 </span>
-                <span id="squadDropdownCountText" class="text-[10px] font-mono text-purple-300 bg-purple-500/15 px-2 py-0.5 rounded-full">3 disponibles</span>
+                <span id="squadDropdownCountText" class="text-[10px] font-mono text-purple-300 bg-purple-500/15 px-2 py-0.5 rounded-full">...</span>
               </div>
               <div class="relative">
                 <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i>
-                <input id="squadSearchInput" type="text" placeholder="Buscar escuadrón..." oninput="filterSquadDropdown(this.value)" class="w-full bg-surface-750 border border-surface-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-purple-500">
+                <input id="squadSearchInput" type="text" placeholder="Buscar escuadrón o modelo..." oninput="filterSquadDropdown(this.value)" class="w-full bg-surface-750 border border-surface-700 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-purple-500">
               </div>
             </div>
 
@@ -5344,6 +5344,8 @@ for chunk in response:
       activeSquadId: (typeof localStorage !== 'undefined' ? localStorage.getItem('andy_active_squad_id') : null) || 'fullstack-squad',
       agents: [],
       squads: [],
+      activeProvider: 'omniroute',
+      activeProviderModels: [],
       isStreaming: false
     };
 
@@ -5408,6 +5410,9 @@ for chunk in response:
         const res = await fetch(\`/v1/pantheon/squads?projectId=\${encodeURIComponent(currentProjectId)}\`);
         const data = await res.json();
         pantheonState.squads = data.squads || [];
+        pantheonState.activeProvider = data.activeProvider || 'omniroute';
+        pantheonState.activeProviderModels = data.activeProviderModels || [];
+        updateHeaderSquadButton();
       } catch (err) {
         console.error('Error fetching Pantheon squads:', err);
       }
@@ -5416,7 +5421,17 @@ for chunk in response:
     function updateHeaderSquadButton() {
       const label = document.getElementById('selectedSquadLabel');
       const countBadge = document.getElementById('selectedSquadCountBadge');
-      const squad = pantheonState.squads.find(s => s.id === pantheonState.activeSquadId) || pantheonState.squads[0];
+      const currentId = pantheonState.activeSquadId;
+
+      if (currentId && currentId.startsWith('model:')) {
+        const mId = currentId.slice(6);
+        const mObj = (pantheonState.activeProviderModels || []).find(m => m.id === mId);
+        if (label) label.innerText = mObj?.name || mId;
+        if (countBadge) countBadge.innerText = (pantheonState.activeProvider || 'modelo');
+        return;
+      }
+
+      const squad = pantheonState.squads.find(s => s.id === currentId) || pantheonState.squads[0];
       if (label && squad) {
         label.innerText = squad.name;
       }
@@ -5425,49 +5440,97 @@ for chunk in response:
       }
     }
 
-    function renderHeaderSquadDropdown() {
+    function renderHeaderSquadDropdown(filteredSquads, filteredModels) {
       const container = document.getElementById('squadsDropdownList');
       const countText = document.getElementById('squadDropdownCountText');
       if (!container) return;
       container.innerHTML = '';
 
-      if (countText) countText.innerText = (pantheonState.squads.length || 0) + ' disponibles';
+      const squadsToRender = filteredSquads !== undefined ? filteredSquads : pantheonState.squads;
+      const modelsToRender = filteredModels !== undefined ? filteredModels : (pantheonState.activeProviderModels || []);
+      const totalCount = squadsToRender.length + modelsToRender.length;
 
-      if (pantheonState.squads.length === 0) {
-        container.innerHTML = '<div class="p-4 text-center text-slate-400 text-xs">Cargando escuadrones...</div>';
+      if (countText) countText.innerText = (squadsToRender.length) + ' escuadrones · ' + (modelsToRender.length) + ' modelos';
+
+      if (totalCount === 0) {
+        container.innerHTML = '<div class="p-4 text-center text-slate-400 text-xs">No se encontraron escuadrones ni modelos.</div>';
         return;
       }
 
-      pantheonState.squads.forEach(s => {
-        const isSelected = s.id === pantheonState.activeSquadId;
-        const members = pantheonState.agents.filter(a => s.memberIds.includes(a.id));
-        const btn = document.createElement('button');
-        btn.className = 'w-full text-left p-2.5 rounded-xl border transition-all flex flex-col space-y-1.5 cursor-pointer ' +
-          (isSelected ? 'bg-purple-600/20 border-purple-500/50 shadow-md' : 'bg-surface-800/80 border-surface-750 hover:bg-surface-750 hover:border-surface-600');
-        btn.onclick = () => selectHeaderSquad(s.id);
+      // 1. Escuadrones Autónomos Section
+      if (squadsToRender.length > 0) {
+        const squadSecHeader = document.createElement('div');
+        squadSecHeader.className = 'px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5';
+        squadSecHeader.innerHTML = '<i data-lucide="shield" class="w-3 h-3 text-purple-400"></i> Escuadrones Autónomos (' + squadsToRender.length + ')';
+        container.appendChild(squadSecHeader);
 
-        const modeBadgeColor = s.workflowMode === 'hierarchical' ? 'bg-purple-500/20 text-purple-300' :
-                               s.workflowMode === 'sequential' ? 'bg-amber-500/20 text-amber-300' : 'bg-cyan-500/20 text-cyan-300';
+        squadsToRender.forEach(s => {
+          const isSelected = s.id === pantheonState.activeSquadId;
+          const members = pantheonState.agents.filter(a => s.memberIds.includes(a.id));
+          const btn = document.createElement('button');
+          btn.className = 'w-full text-left p-2.5 rounded-xl border transition-all flex flex-col space-y-1.5 cursor-pointer ' +
+            (isSelected ? 'bg-purple-600/20 border-purple-500/50 shadow-md' : 'bg-surface-800/80 border-surface-750 hover:bg-surface-750 hover:border-surface-600');
+          btn.onclick = () => selectHeaderSquad(s.id);
 
-        btn.innerHTML = \`
-          <div class="flex items-center justify-between w-full">
-            <div class="flex items-center gap-2 truncate">
-              <span class="text-base">🛡️</span>
-              <span class="font-bold text-xs truncate \${isSelected ? 'text-purple-200' : 'text-white'}">\${s.name}</span>
+          const modeBadgeColor = s.workflowMode === 'hierarchical' ? 'bg-purple-500/20 text-purple-300' :
+                                 s.workflowMode === 'sequential' ? 'bg-amber-500/20 text-amber-300' : 'bg-cyan-500/20 text-cyan-300';
+
+          btn.innerHTML = \`
+            <div class="flex items-center justify-between w-full">
+              <div class="flex items-center gap-2 truncate">
+                <span class="text-base">🛡️</span>
+                <span class="font-bold text-xs truncate \${isSelected ? 'text-purple-200' : 'text-white'}">\${s.name}</span>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="text-[9px] px-1.5 py-0.2 rounded font-mono \${modeBadgeColor}">\${s.workflowMode}</span>
+                \${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i>' : ''}
+              </div>
             </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <span class="text-[9px] px-1.5 py-0.2 rounded font-mono \${modeBadgeColor}">\${s.workflowMode}</span>
-              \${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i>' : ''}
+            <p class="text-[10px] text-slate-400 line-clamp-1">\${s.description || ''}</p>
+            <div class="flex items-center gap-1 pt-1 border-t border-surface-750/50">
+              <span class="text-[9px] text-slate-500 mr-1">Agentes:</span>
+              \${members.map(m => \`<span title="\${m.name} (\${m.role})" class="text-xs">\${m.avatar}</span>\`).join('')}
             </div>
-          </div>
-          <p class="text-[10px] text-slate-400 line-clamp-1">\${s.description || ''}</p>
-          <div class="flex items-center gap-1 pt-1 border-t border-surface-750/50">
-            <span class="text-[9px] text-slate-500 mr-1">Agentes:</span>
-            \${members.map(m => \`<span title="\${m.name} (\${m.role})" class="text-xs">\${m.avatar}</span>\`).join('')}
-          </div>
-        \`;
-        container.appendChild(btn);
-      });
+          \`;
+          container.appendChild(btn);
+        });
+      }
+
+      // 2. Modelos del Proveedor Activo Section
+      if (modelsToRender.length > 0) {
+        const modelSecHeader = document.createElement('div');
+        modelSecHeader.className = 'px-2 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5 border-t border-surface-750/60 mt-1';
+        modelSecHeader.innerHTML = '<i data-lucide="cpu" class="w-3 h-3 text-cyan-400"></i> Modelos Directos: ' + (pantheonState.activeProvider || 'Omniroute') + ' (' + modelsToRender.length + ')';
+        container.appendChild(modelSecHeader);
+
+        modelsToRender.forEach(m => {
+          const isSelected = pantheonState.activeSquadId === 'model:' + m.id || pantheonState.activeSquadId === m.id;
+          const btn = document.createElement('button');
+          btn.className = 'w-full text-left p-2 rounded-xl border transition-all flex flex-col space-y-1 cursor-pointer ' +
+            (isSelected ? 'bg-cyan-600/20 border-cyan-500/50 shadow-md' : 'bg-surface-800/80 border-surface-750 hover:bg-surface-750 hover:border-surface-600');
+          btn.onclick = () => selectHeaderSquad('model:' + m.id);
+
+          btn.innerHTML = \`
+            <div class="flex items-center justify-between w-full">
+              <div class="flex items-center gap-2 truncate">
+                <span class="text-sm">⚡</span>
+                <span class="font-bold text-xs truncate \${isSelected ? 'text-cyan-200' : 'text-white'}">\${m.name || m.id}</span>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="text-[9px] px-1.5 py-0.2 rounded font-mono bg-cyan-500/20 text-cyan-300">\${m.provider}</span>
+                \${m.reasoning ? '<span class="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono">reasoning</span>' : ''}
+                \${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5 text-cyan-400"></i>' : ''}
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-[9px] text-slate-400">
+              <span class="truncate font-mono">\${m.id}</span>
+              <span class="shrink-0 text-slate-500">\${Math.round((m.contextWindow || 128000) / 1000)}k ctx</span>
+            </div>
+          \`;
+          container.appendChild(btn);
+        });
+      }
+
       lucide.createIcons();
     }
 
@@ -5501,41 +5564,17 @@ for chunk in response:
 
     function filterSquadDropdown(query) {
       const q = (query || '').toLowerCase().trim();
-      const container = document.getElementById('squadsDropdownList');
-      if (!container) return;
-      const filtered = pantheonState.squads.filter(s => s.name.toLowerCase().includes(q) || (s.description || '').toLowerCase().includes(q));
-      container.innerHTML = '';
-      if (filtered.length === 0) {
-        container.innerHTML = '<div class="p-4 text-center text-slate-400 text-xs">No se encontraron escuadrones.</div>';
+      if (!q) {
+        renderHeaderSquadDropdown();
         return;
       }
-      filtered.forEach(s => {
-        const isSelected = s.id === pantheonState.activeSquadId;
-        const members = pantheonState.agents.filter(a => s.memberIds.includes(a.id));
-        const btn = document.createElement('button');
-        btn.className = 'w-full text-left p-2.5 rounded-xl border transition-all flex flex-col space-y-1.5 cursor-pointer ' +
-          (isSelected ? 'bg-purple-600/20 border-purple-500/50 shadow-md' : 'bg-surface-800/80 border-surface-750 hover:bg-surface-750 hover:border-surface-600');
-        btn.onclick = () => selectHeaderSquad(s.id);
-        btn.innerHTML = \`
-          <div class="flex items-center justify-between w-full">
-            <div class="flex items-center gap-2 truncate">
-              <span class="text-base">🛡️</span>
-              <span class="font-bold text-xs truncate \${isSelected ? 'text-purple-200' : 'text-white'}">\${s.name}</span>
-            </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <span class="text-[9px] px-1.5 py-0.2 rounded font-mono bg-purple-500/20 text-purple-300">\${s.workflowMode}</span>
-              \${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5 text-purple-400"></i>' : ''}
-            </div>
-          </div>
-          <p class="text-[10px] text-slate-400 line-clamp-1">\${s.description || ''}</p>
-          <div class="flex items-center gap-1 pt-1 border-t border-surface-750/50">
-            <span class="text-[9px] text-slate-500 mr-1">Agentes:</span>
-            \${members.map(m => \`<span title="\${m.name} (\${m.role})" class="text-xs">\${m.avatar}</span>\`).join('')}
-          </div>
-        \`;
-        container.appendChild(btn);
-      });
-      lucide.createIcons();
+      const filteredSquads = pantheonState.squads.filter(s =>
+        s.name.toLowerCase().includes(q) || (s.description || '').toLowerCase().includes(q)
+      );
+      const filteredModels = (pantheonState.activeProviderModels || []).filter(m =>
+        m.id.toLowerCase().includes(q) || (m.name || '').toLowerCase().includes(q) || m.provider.toLowerCase().includes(q)
+      );
+      renderHeaderSquadDropdown(filteredSquads, filteredModels);
     }
 
     function handleMentionWheel(e) {

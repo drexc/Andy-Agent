@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { Model } from "@earendil-works/pi-ai";
@@ -74,7 +74,17 @@ export class WebUiSessionPool {
 	constructor(cwd = process.cwd()) {
 		this.cwd = cwd;
 		this.authStorage = AuthStorage.create();
-		this.modelRegistry = ModelRegistry.create(this.authStorage);
+
+		const andyModelsJson = path.join(os.homedir(), ".andy", "agent", "models.json");
+		const primeModelsJson = path.join(os.homedir(), ".prime", "agent", "models.json");
+		if (!existsSync(andyModelsJson) && existsSync(primeModelsJson)) {
+			try {
+				mkdirSync(path.dirname(andyModelsJson), { recursive: true });
+				copyFileSync(primeModelsJson, andyModelsJson);
+			} catch {}
+		}
+
+		this.modelRegistry = ModelRegistry.create(this.authStorage, andyModelsJson);
 		this.settingsManager = SettingsManager.create(cwd);
 		this.storageDir = path.join(os.homedir(), ".andy", "agent", "webui_sessions");
 		this.projectsFilePath = path.join(os.homedir(), ".andy", "agent", "projects.json");
@@ -544,6 +554,14 @@ export class WebUiSessionPool {
 
 	public getAvailableModels(): Model<any>[] {
 		return this.modelRegistry.getAll();
+	}
+
+	public getActiveProviderModels(): Model<any>[] {
+		const defaultProvider = this.settingsManager.getDefaultProvider() || "omniroute";
+		const all = this.modelRegistry.getAll();
+		const providerModels = all.filter((m) => m.provider === defaultProvider);
+		if (providerModels.length > 0) return providerModels;
+		return all.filter((m) => m.provider === "omniroute" || m.provider === "openrouter");
 	}
 
 	public getModelRegistry(): ModelRegistry {
