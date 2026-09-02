@@ -1604,6 +1604,62 @@ ${prompt || ""}`;
 
 				this.addLog("INFO", "Terminal", `Executing: "${command}" in "${targetCwd}"`);
 
+				// Special interceptor for systemctl restart andy-agent
+				const trimmedCmd = command.trim();
+				if (
+					trimmedCmd === "systemctl restart andy-agent" ||
+					trimmedCmd === "sudo systemctl restart andy-agent" ||
+					trimmedCmd === "systemctl --user restart andy-agent" ||
+					trimmedCmd === "pm2 restart andy-agent"
+				) {
+					this.addLog("WARN", "System", `Terminal command triggered system restart: "${trimmedCmd}"`);
+					if (body?.stream === true) {
+						res.writeHead(200, {
+							"Content-Type": "text/event-stream; charset=utf-8",
+							"Cache-Control": "no-cache, no-transform",
+							Connection: "keep-alive",
+						});
+						res.write(
+							`data: ${JSON.stringify({
+								type: "stdout",
+								text: `[SYSTEM] Ejecutando: ${trimmedCmd}\n[SYSTEM] Reiniciando Andy Agent... esperando reconexión...\n`,
+							})}\n\n`,
+						);
+						res.write(`data: ${JSON.stringify({ type: "exit", code: 0 })}\n\n`);
+						res.write("data: [DONE]\n\n");
+						res.end();
+					} else {
+						res.writeHead(200, { "Content-Type": "application/json" });
+						res.end(
+							JSON.stringify({
+								command,
+								cwd: targetCwd,
+								exitCode: 0,
+								stdout: `[SYSTEM] Ejecutando: ${trimmedCmd}\n[SYSTEM] Reiniciando Andy Agent...\n`,
+								stderr: "",
+								success: true,
+							}),
+						);
+					}
+
+					setTimeout(() => {
+						const isWindows = process.platform === "win32";
+						if (!isWindows) {
+							try {
+								spawn("systemctl", ["restart", "andy-agent"], { detached: true, stdio: "ignore" }).unref();
+							} catch {}
+							try {
+								spawn("systemctl", ["--user", "restart", "andy-agent"], {
+									detached: true,
+									stdio: "ignore",
+								}).unref();
+							} catch {}
+						}
+						process.exit(0);
+					}, 600);
+					return;
+				}
+
 				const isWindows = process.platform === "win32";
 				const shell = isWindows ? "powershell.exe" : "/bin/bash";
 				const shellArgs = isWindows ? ["-NoProfile", "-Command", command] : ["-c", command];
@@ -1659,6 +1715,39 @@ ${prompt || ""}`;
 						res.end(JSON.stringify({ error: err.message }));
 					});
 				}
+				return;
+			}
+
+			// --- 13.2 SYSTEM RESTART API ---
+			if (method === "POST" && (url === "/api/system/restart" || url === "/v1/system/restart")) {
+				this.addLog("WARN", "System", "Server restart initiated via /api/system/restart");
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(
+					JSON.stringify({
+						success: true,
+						message: "Reiniciando Andy Agent... el servicio volverá en unos segundos.",
+						action: "restart",
+					}),
+				);
+
+				setTimeout(() => {
+					const isWindows = process.platform === "win32";
+					if (!isWindows) {
+						try {
+							spawn("systemctl", ["restart", "andy-agent"], { detached: true, stdio: "ignore" }).unref();
+						} catch {}
+						try {
+							spawn("systemctl", ["--user", "restart", "andy-agent"], {
+								detached: true,
+								stdio: "ignore",
+							}).unref();
+						} catch {}
+						try {
+							spawn("pm2", ["restart", "andy-agent"], { detached: true, stdio: "ignore" }).unref();
+						} catch {}
+					}
+					process.exit(0);
+				}, 600);
 				return;
 			}
 

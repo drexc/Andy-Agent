@@ -1557,28 +1557,46 @@ for chunk in response:
           <p class="text-xs text-slate-400 mt-0.5">Ejecuta comandos de consola en el entorno del proyecto activo con streaming de salida en tiempo real.</p>
         </div>
 
-        <!-- Quick Action Preset Buttons -->
-        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-wrap">
-          <button onclick="runTerminalPreset('npm run check')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors cursor-pointer">
-            <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i>
-            npm check
+        <!-- Quick Action Preset Buttons & Server Restart Button -->
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar flex-wrap">
+          <button onclick="requestServerRestart()" class="px-3 py-1.5 bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-md shadow-rose-600/20 transition-all cursor-pointer border border-rose-400/30 shrink-0" title="Reiniciar el servicio de Andy Agent (systemctl restart andy-agent / process restart)">
+            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+            <span>Reiniciar Andy Agent</span>
           </button>
-          <button onclick="runTerminalPreset('npm run build')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors cursor-pointer">
-            <i data-lucide="package" class="w-3.5 h-3.5 text-cyan-400"></i>
-            npm build
-          </button>
-          <button onclick="runTerminalPreset('git status')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors cursor-pointer">
-            <i data-lucide="git-commit" class="w-3.5 h-3.5 text-amber-400"></i>
-            git status
-          </button>
-          <button onclick="runTerminalPreset('git log -n 5 --oneline')" class="px-2.5 py-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg text-xs font-mono flex items-center gap-1 transition-colors cursor-pointer">
-            <i data-lucide="git-pull-request" class="w-3.5 h-3.5 text-purple-400"></i>
-            git log
-          </button>
-          <button onclick="clearTerminalScreen()" class="p-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer" title="Limpiar pantalla">
+
+          <button onclick="clearTerminalScreen()" class="p-1.5 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer shrink-0" title="Limpiar pantalla">
             <i data-lucide="trash-2" class="w-4 h-4"></i>
           </button>
         </div>
+      </div>
+
+      <!-- Quick Command Chips Bar -->
+      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 text-xs shrink-0">
+        <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mr-1">Acciones:</span>
+        <button onclick="runTerminalPreset('systemctl status andy-agent')" class="px-2 py-1 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-emerald-300 hover:text-white rounded-lg font-mono text-[11px] flex items-center gap-1 transition-colors cursor-pointer shrink-0">
+          <i data-lucide="activity" class="w-3 h-3 text-emerald-400"></i>
+          status andy-agent
+        </button>
+        <button onclick="runTerminalPreset('journalctl -u andy-agent -n 40 --no-pager')" class="px-2 py-1 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-purple-300 hover:text-white rounded-lg font-mono text-[11px] flex items-center gap-1 transition-colors cursor-pointer shrink-0">
+          <i data-lucide="file-text" class="w-3 h-3 text-purple-400"></i>
+          logs daemon
+        </button>
+        <button onclick="runTerminalPreset('npm run check')" class="px-2 py-1 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg font-mono text-[11px] flex items-center gap-1 transition-colors cursor-pointer shrink-0">
+          <i data-lucide="check-circle" class="w-3 h-3 text-emerald-400"></i>
+          npm check
+        </button>
+        <button onclick="runTerminalPreset('npm run build')" class="px-2 py-1 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg font-mono text-[11px] flex items-center gap-1 transition-colors cursor-pointer shrink-0">
+          <i data-lucide="package" class="w-3 h-3 text-cyan-400"></i>
+          npm build
+        </button>
+        <button onclick="runTerminalPreset('git status')" class="px-2 py-1 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg font-mono text-[11px] flex items-center gap-1 transition-colors cursor-pointer shrink-0">
+          <i data-lucide="git-commit" class="w-3 h-3 text-amber-400"></i>
+          git status
+        </button>
+        <button onclick="runTerminalPreset('git log -n 5 --oneline')" class="px-2 py-1 bg-surface-800 hover:bg-surface-750 border border-surface-700 text-slate-300 hover:text-white rounded-lg font-mono text-[11px] flex items-center gap-1 transition-colors cursor-pointer shrink-0">
+          <i data-lucide="git-pull-request" class="w-3 h-3 text-indigo-400"></i>
+          git log
+        </button>
       </div>
 
       <!-- Terminal Output Screen -->
@@ -1589,7 +1607,7 @@ for chunk in response:
       <!-- Terminal Input Line -->
       <div class="bg-surface-850 border border-surface-700 rounded-xl p-2 flex items-center gap-2 shadow-lg shrink-0">
         <span class="text-emerald-400 font-mono font-bold text-xs pl-2 select-none">$</span>
-        <input id="terminalCommandInput" type="text" placeholder="Escribe un comando de consola (ej: npm run build, dir, git status)..." onkeydown="handleTerminalKeyDown(event)" autocomplete="off" class="flex-1 bg-transparent font-mono text-xs text-white placeholder-slate-500 focus:outline-none">
+        <input id="terminalCommandInput" type="text" placeholder="Escribe un comando de consola (ej: systemctl restart andy-agent, npm run check, git status)..." onkeydown="handleTerminalKeyDown(event)" autocomplete="off" class="flex-1 bg-transparent font-mono text-xs text-white placeholder-slate-500 focus:outline-none">
         <button id="terminalRunBtn" onclick="submitTerminalCommand()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all cursor-pointer">
           <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
           Ejecutar
@@ -4760,6 +4778,16 @@ for chunk in response:
       terminalState.historyIndex = -1;
       input.value = '';
 
+      if (
+        command === 'systemctl restart andy-agent' ||
+        command === 'sudo systemctl restart andy-agent' ||
+        command === 'systemctl --user restart andy-agent' ||
+        command === 'pm2 restart andy-agent'
+      ) {
+        requestServerRestart();
+        return;
+      }
+
       const screen = document.getElementById('terminalScreen');
       const runBtn = document.getElementById('terminalRunBtn');
       terminalState.isRunning = true;
@@ -4853,6 +4881,70 @@ for chunk in response:
       }
     }
 
+    async function requestServerRestart() {
+      if (!confirm('¿Estás seguro de reiniciar Andy Agent?\\n\\n(Se ejecutará el reinicio del servicio daemon y la WebUI se reconectará automáticamente en unos segundos).')) {
+        return;
+      }
+
+      const screen = document.getElementById('terminalScreen');
+      const restartBlock = document.createElement('div');
+      restartBlock.className = 'pt-2 pb-2 border-t-2 border-amber-500/40 bg-amber-500/10 p-3.5 rounded-xl my-2 space-y-1.5 shadow-lg';
+      restartBlock.innerHTML = \`
+        <div class="flex items-center gap-2 text-amber-300 font-bold text-xs">
+          <span class="animate-spin inline-block text-base">🔄</span>
+          <span>Reiniciando servicio Andy Agent...</span>
+          <span class="text-[10px] text-slate-400 font-mono ml-auto">systemctl restart andy-agent</span>
+        </div>
+        <p class="text-[11px] text-slate-300">Enviando señal de reinicio al servidor. Esperando que el daemon reinicie el proceso...</p>
+        <div id="restartProgressStatus" class="text-[10px] font-mono text-amber-400 font-semibold">Paso 1/2: Notificando al backend...</div>
+      \`;
+      screen.appendChild(restartBlock);
+      screen.scrollTop = screen.scrollHeight;
+
+      const statusEl = document.getElementById('restartProgressStatus');
+
+      try {
+        await fetch('/api/system/restart', { method: 'POST' });
+        if (statusEl) statusEl.innerText = 'Paso 2/2: Servidor reiniciando. Verificando disponibilidad...';
+      } catch (err) {
+        if (statusEl) statusEl.innerText = 'Paso 2/2: Reinicio en curso (conexión temporalmente cerrada). Verificando disponibilidad...';
+      }
+
+      // Polling /health until server responds
+      let attempts = 0;
+      const maxAttempts = 40;
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        if (statusEl) statusEl.innerText = \`Paso 2/2: Reconectando con Andy Agent (intento \${attempts}/\${maxAttempts})...\`;
+        try {
+          const res = await originalFetch('/health', { cache: 'no-store' });
+          if (res.ok) {
+            clearInterval(pollInterval);
+            if (statusEl) {
+              statusEl.className = 'text-[11px] font-bold text-emerald-400 font-mono';
+              statusEl.innerText = '✓ ¡Andy Agent reiniciado y en línea con éxito!';
+            }
+            const okBlock = document.createElement('div');
+            okBlock.className = 'p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2 mt-2';
+            okBlock.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i> Servicio reanudado exitosamente.';
+            screen.appendChild(okBlock);
+            screen.scrollTop = screen.scrollHeight;
+            lucide.createIcons();
+            setTimeout(() => {
+              initializeApp();
+            }, 1000);
+          }
+        } catch (e) {
+          if (attempts >= maxAttempts) {
+            clearInterval(pollInterval);
+            if (statusEl) {
+              statusEl.className = 'text-[11px] font-bold text-rose-400 font-mono';
+              statusEl.innerText = '⚠️ Tiempo de espera agotado. Por favor recarga la página manualmente.';
+            }
+          }
+        }
+      }, 1000);
+    }
 
     // --- STRUCTURAL TOOLS CALLS ---
     async function fetchGraftMap() {
