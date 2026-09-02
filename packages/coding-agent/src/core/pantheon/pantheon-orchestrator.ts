@@ -234,7 +234,7 @@ export class PantheonOrchestrator {
 		}
 
 		// Load Project Context (MEMORY.md, AGENTS.md, Files, CWD)
-		const projectContext = this.loadProjectContext(effectiveProjectInfo);
+		const projectContext = await this.loadProjectContext(effectiveProjectInfo);
 
 		// Collect Graft Structural Context
 		let graftContextData: any;
@@ -701,7 +701,47 @@ export class PantheonOrchestrator {
 		return extraResultsText;
 	}
 
-	private loadProjectContext(projectInfo?: PantheonProjectInfo): PantheonProjectContext {
+	private async extractXlsxText(filePath: string): Promise<string> {
+		return new Promise((resolve) => {
+			try {
+				const yauzl = require("yauzl");
+				yauzl.open(filePath, { lazyEntries: true }, (err: any, zipfile: any) => {
+					if (err || !zipfile) return resolve("");
+					let sharedStrings: string[] = [];
+
+					zipfile.readEntry();
+					zipfile.on("entry", (entry: any) => {
+						if (entry.fileName === "xl/sharedStrings.xml") {
+							zipfile.openReadStream(entry, (sErr: any, readStream: any) => {
+								if (sErr) return zipfile.readEntry();
+								const chunks: Buffer[] = [];
+								readStream.on("data", (chunk: Buffer) => chunks.push(chunk));
+								readStream.on("end", () => {
+									const xml = Buffer.concat(chunks).toString("utf-8");
+									const matches = xml.match(/<t[^>]*>([\s\S]*?)<\/t>/g) || [];
+									sharedStrings = matches.map((m: string) => m.replace(/<[^>]+>/g, "").trim()).filter(Boolean);
+									zipfile.readEntry();
+								});
+							});
+						} else {
+							zipfile.readEntry();
+						}
+					});
+					zipfile.on("end", () => {
+						if (sharedStrings.length === 0) return resolve("");
+						const cleanStrings = Array.from(new Set(sharedStrings));
+						const result = `### 📊 Especificación de Protocolo desde Archivo Excel (${path.basename(filePath)}):\n\`\`\`text\n${cleanStrings.slice(0, 300).join("\n")}\n\`\`\``;
+						resolve(result);
+					});
+					zipfile.on("error", () => resolve(""));
+				});
+			} catch {
+				resolve("");
+			}
+		});
+	}
+
+	private async loadProjectContext(projectInfo?: PantheonProjectInfo): Promise<PantheonProjectContext> {
 		const targetCwd = projectInfo?.path ? path.resolve(projectInfo.path) : this.cwd;
 		const name = projectInfo?.name || path.basename(targetCwd) || "Proyecto Principal";
 		const description = projectInfo?.description;
@@ -752,10 +792,11 @@ export class PantheonOrchestrator {
 		try {
 			const scanned: string[] = [];
 			const manifestFiles: string[] = [];
+			const docFiles: string[] = [];
 			const sourceFiles: string[] = [];
 
 			const scanDir = (dir: string, depth = 0) => {
-				if (depth > 6 || scanned.length >= 200) return;
+				if (depth > 6 || scanned.length >= 250) return;
 				if (!existsSync(dir)) return;
 				try {
 					const entries = readdirSync(dir);
@@ -797,13 +838,15 @@ export class PantheonOrchestrator {
 									lower === "pyproject.toml"
 								) {
 									manifestFiles.push(fullPath);
+								} else if (lower.endsWith(".xlsx") || lower.endsWith(".xls") || lower.endsWith(".csv")) {
+									docFiles.push(fullPath);
 								} else if (
 									(lower.endsWith(".cs") ||
 										lower.endsWith(".ts") ||
 										lower.endsWith(".py") ||
 										lower.endsWith(".rs") ||
 										lower.endsWith(".go")) &&
-									sourceFiles.length < 15
+									sourceFiles.length < 50
 								) {
 									sourceFiles.push(fullPath);
 								}
@@ -814,7 +857,7 @@ export class PantheonOrchestrator {
 			};
 
 			scanDir(targetCwd);
-			fileList = scanned.slice(0, 150).join("\n");
+			fileList = scanned.slice(0, 200).join("\n");
 			if (scanned.length === 0) {
 				fileList = "(Directorio vacío o recién inicializado)";
 			}
@@ -832,43 +875,74 @@ export class PantheonOrchestrator {
 				manifestSummary = manifests.join("\n\n");
 			}
 
-			// Extract public interfaces, models, and classes from source files
+			// Extract public interfaces, models, classes and documentation
+			const snippets: string[] = [];
+
+			// 1. Decode Excel / protocol documentation files
+			if (docFiles.length > 0) {
+				for (const df of docFiles.slice(0, 3)) {
+					try {
+						const xlsxText = await this.extractXlsxText(df);
+						if (xlsxText) {
+							snippets.push(xlsxText);
+						}
+					} catch {}
+				}
+			}
+
+			// 2. Sort source files to prioritize root files & protocol handlers (Comandos.cs, Main.cs, Procesador.cs, Packet.cs)
+			sourceFiles.sort((a, b) => {
+				const aBase = path.basename(a).toLowerCase();
+				const bBase = path.basename(b).toLowerCase();
+				const isPriority = (name: string) =>
+					name.includes("comando") ||
+					name.includes("main") ||
+					name.includes("procesador") ||
+					name.includes("protocol") ||
+					name.includes("service") ||
+					name.includes("packet");
+				if (isPriority(aBase) && !isPriority(bBase)) return -1;
+				if (!isPriority(aBase) && isPriority(bBase)) return 1;
+				return a.length - b.length;
+			});
+
 			if (sourceFiles.length > 0) {
-				const snippets: string[] = [];
-				for (const sf of sourceFiles.slice(0, 25)) {
+				for (const sf of sourceFiles.slice(0, 40)) {
 					try {
 						const rel = path.relative(targetCwd, sf).replace(/\\/g, "/");
 						const content = readFileSync(sf, "utf-8");
 						const ext = path.extname(sf).slice(1) || "cs";
 
-						// If file is small (< 12KB), include full content for complete context
-						if (content.length <= 12000) {
+						// If file is small (< 15KB), include full content for complete context
+						if (content.length <= 15000) {
 							snippets.push(`### 🔍 ${rel} (Código Completo):\n\`\`\`${ext}\n${content}\n\`\`\``);
 						} else {
-							// For larger files, extract declarations, signatures, public methods, events, properties
+							// For larger files, extract declarations, signatures, public methods, events, properties, and constants
 							const lines = content.split(/\r?\n/);
 							const relevantLines = lines.filter(
 								(l) =>
-									/(?:public|internal|protected)\s+(?:class|interface|struct|enum|record|void|async|Task|event|string|int|bool|byte|List|Dictionary|delegate)/i.test(
+									/(?:public|internal|protected|const|static)\s+(?:class|interface|struct|enum|record|void|async|Task|event|string|int|bool|byte|List|Dictionary|delegate|byte\[\])/i.test(
 										l,
 									) ||
 									/#region|#endregion/i.test(l) ||
+									/0x[0-9A-Fa-f]{2}/.test(l) ||
+									/case\s+0x/i.test(l) ||
 									/namespace\s+|using\s+/i.test(l),
 							);
 							if (relevantLines.length > 0) {
 								snippets.push(
-									`### 🔍 ${rel} (Estructura/Signaturas públicas y eventos):\n\`\`\`${ext}\n${relevantLines.slice(0, 80).join("\n")}\n\`\`\``,
+									`### 🔍 ${rel} (Estructura/Signaturas públicas, constantes de protocolo y eventos):\n\`\`\`${ext}\n${relevantLines.slice(0, 180).join("\n")}\n\`\`\``,
 								);
 							} else {
 								snippets.push(
-									`### 🔍 ${rel} (Muestra inicial):\n\`\`\`${ext}\n${content.slice(0, 3000)}\n\`\`\``,
+									`### 🔍 ${rel} (Muestra inicial):\n\`\`\`${ext}\n${content.slice(0, 4000)}\n\`\`\``,
 								);
 							}
 						}
 					} catch {}
 				}
-				codeSnippetsSummary = snippets.join("\n\n");
 			}
+			codeSnippetsSummary = snippets.join("\n\n");
 		} catch {
 			fileList = "(No fue posible escanear los archivos del directorio)";
 		}
@@ -972,8 +1046,8 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 1. **Identidad del Agente**: Eres exclusivamente **@${agent.name}** (${agent.role}), un agente autónomo del escuadrón "${squad.name}" en el ecosistema Andy Agent. Tu única identidad es @${agent.name}. NUNCA te identifiques como Antigravity, Google DeepMind, OpenAI ni un asistente genérico.
 2. **Idioma y Formato Humano**: Responde siempre en **Español** con formato Markdown estructurado, limpio y profesional (encabezados, listas, tablas y bloques de código).
 3. **PROHIBICIÓN ABSOLUTA DE GENERAR PSEUDO-TAGS O TOKENS DE HERRAMIENTAS**: NUNCA generes tokens o etiquetas especiales de llamada a herramientas como \`<|tool_call_start|>\`, \`<|tool_call_end|>\`, \`<tool_call>\`, \`<arg_key>\`, \`<arg_value>\`, \`<action>\`. Toda la información del proyecto, manifiestos y código fuente ya ha sido leída y provista arriba. Redacta siempre en texto Markdown en Español para el usuario y para tus compañeros de escuadrón.
-4. **Acceso Directo y Total al Proyecto Activo**: Ya te encuentras ejecutando dentro del espacio de trabajo del proyecto activo ("${projectContext?.name || path.basename(this.cwd)}" en "${projectContext?.path || this.cwd}"). Toda la estructura de archivos, clases, interfaces públicas, manifiestos (.csproj / .sln) y modelos C# ya están completamente leídos e incluidos arriba.
-5. **PROHIBICIÓN ESTRICTA DE DECIR "NO PUEDO ACCEDER" O PEDIR COMANDOS DE TERMINAL PARA VER ARCHIVOS**: NUNCA digas "NO PUEDO Acceder a tu Filesystem", "no tengo acceso al código" ni pidas que el usuario ejecute "Get-ChildItem", "tree /F", "dir" o comparta archivos. Tienes el código fuente C# completo arriba en "Interfaces y Estructuras Públicas del Código Fuente" y "Árbol de Archivos del Proyecto".
+4. **Acceso Directo y Total al Proyecto Activo**: Ya te encuentras ejecutando dentro del espacio de trabajo del proyecto activo ("${projectContext?.name || path.basename(this.cwd)}" en "${projectContext?.path || this.cwd}"). Toda la estructura de archivos, clases, interfaces públicas, manifiestos (.csproj / .sln), modelos C# y documentación técnica de protocolos (incluyendo hojas Excel .xlsx decodificadas) ya están completamente leídos e incluidos arriba en tu contexto.
+5. **PROHIBICIÓN ESTRICTA DE DECIR "NO PUEDO ACCEDER", "NECESITO LOS ARCHIVOS" O PEDIR QUE EL USUARIO COMPARTA CÓDIGO**: NUNCA digas "NO PUEDO Acceder a tu Filesystem", "Necesito los Archivos Fuente para Proceder", "no tengo acceso al código" ni pidas que el usuario comparta archivos o ejecute "Get-ChildItem", "tree /F", "dir". Tienes el código fuente C# completo arriba en "Interfaces y Estructuras Públicas del Código Fuente", las tablas en "Especificación de Protocolo desde Archivo Excel" y la estructura en "Árbol de Archivos del Proyecto". Realiza el análisis comparativo, auditoría, diseño o implementación de inmediato con los datos provistos.
 6. **Programación Inmediata Sin Preguntas Retóricas**: No pidas confirmación para empezar ni preguntes "¿deseas que proceda?". Entrega de inmediato el diseño arquitectónico y el CÓDIGO FUENTE COMPLETO implementado.
 7. **Especialización Inmediata en tu Escuadrón**:\n${specializationBullets}`;
 
