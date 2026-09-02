@@ -3292,7 +3292,7 @@ ${prompt || ""}`;
 		targetAgentId: string | undefined,
 		_messages: any[],
 		nonSystem: any[],
-		_body: any,
+		body: any,
 	) {
 		const self = this;
 		const pantheonOrchestrator = this.pool.getPantheonOrchestrator(ideProject.id);
@@ -3387,6 +3387,7 @@ ${prompt || ""}`;
 				const auth = await self.pool.getModelRegistry().getApiKeyAndHeaders(resolvedModel);
 				const apiKey = auth.ok ? auth.apiKey : undefined;
 				let hasYielded = false;
+				let streamError: string | undefined;
 				try {
 					const streamResult = stream(resolvedModel, pContext, {
 						apiKey,
@@ -3397,10 +3398,12 @@ ${prompt || ""}`;
 						if (event.type === "text_delta" && event.delta) {
 							hasYielded = true;
 							yield event.delta;
+						} else if (event.type === "error") {
+							streamError = event.error?.errorMessage || "Error en stream del proveedor de IA";
 						}
 					}
-				} catch (_err: any) {
-					// Stream failed, proceed to fallback
+				} catch (err: any) {
+					streamError = err.message || String(err);
 				}
 
 				if (!hasYielded) {
@@ -3409,14 +3412,21 @@ ${prompt || ""}`;
 							apiKey,
 							temperature: temp,
 						});
-						for (const part of response.content) {
-							if (part.type === "text" && part.text) {
-								hasYielded = true;
-								yield part.text;
+						if (response.stopReason === "error") {
+							yield `\n\n[Error del proveedor de IA: ${response.errorMessage || streamError || "Inferencia fallida"}]`;
+						} else {
+							for (const part of response.content) {
+								if (part.type === "text" && part.text) {
+									hasYielded = true;
+									yield part.text;
+								}
+							}
+							if (!hasYielded) {
+								yield `\n\n[Aviso: El modelo ${resolvedModel.id} no retornó texto. ${streamError ? `Detalle: ${streamError}` : ""}]`;
 							}
 						}
 					} catch (fallbackErr: any) {
-						yield `[Error al invocar modelo: ${fallbackErr.message || String(fallbackErr)}]`;
+						yield `\n\n[Error al invocar modelo: ${fallbackErr.message || streamError || String(fallbackErr)}]`;
 					}
 				}
 			};
@@ -3432,7 +3442,7 @@ ${prompt || ""}`;
 		};
 		req.on("close", onClientClose);
 
-		const modelName = targetAgentId ? `agent:${targetAgentId}` : `squad:${squadId}`;
+		const returnedModel = body?.model || (targetAgentId ? `agent:${targetAgentId}` : `squad:${squadId}`);
 		let accumulatedFullText = "";
 
 		if (isStream) {
@@ -3449,7 +3459,7 @@ ${prompt || ""}`;
 					id: reqId,
 					object: "chat.completion.chunk",
 					created: Math.floor(Date.now() / 1000),
-					model: modelName,
+					model: returnedModel,
 					choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }],
 				})}\n\n`,
 			);
@@ -3467,12 +3477,12 @@ ${prompt || ""}`;
 						} else if (event.type === "delta") {
 							contentToSend = (event as any).delta || (event as any).text || "";
 						} else if (event.type === "tool_start") {
-							contentToSend = `\n\n> ⚙️ **Ejecutando ${event.tool === "write" ? "Modificación de Archivo" : "Comando en Terminal"}**: \`${event.target}\`...\n\n`;
+							contentToSend = `\n\n> ⚙️ **Ejecutando ${event.tool === "write" ? "Modificación de Archivo" : "Comando en Terminal"}**: \`${event.target || event.tool}\`...\n\n`;
 						} else if (event.type === "tool_result") {
 							if (event.tool === "write") {
-								contentToSend = `> ✓ **Archivo actualizado**: \`${event.target}\` (${event.output || "OK"})\n\n`;
+								contentToSend = `> ✓ **Archivo actualizado**: \`${event.target || "archivo"}\` (${event.output || "OK"})\n\n`;
 							} else {
-								contentToSend = `\n\`\`\`bash\n# ${event.target} (Exit code: ${event.exitCode ?? 0})\n${event.output || ""}\n\`\`\`\n\n`;
+								contentToSend = `\n\`\`\`bash\n# ${event.target || "comando"} (Exit code: ${event.exitCode ?? 0})\n${event.output || ""}\n\`\`\`\n\n`;
 							}
 						} else if (event.type === "agent_finish") {
 							contentToSend = "\n";
@@ -3485,7 +3495,7 @@ ${prompt || ""}`;
 									id: reqId,
 									object: "chat.completion.chunk",
 									created: Math.floor(Date.now() / 1000),
-									model: modelName,
+									model: returnedModel,
 									choices: [{ index: 0, delta: { content: contentToSend }, finish_reason: null }],
 								})}\n\n`,
 							);
@@ -3504,7 +3514,7 @@ ${prompt || ""}`;
 							id: reqId,
 							object: "chat.completion.chunk",
 							created: Math.floor(Date.now() / 1000),
-							model: modelName,
+							model: returnedModel,
 							choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
 						})}\n\n`,
 					);
@@ -3518,7 +3528,7 @@ ${prompt || ""}`;
 							id: reqId,
 							object: "chat.completion.chunk",
 							created: Math.floor(Date.now() / 1000),
-							model: modelName,
+							model: returnedModel,
 							choices: [
 								{
 									index: 0,
@@ -3572,7 +3582,7 @@ ${prompt || ""}`;
 						id: reqId,
 						object: "chat.completion",
 						created: Math.floor(Date.now() / 1000),
-						model: modelName,
+						model: returnedModel,
 						choices: [
 							{
 								index: 0,
@@ -3597,7 +3607,7 @@ ${prompt || ""}`;
 
 		// Persist interaction into IDE project session for full transparency in WebUI
 		try {
-			const sessionItem = await this.pool.getOrCreateSession(sessionId, modelName, undefined, ideProject.id);
+			const sessionItem = await this.pool.getOrCreateSession(sessionId, returnedModel, undefined, ideProject.id);
 			const cleanResponse = accumulatedFullText.trim();
 			if (cleanResponse) {
 				const assistantContent: (TextContent | ThinkingContent | ToolCall)[] = [
@@ -3608,7 +3618,7 @@ ${prompt || ""}`;
 					content: assistantContent,
 					api: "openai-completions",
 					provider: "pantheon",
-					model: modelName,
+					model: returnedModel,
 					usage: {
 						input: Math.ceil(prompt.length / 4),
 						output: Math.ceil(cleanResponse.length / 4),
