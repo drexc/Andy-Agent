@@ -1557,16 +1557,25 @@ ${prompt || ""}`;
 			}
 
 			// --- 13. GRAFT STUDIO API (PROJECT-ISOLATED) ---
+			// --- 13. GRAFT STUDIO API (PROJECT-ISOLATED & WORKSPACE-AWARE) ---
+			const customWorkspaceCandidate =
+				(req.headers["x-workspace-path"] as string) ||
+				(req.headers["x-project-dir"] as string) ||
+				(req.headers["x-project-path"] as string) ||
+				(req.headers["x-cwd"] as string) ||
+				parsedUrl.searchParams.get("workspace") ||
+				parsedUrl.searchParams.get("path") ||
+				undefined;
+
 			const targetProjectId = parsedUrl.searchParams.get("projectId") || undefined;
-			const graft = this.pool.getGraftEngine(targetProjectId);
+			let graft = this.pool.getGraftEngine(targetProjectId);
+
+			if (customWorkspaceCandidate && existsSync(customWorkspaceCandidate)) {
+				graft = this.pool.getOrCreateGraftEngine(undefined, path.resolve(customWorkspaceCandidate));
+			}
 
 			if (method === "GET" && (url === "/v1/graft/map" || url === "/api/graft/map")) {
-				const activeProj = this.pool.getProject(targetProjectId || "") || this.pool.getActiveProject();
-				this.addLog(
-					"TOOL",
-					"Graft",
-					`Executing graft.map() indexing for project "${activeProj.name}" (${activeProj.path})`,
-				);
+				this.addLog("TOOL", "Graft", `Executing graft.map() indexing for workspace "${graft.cwd}"`);
 				const map = await graft.map();
 				res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" });
 				res.end(map);
@@ -1606,11 +1615,54 @@ ${prompt || ""}`;
 			}
 
 			if (method === "GET" && (url === "/v1/graft/graph" || url === "/api/graft/graph")) {
-				const activeProj = this.pool.getProject(targetProjectId || "") || this.pool.getActiveProject();
-				this.addLog("TOOL", "Graft", `Exporting Code Graph Data for project "${activeProj.name}"`);
+				this.addLog("TOOL", "Graft", `Exporting Code Graph Data for workspace "${graft.cwd}"`);
 				const graphData = await graft.graphData();
 				res.writeHead(200, { "Content-Type": "application/json" });
 				res.end(JSON.stringify(graphData, null, 2));
+				return;
+			}
+
+			if (method === "GET" && (url === "/v1/graft/file" || url === "/api/graft/file")) {
+				const localGraphPath = path.join(graft.cwd, ".andy", "graft", "graph.json");
+				const altGraphPath = path.join(graft.cwd, ".graft", "graph.json");
+				const foundPath = existsSync(localGraphPath)
+					? localGraphPath
+					: existsSync(altGraphPath)
+						? altGraphPath
+						: null;
+
+				if (foundPath) {
+					const content = readFileSync(foundPath, "utf-8");
+					res.writeHead(200, { "Content-Type": "application/json" });
+					res.end(content);
+					return;
+				}
+
+				// If not yet generated, generate and return
+				const graphData = await graft.graphData();
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify(graphData, null, 2));
+				return;
+			}
+
+			if (method === "POST" && (url === "/v1/graft/sync" || url === "/api/graft/sync")) {
+				this.addLog("TOOL", "Graft", `Syncing and persisting Code Graph in "${graft.cwd}"`);
+				await graft.init();
+				const graphData = await graft.graphData();
+				const localGraphPath = path.join(graft.cwd, ".andy", "graft", "graph.json");
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(
+					JSON.stringify(
+						{
+							success: true,
+							savedPath: localGraphPath,
+							metrics: graphData.metrics,
+							totalFiles: graphData.nodes.length,
+						},
+						null,
+						2,
+					),
+				);
 				return;
 			}
 

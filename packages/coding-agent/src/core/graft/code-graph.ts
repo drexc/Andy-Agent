@@ -1,4 +1,5 @@
-import { readdir, readFile } from "node:fs/promises";
+import { existsSync, mkdirSync } from "node:fs";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { type CodeSymbol, parseFileAst } from "./ast-parser.js";
 
@@ -164,6 +165,21 @@ export class CodeGraph {
 		}
 
 		this.isIndexed = true;
+		try {
+			await this.saveGraphToDisk();
+		} catch {}
+	}
+
+	public async saveGraphToDisk(): Promise<void> {
+		try {
+			const data = this.getGraphData();
+			const cacheDir = join(this.rootDir, ".andy", "graft");
+			if (!existsSync(cacheDir)) {
+				mkdirSync(cacheDir, { recursive: true });
+			}
+			const cacheFile = join(cacheDir, "graph.json");
+			await writeFile(cacheFile, JSON.stringify(data, null, 2), "utf-8");
+		} catch {}
 	}
 
 	public async ensureIndexed(): Promise<void> {

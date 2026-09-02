@@ -478,13 +478,13 @@ export class WebUiSessionPool {
 	}
 
 	public getOrCreateGraftEngine(projectId?: string, customPath?: string): GraftEngine {
-		const pId = projectId || this.activeProjectId;
-		let engine = this.graftEngines.get(pId);
-		if (!engine) {
-			const project = this.projects.get(pId);
-			const targetPath = customPath || project?.path || this.cwd;
+		const key = customPath ? `workspace:${customPath}` : projectId || this.activeProjectId;
+		let engine = this.graftEngines.get(key);
+		const project = projectId ? this.projects.get(projectId) : this.projects.get(this.activeProjectId);
+		const targetPath = customPath || project?.path || this.cwd;
+		if (!engine || engine.cwd !== targetPath) {
 			engine = new GraftEngine(targetPath);
-			this.graftEngines.set(pId, engine);
+			this.graftEngines.set(key, engine);
 		}
 		return engine;
 	}
