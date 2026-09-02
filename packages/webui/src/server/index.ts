@@ -3059,6 +3059,10 @@ ${prompt || ""}`;
 						: Array.isArray(turn.content)
 							? turn.content.map((c: any) => (c.type === "text" ? c.text || "" : "")).join(" ")
 							: "";
+				// Clean out previous hallucinated prompts asking for files / Get-ChildItem
+				if (tText.includes("Get-ChildItem") || tText.includes("NO PUEDO Acceder") || tText.includes("tree /F")) {
+					continue;
+				}
 				if (tText) {
 					historySnippet += `- ${roleLabel}: ${tText.slice(0, 300)}\n`;
 				}
