@@ -1953,12 +1953,14 @@ ${prompt || ""}`;
 				};
 
 				try {
-					await pantheonOrchestrator.executeTurn(
+					const turnMessages = await pantheonOrchestrator.executeTurn(
 						squadId,
 						prompt,
 						async (event) => {
 							if (!res.writableEnded) {
-								res.write(`data: ${JSON.stringify(event)}\n\n`);
+								try {
+									res.write(`data: ${JSON.stringify(event)}\n\n`);
+								} catch {}
 							}
 						},
 						{
@@ -1972,15 +1974,78 @@ ${prompt || ""}`;
 							},
 						},
 					);
+
+					// Persist Turn Messages into the Project Session
+					const targetSessionId = body?.sessionId || "default";
+					try {
+						const sessionItem = await this.pool.getOrCreateSession(
+							targetSessionId,
+							undefined,
+							undefined,
+							activeProj.id,
+						);
+						sessionItem.lastActive = Date.now();
+
+						// Smart auto-title from first user prompt
+						if (
+							prompt &&
+							(sessionItem.title.startsWith("Chat ") ||
+								sessionItem.title.startsWith("session-") ||
+								sessionItem.title === "default")
+						) {
+							const cleanTitle = prompt
+								.trim()
+								.replace(/^[/#@\s]+/, "")
+								.slice(0, 32);
+							if (cleanTitle) {
+								sessionItem.title = cleanTitle;
+							}
+						}
+
+						// Append user turn and all agent responses
+						const msgs = sessionItem.session.state.messages;
+						for (const msg of turnMessages) {
+							if (msg.senderId === "user") {
+								msgs.push({
+									role: "user",
+									content: msg.content,
+									timestamp: Date.now(),
+								} as any);
+							} else {
+								msgs.push({
+									role: "assistant",
+									content: msg.content,
+									agentId: msg.senderId,
+									agentName: msg.senderName,
+									agentRole: msg.senderRole,
+									agentAvatar: msg.senderAvatar,
+									agentColor: msg.senderColor,
+									timestamp: Date.now(),
+								} as any);
+							}
+						}
+
+						this.pool.persistSession(sessionItem);
+					} catch (saveErr: any) {
+						this.addLog(
+							"ERROR",
+							"Pantheon",
+							`Failed to persist session messages: ${saveErr?.message || saveErr}`,
+						);
+					}
 				} catch (err: any) {
 					this.addLog("ERROR", "Pantheon", `Turn error: ${err.message || String(err)}`);
 					if (!res.writableEnded) {
-						res.write(`data: ${JSON.stringify({ type: "error", error: err.message || String(err) })}\n\n`);
+						try {
+							res.write(`data: ${JSON.stringify({ type: "error", error: err.message || String(err) })}\n\n`);
+						} catch {}
 					}
 				} finally {
 					if (!res.writableEnded) {
-						res.write("data: [DONE]\n\n");
-						res.end();
+						try {
+							res.write("data: [DONE]\n\n");
+							res.end();
+						} catch {}
 					}
 				}
 				return;

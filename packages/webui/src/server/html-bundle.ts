@@ -3831,29 +3831,67 @@ for chunk in response:
         const rawText = extractMessageText(msg.content);
         const hasError = msg.stopReason === 'error' || Boolean(msg.errorMessage);
         const errorText = msg.errorMessage || (msg.stopReason === 'error' ? 'El proveedor agotó el tiempo de espera o rechazó la solicitud.' : '');
-        div.className = 'flex gap-3.5 p-4 rounded-xl bg-surface-850 border border-surface-750/70 text-xs shadow-sm my-2 group';
+
+        let agentName = msg.agentName || 'Andy Agent';
+        let agentAvatar = msg.agentAvatar || '🤖';
+        let agentColor = msg.agentColor || '#8B5CF6';
+        let agentRole = msg.agentRole || 'Pantheon Specialist';
+        let displayContent = rawText;
+
+        const headerMatch = rawText.match(/^\\[([^\\]@\\(\\)]+)\\s*(?:\\(@([^\\)]+)\\))?\\]:\\s*\\n?([\\s\\S]*)$/);
+        if (headerMatch) {
+          agentName = headerMatch[1].trim();
+          const targetAg = (pantheonState.agents || []).find(a => a.name.toLowerCase() === agentName.toLowerCase() || a.id.toLowerCase() === (headerMatch[2] || '').toLowerCase());
+          if (targetAg) {
+            agentAvatar = targetAg.avatar;
+            agentColor = targetAg.color;
+            agentRole = targetAg.role;
+          }
+          displayContent = headerMatch[3];
+        } else if (msg.agentId) {
+          const targetAg = (pantheonState.agents || []).find(a => a.id === msg.agentId || a.name === msg.agentName);
+          if (targetAg) {
+            agentAvatar = targetAg.avatar;
+            agentColor = targetAg.color;
+            agentRole = targetAg.role;
+          }
+        }
+
+        const isPantheon = Boolean(msg.agentName || headerMatch || msg.agentId);
+
+        div.className = 'flex gap-3.5 p-4 rounded-2xl bg-surface-850 border border-surface-700 text-xs shadow-lg my-2 group transition-all';
+        if (isPantheon) {
+          div.style.borderLeft = \`4px solid \${agentColor}\`;
+        }
+
         div.innerHTML = \`
-          <div class="w-7 h-7 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-white shrink-0 font-bold shadow-md shadow-brand-500/20">
-            Ψ
+          <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-xl bg-surface-800 border border-surface-700 shrink-0 shadow-sm">
+            \${agentAvatar}
           </div>
           <div class="flex-1 space-y-2 overflow-hidden">
-            <div class="flex items-center justify-between border-b border-surface-750/50 pb-1 mb-1">
-              <span class="text-[11px] font-semibold text-brand-300">Andy Agent</span>
-              <button onclick="copyMessageText(this, decodeURIComponent('\${encodeURIComponent(rawText || errorText || '')}'))" title="Copiar mensaje" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white p-1 rounded transition-opacity">
-                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-              </button>
+            <div class="flex items-center justify-between border-b border-surface-750/50 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-xs" style="color: \${agentColor}">\${agentName}</span>
+                <span class="text-[10px] text-slate-400 font-mono">\${agentRole}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] px-2.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 font-mono border border-purple-500/20">Pantheon Agent</span>
+                <button onclick="copyMessageText(this, decodeURIComponent('\${encodeURIComponent(displayContent || errorText || '')}'))" title="Copiar mensaje" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white p-1 rounded transition-opacity">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
             </div>
             \${hasError ? \`
               <div class="error-card p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 font-mono text-xs flex items-start gap-2.5 my-1">
                 <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
                 <div class="flex-1 overflow-hidden">
-                  <div class="font-bold text-rose-200 text-xs mb-1">Aviso del Asistente (Timeout / Error)</div>
+                  <div class="font-bold text-rose-200 text-xs mb-1">Aviso del Asistente</div>
                   <div class="text-[11px] leading-relaxed whitespace-pre-wrap select-text">\${errorText}</div>
                 </div>
               </div>
             \` : ''}
-            <div class="assistant-content prose-custom text-slate-100 leading-relaxed select-text">
-              \${rawText ? formatMarkdown(rawText) : (!hasError ? '<span class="text-slate-500 italic">Sin contenido</span>' : '')}
+            <div class="assistant-content prose-custom text-slate-100 leading-relaxed select-text pl-1 space-y-2">
+              \${displayContent ? formatMarkdown(cleanPantheonOutput(displayContent)) : (!hasError ? '<span class="text-slate-500 italic">Sin contenido</span>' : '')}
             </div>
           </div>
         \`;
