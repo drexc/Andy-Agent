@@ -1,10 +1,6 @@
-/**
- * Pantheon Orchestrator & Peer-to-Peer Multi-Agent Engine
- * Executes collaborative, sequential, and hierarchical workflows with Graft & RLM context.
- */
-
+import { exec } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { GraftEngine } from "../graft/index.js";
 import { PantheonRegistry } from "./pantheon-registry.js";
@@ -33,13 +29,26 @@ export interface PantheonProjectContext {
 }
 
 export interface PantheonExecutionEvent {
-	type: "agent_start" | "delta" | "agent_finish" | "delegation" | "graft_event" | "error" | "done";
+	type:
+		| "agent_start"
+		| "delta"
+		| "agent_finish"
+		| "delegation"
+		| "graft_event"
+		| "tool_start"
+		| "tool_result"
+		| "file_change"
+		| "error"
+		| "done";
 	agentId?: string;
 	agentName?: string;
 	agentAvatar?: string;
 	agentColor?: string;
 	agentRole?: string;
 	delta?: string;
+	tool?: string;
+	input?: any;
+	output?: any;
 	message?: PantheonMessage;
 	delegation?: PantheonTaskDelegation;
 	graftData?: any;
@@ -78,7 +87,7 @@ export class PantheonOrchestrator {
 	}
 
 	/**
-	 * Run a collaborative multi-agent turn
+	 * Run a collaborative multi-agent turn with real tool and file actions
 	 */
 	public async executeTurn(
 		squadId: string,
@@ -123,7 +132,7 @@ export class PantheonOrchestrator {
 			if (found) targetAgentId = found.id;
 		}
 
-		// Default to squad leader if no specific agent targeted
+		// Determine starting agent
 		const activeAgentId = targetAgentId || squad.leaderId || "hermes";
 		const primaryAgent = this.registry.getAgent(activeAgentId) || this.registry.getAgents()[0];
 
@@ -148,25 +157,12 @@ export class PantheonOrchestrator {
 		} catch {}
 
 		const allTurnMessages: PantheonMessage[] = [userMsg];
-		const agentsQueue: PantheonAgentProfile[] = [];
+		const agentsQueue: PantheonAgentProfile[] = [primaryAgent];
 		const executionCounts: Record<string, number> = {};
-		const maxTotalSteps = 6;
+		const maxTotalSteps = 4;
 		let currentStep = 0;
 
-		if (targetAgentId) {
-			// Specific agent targeted
-			const targeted = this.registry.getAgent(targetAgentId);
-			if (targeted) agentsQueue.push(targeted);
-		} else if (squad.workflowMode === "sequential") {
-			// In sequential mode, queue all squad members in pipeline order
-			for (const mId of squad.memberIds) {
-				const ag = this.registry.getAgent(mId);
-				if (ag) agentsQueue.push(ag);
-			}
-		} else {
-			// In hierarchical or collaborative mode, start with the primary leader
-			agentsQueue.push(primaryAgent);
-		}
+		const isExplicitDirectTarget = Boolean(targetAgentId);
 
 		while (agentsQueue.length > 0 && currentStep < maxTotalSteps) {
 			const currentAgent = agentsQueue.shift()!;
@@ -227,12 +223,24 @@ export class PantheonOrchestrator {
 				await onEvent({ type: "delta", agentId: currentAgent.id, delta: fullResponseText });
 			}
 
+			// Execute Real Actions (File writes / edits and terminal test commands)
+			const actionResultsText = await this.executeAgentActions(
+				currentAgent,
+				fullResponseText,
+				projectContext.path,
+				onEvent,
+			);
+
 			const cleanedResponse = this.sanitizeAgentOutput(fullResponseText);
-			const effectiveResponseText =
+			let effectiveResponseText =
 				cleanedResponse.trim() ||
 				(fullResponseText.includes("tool_call") || fullResponseText.includes("[read(")
-					? `[${currentAgent.name}] He examinado la estructura y dependencias del proyecto activo para coordinar con el escuadrón.`
+					? `[${currentAgent.name}] He procesado la tarea asignada sobre el proyecto activo.`
 					: fullResponseText);
+
+			if (actionResultsText) {
+				effectiveResponseText += actionResultsText;
+			}
 
 			const agentMsg: PantheonMessage = {
 				id: randomUUID(),
@@ -255,7 +263,12 @@ export class PantheonOrchestrator {
 				message: agentMsg,
 			});
 
-			// Check if current agent delegated to peer agents
+			// If user specifically targeted this one agent, we finish without delegating
+			if (isExplicitDirectTarget) {
+				break;
+			}
+
+			// Check if current agent explicitly delegated to peer agents
 			const peerDelegations = this.detectPeerDelegations(fullResponseText, currentAgent.id);
 			for (const del of peerDelegations) {
 				roomState.delegations.push(del);
@@ -269,44 +282,251 @@ export class PantheonOrchestrator {
 				if (nextAgent) {
 					const count = executionCounts[nextAgent.id] || 0;
 					const alreadyInQueue = agentsQueue.some((a) => a.id === nextAgent.id);
-					// Allow up to 2 turns per agent in a single user session to prevent infinite loops
 					if (count < 2 && !alreadyInQueue) {
 						agentsQueue.push(nextAgent);
 					}
 				}
 			}
 
-			// Squad Auto-Progression fallback:
-			// If no explicit delegation was detected but there are unexecuted squad members
-			if (peerDelegations.length === 0 && agentsQueue.length === 0 && squad.memberIds.length > 1) {
-				const unexecutedMembers = squad.memberIds
-					.filter((id) => id !== currentAgent.id && !(executionCounts[id] > 0))
-					.map((id) => this.registry.getAgent(id))
-					.filter(Boolean) as PantheonAgentProfile[];
+			// Purposeful Next-Step Routing (No Blind 5-Agent Tip Loops)
+			if (peerDelegations.length === 0 && agentsQueue.length === 0) {
+				// 1. If leader (Hermes) just completed the planning step:
+				if (currentAgent.id === "hermes") {
+					const lowerPrompt = userPrompt.toLowerCase();
+					const isCodingTask =
+						/crea|haz|programa|corrige|modifica|escribe|agrega|refactoriza|implementa|build|code|fix|function|clase|archivo/i.test(
+							lowerPrompt,
+						);
+					const isResearchTask = /investiga|explora|busca|analiza|documenta/i.test(lowerPrompt);
 
-				if (unexecutedMembers.length > 0) {
-					const nextSpecialist = unexecutedMembers[0];
-					agentsQueue.push(nextSpecialist);
-					const autoDel: PantheonTaskDelegation = {
-						taskId: `task-${randomUUID().slice(0, 8)}`,
-						fromAgentId: currentAgent.id,
-						toAgentId: nextSpecialist.id,
-						instruction: `Continuación de turno de colaboración en escuadrón "${squad.name}"`,
-						status: "pending",
-						createdAt: new Date().toISOString(),
-					};
-					roomState.delegations.push(autoDel);
-					await onEvent({
-						type: "delegation",
-						agentId: currentAgent.id,
-						delegation: autoDel,
-					});
+					if (isCodingTask && squad.memberIds.includes("hephaestus") && !(executionCounts.hephaestus > 0)) {
+						const coder = this.registry.getAgent("hephaestus");
+						if (coder) {
+							agentsQueue.push(coder);
+							await this.emitAutoDelegation(
+								currentAgent.id,
+								coder.id,
+								"Implementación de código",
+								roomState,
+								onEvent,
+							);
+						}
+					} else if (isResearchTask && squad.memberIds.includes("pythia") && !(executionCounts.pythia > 0)) {
+						const researcher = this.registry.getAgent("pythia");
+						if (researcher) {
+							agentsQueue.push(researcher);
+							await this.emitAutoDelegation(
+								currentAgent.id,
+								researcher.id,
+								"Investigación profunda de código",
+								roomState,
+								onEvent,
+							);
+						}
+					}
+				}
+				// 2. If Hephaestus (Coder) just modified or created files, automatically delegate to Argos (Tester/Auditor):
+				else if (
+					currentAgent.id === "hephaestus" &&
+					squad.memberIds.includes("argos") &&
+					!(executionCounts.argos > 0)
+				) {
+					const tester = this.registry.getAgent("argos");
+					if (tester) {
+						agentsQueue.push(tester);
+						await this.emitAutoDelegation(
+							currentAgent.id,
+							tester.id,
+							"Auditoría de calidad y ejecución de tests",
+							roomState,
+							onEvent,
+						);
+					}
 				}
 			}
 		}
 
 		await onEvent({ type: "done" });
 		return allTurnMessages;
+	}
+
+	private async emitAutoDelegation(
+		fromAgentId: string,
+		toAgentId: string,
+		instruction: string,
+		roomState: PantheonRoomState,
+		onEvent: PantheonEventCallback,
+	): Promise<void> {
+		const autoDel: PantheonTaskDelegation = {
+			taskId: `task-${randomUUID().slice(0, 8)}`,
+			fromAgentId,
+			toAgentId,
+			instruction,
+			status: "pending",
+			createdAt: new Date().toISOString(),
+		};
+		roomState.delegations.push(autoDel);
+		await onEvent({
+			type: "delegation",
+			agentId: fromAgentId,
+			delegation: autoDel,
+		});
+	}
+
+	private async executeCommandLine(
+		cmd: string,
+		cwd: string,
+	): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+		return new Promise((resolve) => {
+			exec(cmd, { cwd, timeout: 45000, maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
+				resolve({
+					stdout: (stdout || "").toString(),
+					stderr: (stderr || "").toString(),
+					exitCode: error ? (error.code ?? 1) : 0,
+				});
+			});
+		});
+	}
+
+	private async executeAgentActions(
+		agent: PantheonAgentProfile,
+		text: string,
+		targetCwd: string,
+		onEvent: PantheonEventCallback,
+	): Promise<string> {
+		let extraResultsText = "";
+
+		// 1. File Writing / Editing (for agents with write capability, e.g. Hephaestus)
+		if (agent.capabilities.write) {
+			// Pattern 1: ```file:path/to/file.ext or ```write:path/to/file.ext
+			const fileBlockRegex = /```(?:file|write|filepath):\s*([^\r\n]+)\r?\n([\s\S]*?)```/gi;
+			let match = fileBlockRegex.exec(text);
+			while (match !== null) {
+				const rawPath = match[1].trim().replace(/^['"]|['"]$/g, "");
+				const content = match[2];
+				if (rawPath && content !== undefined) {
+					try {
+						const fullPath = path.isAbsolute(rawPath) ? rawPath : path.resolve(targetCwd, rawPath);
+						const dir = path.dirname(fullPath);
+						if (!existsSync(dir)) {
+							mkdirSync(dir, { recursive: true });
+						}
+						writeFileSync(fullPath, content, "utf-8");
+						const lineCount = content.split(/\r?\n/).length;
+						const byteCount = Buffer.byteLength(content, "utf-8");
+
+						await onEvent({
+							type: "tool_start",
+							agentId: agent.id,
+							tool: "write",
+							input: { path: rawPath, lines: lineCount, bytes: byteCount },
+						});
+
+						const resultMsg = `✓ Archivo "${rawPath}" creado/modificado exitosamente (${lineCount} líneas, ${byteCount} bytes).`;
+						await onEvent({
+							type: "tool_result",
+							agentId: agent.id,
+							tool: "write",
+							output: resultMsg,
+						});
+
+						extraResultsText += `\n\n> 🛠️ **Acción ejecutada**: Se escribió el archivo \`${rawPath}\` (${lineCount} líneas en disco).`;
+					} catch (err: any) {
+						await onEvent({
+							type: "tool_result",
+							agentId: agent.id,
+							tool: "write",
+							output: `✗ Error al escribir archivo "${rawPath}": ${err.message || String(err)}`,
+						});
+					}
+				}
+				match = fileBlockRegex.exec(text);
+			}
+
+			// Pattern 2: ```typescript // filepath: path/to/file.ts
+			const commentedFileBlockRegex =
+				/```(?:[a-zA-Z0-9_-]+)\s*(?:\/\/|#)\s*(?:filepath|file):\s*([^\r\n]+)\r?\n([\s\S]*?)```/gi;
+			match = commentedFileBlockRegex.exec(text);
+			while (match !== null) {
+				const rawPath = match[1].trim().replace(/^['"]|['"]$/g, "");
+				const content = match[2];
+				if (rawPath && content !== undefined) {
+					try {
+						const fullPath = path.isAbsolute(rawPath) ? rawPath : path.resolve(targetCwd, rawPath);
+						const dir = path.dirname(fullPath);
+						if (!existsSync(dir)) {
+							mkdirSync(dir, { recursive: true });
+						}
+						writeFileSync(fullPath, content, "utf-8");
+						const lineCount = content.split(/\r?\n/).length;
+						const byteCount = Buffer.byteLength(content, "utf-8");
+
+						await onEvent({
+							type: "tool_start",
+							agentId: agent.id,
+							tool: "write",
+							input: { path: rawPath, lines: lineCount, bytes: byteCount },
+						});
+
+						const resultMsg = `✓ Archivo "${rawPath}" actualizado en disco (${lineCount} líneas).`;
+						await onEvent({
+							type: "tool_result",
+							agentId: agent.id,
+							tool: "write",
+							output: resultMsg,
+						});
+
+						extraResultsText += `\n\n> 🛠️ **Acción ejecutada**: Se escribió el archivo \`${rawPath}\` (${lineCount} líneas en disco).`;
+					} catch (err: any) {
+						await onEvent({
+							type: "tool_result",
+							agentId: agent.id,
+							tool: "write",
+							output: `✗ Error al escribir archivo "${rawPath}": ${err.message || String(err)}`,
+						});
+					}
+				}
+				match = commentedFileBlockRegex.exec(text);
+			}
+		}
+
+		// 2. Terminal Command / Test Execution (for agents with terminal capability, e.g. Argos)
+		if (agent.capabilities.terminal) {
+			const bashBlockRegex = /```(?:bash|terminal|test|sh):\s*([^\r\n]+)\r?\n?([\s\S]*?)```/gi;
+			let match = bashBlockRegex.exec(text);
+			while (match !== null) {
+				let cmd = match[1].trim();
+				const body = match[2]?.trim();
+				if (body && !cmd) cmd = body;
+
+				if (cmd) {
+					await onEvent({
+						type: "tool_start",
+						agentId: agent.id,
+						tool: "bash",
+						input: { command: cmd },
+					});
+
+					const res = await this.executeCommandLine(cmd, targetCwd);
+					const combinedOutput =
+						(res.stdout + (res.stderr ? `\nSTDERR:\n${res.stderr}` : "")).trim() ||
+						"(Comando completado sin salida)";
+					const isSuccess = res.exitCode === 0;
+
+					await onEvent({
+						type: "tool_result",
+						agentId: agent.id,
+						tool: "bash",
+						output: `Exit Code ${res.exitCode}\n${combinedOutput.slice(0, 2000)}`,
+					});
+
+					extraResultsText += `\n\n### 🩺 Resultado de Ejecución en Terminal (\`${cmd}\`)\n- **Estado**: ${isSuccess ? "✅ Éxito (Exit Code 0)" : `❌ Fallo (Exit Code ${res.exitCode})`}\n\`\`\`text\n${combinedOutput.slice(0, 1500)}\n\`\`\``;
+				}
+				match = bashBlockRegex.exec(text);
+			}
+		}
+
+		return extraResultsText;
 	}
 
 	private loadProjectContext(projectInfo?: PantheonProjectInfo): PantheonProjectContext {
@@ -467,12 +687,31 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
    - Si eres **@Argos**: Audita el código, diagnósticos estáticos y dependencias basándote en la información estructural de Graft arriba expuesta, y redacta tu reporte de auditoría.
    - Si eres **@Hermes**: Orquesta el plan global y coordina las tareas entre los especialistas.`;
 
+		const actionProtocol = `\n\n# PROTOCOLO DE ACCIÓN DIRECTA SOBRE EL ESPACIO DE TRABAJO
+1. **Para Escribir o Modificar Archivos (@Hephaestus)**:
+   Escribe el bloque de código indicando la ruta del archivo:
+   \`\`\`file:ruta/del/archivo.ext
+   // Código fuente completo
+   \`\`\`
+   El sistema escribirá inmediatamente el archivo en el disco del proyecto. Al terminar de codificar, delega a @Argos para que ejecute los tests.
+
+2. **Para Ejecutar Pruebas o Comandos (@Argos)**:
+   Escribe el bloque de comando con el formato:
+   \`\`\`bash:npm test\`\`\` o \`\`\`bash:npm run check\`\`\` o \`\`\`bash:pytest\`\`\`
+   El sistema ejecutará el comando en la terminal real del proyecto y presentará el reporte de calidad.
+
+3. **Para Investigar (@Pythia)**:
+   Analiza el código y dependencias de los archivos del proyecto y sintetiza los puntos clave para @Athena y @Hephaestus.
+
+4. **Para Coordinar (@Hermes)**:
+   Define el plan y delega a @Hephaestus o @Pythia. No repitas consejos redundantes.`;
+
 		return `${agent.systemPrompt}
 
 Eres parte del escuadrón multi-agente "${squad.name}" (Modo: ${squad.workflowMode}).
 Otros agentes en tu escuadrón:
 ${members}
-${projectSection}${graftSection}${delegationSection}${squadCollaborationProtocol}${operationalRules}`;
+${projectSection}${graftSection}${delegationSection}${squadCollaborationProtocol}${actionProtocol}${operationalRules}`;
 	}
 
 	private sanitizeAgentOutput(text: string): string {

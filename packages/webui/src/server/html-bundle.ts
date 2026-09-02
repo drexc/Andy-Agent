@@ -3594,6 +3594,39 @@ for chunk in response:
                 });
                 lucide.createIcons();
                 chatMessages.scrollTop = chatMessages.scrollHeight;
+              } else if (event.type === 'tool_start') {
+                const tDiv = document.createElement('div');
+                tDiv.className = 'p-2.5 rounded-xl bg-surface-900 border border-surface-750 text-slate-300 text-xs font-mono my-1 pl-6 flex items-center justify-between shadow-sm';
+                const toolName = event.tool || 'herramienta';
+                const inputInfo = event.input?.path || event.input?.command || JSON.stringify(event.input || {});
+                tDiv.innerHTML = \`
+                  <div class="flex items-center gap-2 truncate">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <strong class="text-amber-300">\${toolName}:</strong>
+                    <span class="truncate text-slate-300 text-[11px]">\${inputInfo}</span>
+                  </div>
+                  <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 shrink-0">Ejecutando</span>
+                \`;
+                chatMessages.appendChild(tDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                lucide.createIcons();
+              } else if (event.type === 'tool_result') {
+                const rDiv = document.createElement('div');
+                rDiv.className = 'p-2.5 rounded-xl bg-surface-900/90 border border-emerald-500/30 text-emerald-300 text-xs font-mono my-1 pl-6 space-y-1 shadow-sm';
+                const toolName = event.tool || 'herramienta';
+                rDiv.innerHTML = \`
+                  <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-1.5 font-bold text-[11px] text-emerald-400">
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                      \${toolName} completado
+                    </span>
+                    <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 font-sans">En disco</span>
+                  </div>
+                  <pre class="bg-surface-950 p-2 rounded text-[11px] text-slate-300 overflow-x-auto max-h-36 whitespace-pre-wrap select-text">\${typeof event.output === 'string' ? event.output : JSON.stringify(event.output, null, 2)}</pre>
+                \`;
+                chatMessages.appendChild(rDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                lucide.createIcons();
               } else if (event.type === 'delegation') {
                 const delDiv = document.createElement('div');
                 delDiv.className = 'p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/25 text-purple-200 text-xs flex items-center gap-2 my-1.5 pl-6';
@@ -5417,9 +5450,19 @@ for chunk in response:
     function cleanPantheonOutput(text) {
       if (!text) return '';
       return text
-        .replace(/<|tool_call_start|>[sS]*?<|tool_call_end|>/gi, '')
-        .replace(/<|tool_call_start|>[sS]*$/gi, '')
-        .replace(/<|im_start|>[sS]*?<|im_end|>/gi, '')
+        .replace(/<|tool_call_start|>[\\s\\S]*?<|tool_call_end|>/gi, '')
+        .replace(/<|tool_call_start|>[\\s\\S]*$/gi, '')
+        .replace(/<|im_start|>[\\s\\S]*?<|im_end|>/gi, '')
+        .replace(/\`\`\`(?:file|write|filepath):\\s*([^\\r\\n]+)\\r?\\n([\\s\\S]*?)\`\`\`/gi, function(_, filePath, content) {
+          const ext = (filePath.split('.').pop() || '').toLowerCase();
+          const langMap = { ts: 'typescript', js: 'javascript', tsx: 'typescript', jsx: 'javascript', py: 'python', json: 'json', html: 'html', css: 'css', md: 'markdown', rs: 'rust', go: 'go', sh: 'bash' };
+          const lang = langMap[ext] || '';
+          return '\\n\\n\`\`\`' + lang + '\\n// Archivo en disco: ' + filePath.trim() + '\\n' + content + '\\n\`\`\`\\n\\n';
+        })
+        .replace(/\`\`\`(?:bash|terminal|test|sh):\\s*([^\\r\\n]+)\\r?\\n?([\\s\\S]*?)\`\`\`/gi, function(_, cmd, body) {
+          const fullCmd = (cmd + '\\n' + (body || '')).trim();
+          return '\\n\\n\`\`\`bash\\n# Comando ejecutado en terminal:\\n' + fullCmd + '\\n\`\`\`\\n\\n';
+        })
         .replace(/<tool_call>\\s*([A-Za-z0-9_-]+)[\\s\\S]*?<arg_key>([^<]*)<\\/arg_key>[\\s\\S]*?<arg_value>([\\s\\S]*?)<\\/arg_value>\\s*<\\/tool_call>/gi, function(_, tool, _k, val) {
           return '\\n\\n\`\`\`bash\\n# Comando (' + tool + '):\\n' + val.trim() + '\\n\`\`\`\\n\\n';
         })
