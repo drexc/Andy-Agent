@@ -148,10 +148,25 @@ export class PantheonOrchestrator {
 		} catch {}
 
 		const allTurnMessages: PantheonMessage[] = [userMsg];
-		const agentsQueue: PantheonAgentProfile[] = [primaryAgent];
+		const agentsQueue: PantheonAgentProfile[] = [];
 		const executionCounts: Record<string, number> = {};
-		const maxTotalSteps = 5;
+		const maxTotalSteps = 6;
 		let currentStep = 0;
+
+		if (targetAgentId) {
+			// Specific agent targeted
+			const targeted = this.registry.getAgent(targetAgentId);
+			if (targeted) agentsQueue.push(targeted);
+		} else if (squad.workflowMode === "sequential") {
+			// In sequential mode, queue all squad members in pipeline order
+			for (const mId of squad.memberIds) {
+				const ag = this.registry.getAgent(mId);
+				if (ag) agentsQueue.push(ag);
+			}
+		} else {
+			// In hierarchical or collaborative mode, start with the primary leader
+			agentsQueue.push(primaryAgent);
+		}
 
 		while (agentsQueue.length > 0 && currentStep < maxTotalSteps) {
 			const currentAgent = agentsQueue.shift()!;
@@ -251,6 +266,34 @@ export class PantheonOrchestrator {
 					if (count < 2 && !alreadyInQueue) {
 						agentsQueue.push(nextAgent);
 					}
+				}
+			}
+
+			// Squad Auto-Progression fallback:
+			// If no explicit delegation was detected but there are unexecuted squad members
+			if (peerDelegations.length === 0 && agentsQueue.length === 0 && squad.memberIds.length > 1) {
+				const unexecutedMembers = squad.memberIds
+					.filter((id) => id !== currentAgent.id && !(executionCounts[id] > 0))
+					.map((id) => this.registry.getAgent(id))
+					.filter(Boolean) as PantheonAgentProfile[];
+
+				if (unexecutedMembers.length > 0) {
+					const nextSpecialist = unexecutedMembers[0];
+					agentsQueue.push(nextSpecialist);
+					const autoDel: PantheonTaskDelegation = {
+						taskId: `task-${randomUUID().slice(0, 8)}`,
+						fromAgentId: currentAgent.id,
+						toAgentId: nextSpecialist.id,
+						instruction: `Continuación de turno de colaboración en escuadrón "${squad.name}"`,
+						status: "pending",
+						createdAt: new Date().toISOString(),
+					};
+					roomState.delegations.push(autoDel);
+					await onEvent({
+						type: "delegation",
+						agentId: currentAgent.id,
+						delegation: autoDel,
+					});
 				}
 			}
 		}
@@ -394,6 +437,16 @@ ${graftContext.map}
 Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una tarea o solicitó tu análisis en los mensajes inmediatamente anteriores. Lee atentamente sus conclusiones o instrucciones previas en el historial, asume el control inmediato y entrega tus resultados según tu especialidad sin repetir lo que ya se dijo.`
 			: "";
 
+		const squadCollaborationProtocol = `\n\n# PROTOCOLO OBLIGATORIO DE COLABORACIÓN Y DELEGACIÓN EN EL ESCUADRÓN
+1. **Trabajo en Equipo Autónomo**: No estás solo, formas parte de un escuadrón especializado.
+2. **Delega Explícitamente**: Para pasarle la tarea o hallazgos al siguiente especialista, menciona su etiqueta con @Nombre (ej: \`@Athena\`, \`@Pythia\`, \`@Hephaestus\`, \`@Argos\`, \`@Hermes\`). Cada mención activará al agente en vivo para que elabore su parte en la misma conversación.
+3. **Flujo de Escuadrón Recomendado**:
+   - **@Hermes** (Líder): Diseña el plan y delega a los especialistas (@Athena / @Pythia / @Hephaestus / @Argos).
+   - **@Pythia**: Investiga dependencias y pasa el informe a @Athena o @Hermes.
+   - **@Athena**: Diseña la arquitectura y pasa las especificaciones a @Hephaestus para programar.
+   - **@Hephaestus**: Desarrolla el código y delega a @Argos para auditar la calidad.
+   - **@Argos**: Audita el código, reporta diagnósticos y devuelve veredicto al usuario o a @Hephaestus.`;
+
 		const operationalRules = `\n\n# REGLAS CRÍTICAS DE EJECUCIÓN DEL PANTHEON
 1. **Identidad del Agente**: Eres exclusivamente **@${agent.name}** (${agent.role}), un agente autónomo del sistema multi-agente Pantheon en el ecosistema Andy Agent. Tu única identidad es @${agent.name}. NUNCA te identifiques como Antigravity, Google DeepMind, OpenAI ni un asistente genérico.
 2. **Idioma y Formato Humano**: Responde siempre en **Español** con formato Markdown estructurado, limpio y profesional (encabezados, listas, tablas y bloques de código).
@@ -412,9 +465,7 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 Eres parte del escuadrón multi-agente "${squad.name}" (Modo: ${squad.workflowMode}).
 Otros agentes en tu escuadrón:
 ${members}
-
-Puedes delegar tareas mencionando a otro agente con @Nombre y describiendo la subtarea exacta que debe realizar.
-${projectSection}${graftSection}${delegationSection}${operationalRules}`;
+${projectSection}${graftSection}${delegationSection}${squadCollaborationProtocol}${operationalRules}`;
 	}
 
 	private detectPeerDelegations(text: string, fromAgentId: string): PantheonTaskDelegation[] {
@@ -423,7 +474,7 @@ ${projectSection}${graftSection}${delegationSection}${operationalRules}`;
 
 		for (const a of agents) {
 			if (a.id === fromAgentId) continue;
-			const regex = new RegExp(`@${a.name}\\b`, "i");
+			const regex = new RegExp(`@${a.name}\\b|@${a.id}\\b`, "i");
 			if (regex.test(text)) {
 				delegations.push({
 					taskId: `task-${randomUUID().slice(0, 8)}`,
