@@ -1871,7 +1871,7 @@ ${prompt || ""}`;
 					Connection: "keep-alive",
 				});
 
-				const llmCaller = async (messages: any[], modelId: string, temp: number) => {
+				const llmCaller = async (messages: any[], modelId: string, temp: number, systemPrompt?: string) => {
 					const targetModel = this.pool.findModel(modelId);
 					if (!targetModel) {
 						return `[Modelo ${modelId} no encontrado en el registro de proveedores]`;
@@ -1879,13 +1879,55 @@ ${prompt || ""}`;
 					const authStorage = this.pool.getAuthStorage();
 					const apiKey = await authStorage.getApiKey(targetModel.provider);
 					const now = Date.now();
-					const context: Context = {
-						messages: messages.map((m: any) => ({
-							role: m.role as any,
-							content: [{ type: "text" as const, text: m.content }],
+
+					let effectiveSystemPrompt = systemPrompt || "";
+					const validMessages: Message[] = [];
+
+					for (const m of messages) {
+						if (m.role === "system") {
+							if (!effectiveSystemPrompt) {
+								effectiveSystemPrompt = m.content || "";
+							}
+						} else if (m.role === "user") {
+							validMessages.push({
+								role: "user",
+								content: m.content || "",
+								timestamp: now,
+							});
+						} else if (m.role === "assistant") {
+							validMessages.push({
+								role: "assistant",
+								content: [{ type: "text", text: m.content || "" }],
+								api: targetModel.api,
+								provider: targetModel.provider,
+								model: targetModel.id,
+								usage: {
+									input: 0,
+									output: 0,
+									cacheRead: 0,
+									cacheWrite: 0,
+									totalTokens: 0,
+									cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+								},
+								stopReason: "stop",
+								timestamp: now,
+							});
+						}
+					}
+
+					if (validMessages.length === 0) {
+						validMessages.push({
+							role: "user",
+							content: "Por favor procede con la tarea encomendada.",
 							timestamp: now,
-						})),
+						});
+					}
+
+					const context: Context = {
+						systemPrompt: effectiveSystemPrompt,
+						messages: validMessages,
 					};
+
 					const streamOptions = {
 						apiKey: apiKey || undefined,
 						temperature: temp ?? 0.2,

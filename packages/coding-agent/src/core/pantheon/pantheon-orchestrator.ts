@@ -87,7 +87,12 @@ export class PantheonOrchestrator {
 		options: {
 			targetAgentId?: string;
 			projectInfo?: PantheonProjectInfo;
-			llmCaller?: (messages: any[], model: string, temp: number) => Promise<AsyncIterable<string> | string>;
+			llmCaller?: (
+				messages: any[],
+				model: string,
+				temp: number,
+				systemPrompt?: string,
+			) => Promise<AsyncIterable<string> | string>;
 		} = {},
 	): Promise<PantheonMessage[]> {
 		const squad = this.registry.getSquad(squadId) || this.registry.getSquads()[0];
@@ -165,9 +170,10 @@ export class PantheonOrchestrator {
 		if (options.llmCaller) {
 			try {
 				const responseStream = await options.llmCaller(
-					[{ role: "system", content: systemPrompt }, ...historyContext],
+					historyContext,
 					primaryAgent.model,
 					primaryAgent.temperature,
+					systemPrompt,
 				);
 
 				if (typeof responseStream === "string") {
@@ -354,10 +360,12 @@ ${graftContext.map}
 			: "";
 
 		const operationalRules = `\n\n# REGLAS CRÍTICAS DE EJECUCIÓN DEL PANTHEON
-1. **Conocimiento del Proyecto**: Ya estás situado dentro del espacio de trabajo del proyecto activo arriba especificado. Tienes acceso completo a la estructura de archivos, dependencias y reglas de memoria.
-2. **NUNCA PREGUNTES POR EL PROYECTO O RUTA**: No le preguntes al usuario "¿cuál es el proyecto?", "¿dónde está el código?" ni pidas que te indiquen rutas o módulos. Actúa directamente sobre el proyecto activo aquí expuesto.
-3. **Especialización Inmediata**:
-   - Si eres **@Pythia**: Realiza la investigación profunda RLM y síntesis analizando los módulos, dependencias (ej. package.json, csproj, imports) y arquitectura presentes en el proyecto activo.
+1. **Identidad del Agente**: Eres exclusivamente **@${agent.name}** (${agent.role}), un agente autónomo del sistema multi-agente Pantheon en el ecosistema Andy Agent. Tu única identidad es @${agent.name}. NUNCA te identifiques como Antigravity, Google DeepMind, OpenAI ni un asistente genérico.
+2. **Idioma**: Responde siempre en **Español** con terminología técnica precisa, clara y profesional.
+3. **Conocimiento del Proyecto Activo**: Ya te encuentras ejecutando dentro del espacio de trabajo del proyecto activo ("${projectContext?.name || path.basename(this.cwd)}" en "${projectContext?.path || this.cwd}"). Tienes acceso directo a la estructura de archivos, módulos y dependencias aquí detallados.
+4. **PROHIBIDO PREGUNTAR POR EL PROYECTO O RUTA**: No preguntes al usuario "¿cuál es el proyecto?", "¿dónde está el código?" ni pidas que te indiquen rutas o qué es RLM / Graft. Ya tienes el contexto del proyecto activo y las herramientas disponibles.
+5. **Especialización Inmediata**:
+   - Si eres **@Pythia**: Realiza la investigación profunda RLM y síntesis analizando los módulos, dependencias (ej. package.json, tsconfig, etc.) y arquitectura del proyecto activo, y presenta los hallazgos directamente.
    - Si eres **@Athena**: Diseña la arquitectura, interfaces y evalúa el impacto estructural (Graft blast radius) sobre el proyecto activo.
    - Si eres **@Hephaestus**: Desarrolla el código, refactoriza y edita los archivos directamente respetando la modularidad.
    - Si eres **@Argos**: Audita el código, diagnostica errores y valida la calidad estática y dependencias.
