@@ -5,8 +5,8 @@ import { AndyWebUiServer } from "./index.js";
 async function main() {
 	const { values } = parseArgs({
 		options: {
-			port: { type: "string", short: "p", default: "3000" },
-			host: { type: "string", short: "h", default: "0.0.0.0" },
+			port: { type: "string", short: "p", default: process.env.PORT || "3000" },
+			host: { type: "string", short: "h", default: process.env.HOST || "0.0.0.0" },
 			cwd: { type: "string", default: process.cwd() },
 			apiKey: { type: "string" },
 			help: { type: "boolean" },
