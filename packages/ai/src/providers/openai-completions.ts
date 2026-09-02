@@ -51,7 +51,7 @@ function hasToolHistory(messages: Message[]): boolean {
 			return true;
 		}
 		if (msg.role === "assistant") {
-			if (msg.content.some((block) => block.type === "toolCall")) {
+			if (Array.isArray(msg.content) && msg.content.some((block) => block.type === "toolCall")) {
 				return true;
 			}
 		}
@@ -877,7 +877,14 @@ export function convertMessages(
 				content: compat.requiresAssistantAfterToolResult ? "" : null,
 			};
 
-			const assistantTextParts = msg.content
+			const rawContentBlocks =
+				typeof msg.content === "string"
+					? [{ type: "text" as const, text: msg.content }]
+					: Array.isArray(msg.content)
+						? msg.content
+						: [];
+
+			const assistantTextParts = rawContentBlocks
 				.filter(isTextContentBlock)
 				.filter((block) => block.text.trim().length > 0)
 				.map(
@@ -889,14 +896,14 @@ export function convertMessages(
 				);
 			const assistantText = assistantTextParts.map((part) => part.text).join("");
 
-			const replayReasoningDetails = msg.content
+			const replayReasoningDetails = rawContentBlocks
 				.filter(isThinkingContentBlock)
 				.flatMap((block) => decodeReasoningDetails(block.thinkingSignature) ?? []);
 			if (replayReasoningDetails.length > 0) {
 				(assistantMsg as any).reasoning_details = replayReasoningDetails;
 			}
 
-			const nonEmptyThinkingBlocks = msg.content
+			const nonEmptyThinkingBlocks = rawContentBlocks
 				.filter(isThinkingContentBlock)
 				.filter((block) => decodeReasoningDetails(block.thinkingSignature) === undefined)
 				.filter((block) => block.thinking.trim().length > 0);
@@ -945,7 +952,7 @@ export function convertMessages(
 				assistantMsg.content = assistantText;
 			}
 
-			const toolCalls = msg.content.filter(isToolCallBlock);
+			const toolCalls = rawContentBlocks.filter(isToolCallBlock);
 			if (toolCalls.length > 0) {
 				assistantMsg.tool_calls = toolCalls.map((tc) => ({
 					id: tc.id,

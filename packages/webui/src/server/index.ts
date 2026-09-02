@@ -3360,6 +3360,19 @@ ${prompt || ""}`;
 				const pContext: Context = {
 					systemPrompt: pSystemPrompt,
 					messages: pMessages.map((m: any) => {
+						if (m.role === "assistant") {
+							const textContent =
+								typeof m.content === "string"
+									? m.content
+									: Array.isArray(m.content)
+										? m.content.map((c: any) => c.text || "").join("")
+										: "";
+							return {
+								role: "assistant",
+								content: [{ type: "text", text: textContent }],
+								timestamp: Date.now(),
+							} as any;
+						}
 						if (typeof m.content === "string") {
 							return {
 								role: m.role || "user",

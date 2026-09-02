@@ -541,6 +541,7 @@ export class PantheonOrchestrator {
 							type: "tool_start",
 							agentId: agent.id,
 							tool: "write",
+							target: rawPath,
 							input: { path: rawPath, lines: lineCount, bytes: byteCount },
 						});
 
@@ -549,6 +550,7 @@ export class PantheonOrchestrator {
 							type: "tool_result",
 							agentId: agent.id,
 							tool: "write",
+							target: rawPath,
 							output: resultMsg,
 						});
 
@@ -558,6 +560,7 @@ export class PantheonOrchestrator {
 							type: "tool_result",
 							agentId: agent.id,
 							tool: "write",
+							target: rawPath,
 							output: `✗ Error al escribir archivo "${rawPath}": ${err.message || String(err)}`,
 						});
 					}
@@ -587,6 +590,7 @@ export class PantheonOrchestrator {
 							type: "tool_start",
 							agentId: agent.id,
 							tool: "write",
+							target: rawPath,
 							input: { path: rawPath, lines: lineCount, bytes: byteCount },
 						});
 
@@ -595,6 +599,7 @@ export class PantheonOrchestrator {
 							type: "tool_result",
 							agentId: agent.id,
 							tool: "write",
+							target: rawPath,
 							output: resultMsg,
 						});
 
@@ -604,6 +609,7 @@ export class PantheonOrchestrator {
 							type: "tool_result",
 							agentId: agent.id,
 							tool: "write",
+							target: rawPath,
 							output: `✗ Error al escribir archivo "${rawPath}": ${err.message || String(err)}`,
 						});
 					}
@@ -635,6 +641,7 @@ export class PantheonOrchestrator {
 							type: "tool_start",
 							agentId: agent.id,
 							tool: "bash",
+							target: cmd,
 							input: { command: cmd },
 						});
 
@@ -648,6 +655,7 @@ export class PantheonOrchestrator {
 							type: "tool_result",
 							agentId: agent.id,
 							tool: "bash",
+							target: cmd,
 							output: `Exit Code ${res.exitCode}\n${combinedOutput.slice(0, 2000)}`,
 						});
 

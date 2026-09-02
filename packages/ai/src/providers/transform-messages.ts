@@ -89,7 +89,14 @@ export function transformMessages<TApi extends Api>(
 				assistantMsg.api === model.api &&
 				assistantMsg.model === model.id;
 
-			const transformedContent = assistantMsg.content.flatMap((block) => {
+			const rawBlocks =
+				typeof assistantMsg.content === "string"
+					? [{ type: "text" as const, text: assistantMsg.content }]
+					: Array.isArray(assistantMsg.content)
+						? assistantMsg.content
+						: [];
+
+			const transformedContent = rawBlocks.flatMap((block) => {
 				if (block.type === "thinking") {
 					// Redacted thinking is opaque encrypted content, only valid for the same model.
 					// Drop it for cross-model to avoid API errors.
@@ -186,7 +193,9 @@ export function transformMessages<TApi extends Api>(
 				continue;
 			}
 
-			const toolCalls = assistantMsg.content.filter((b) => b.type === "toolCall") as ToolCall[];
+			const toolCalls = Array.isArray(assistantMsg.content)
+				? (assistantMsg.content.filter((b) => b.type === "toolCall") as ToolCall[])
+				: [];
 			if (toolCalls.length > 0) {
 				pendingToolCalls = toolCalls;
 				existingToolResultIds = new Set();
