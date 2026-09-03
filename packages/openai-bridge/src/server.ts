@@ -85,7 +85,7 @@ export class OpenAiBridgeServer {
 						{
 							status: "ok",
 							name: "Andy Agent OpenAI Bridge",
-							version: "0.8.0",
+							version: "0.9.0",
 							totalAvailableModels: models.length,
 							defaultModel: this.options.defaultModel || "auto/best-coding",
 							endpoints: {

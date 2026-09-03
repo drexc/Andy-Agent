@@ -152,6 +152,7 @@ export class PantheonOrchestrator {
 			taskId?: string;
 			abortController?: AbortController;
 			projectInfo?: PantheonProjectInfo;
+			yieldOnFileWrite?: boolean;
 			llmCaller?: (
 				messages: any[],
 				model: string,
@@ -422,6 +423,18 @@ export class PantheonOrchestrator {
 				});
 
 				// Pause squad execution: empty the queue so peer agents don't execute prematurely
+				agentsQueue.length = 0;
+				break;
+			}
+
+			// Yield on file write when requested (e.g. Andy Code / IDE client waiting for approval)
+			if (
+				options.yieldOnFileWrite &&
+				actionResultsText &&
+				(actionResultsText.includes("Se escribió el archivo") || actionResultsText.includes("Acción ejecutada"))
+			) {
+				(roomState as any).pendingFileApproval = true;
+				(roomState as any).lastActionResultsText = actionResultsText;
 				agentsQueue.length = 0;
 				break;
 			}

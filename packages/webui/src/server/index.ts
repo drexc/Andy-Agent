@@ -165,7 +165,7 @@ export class AndyWebUiServer {
 						{
 							status: "ok",
 							name: "Andy Agent WebUI Server",
-							version: "0.8.0",
+							version: "0.9.0",
 							totalAvailableModels: models.length,
 							endpoints: {
 								webui: "/",
@@ -3909,6 +3909,7 @@ ${prompt || ""}`;
 						targetAgentId,
 						llmCaller,
 						projectInfo: { path: ideProject.path, name: ideProject.name },
+						yieldOnFileWrite: true,
 					},
 				);
 
@@ -4582,7 +4583,7 @@ ${prompt || ""}`;
 		const method = req.method || "GET";
 		const device = parsedUrl.searchParams.get("device") || "Mi Equipo";
 		const editor = parsedUrl.searchParams.get("editor") || "VS Code";
-		const version = parsedUrl.searchParams.get("version") || "0.8.0";
+		const version = parsedUrl.searchParams.get("version") || "0.9.0";
 		const callbackUri = parsedUrl.searchParams.get("callback_uri") || "cursor://AndyAgent.andy-code/auth-callback";
 
 		if (method === "POST") {

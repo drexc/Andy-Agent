@@ -1,6 +1,6 @@
 {
   "name": "@andy-agent/openai-bridge",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "OpenAI-compatible HTTP/SSE bridge for Andy Agent RLM Core",
   "type": "module",
   "bin": {

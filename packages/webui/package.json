@@ -1,6 +1,6 @@
 {
   "name": "@andy-agent/webui",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Modern WebUI for Andy Agent RLM Core & Graft Engine",
   "type": "module",
   "bin": {
