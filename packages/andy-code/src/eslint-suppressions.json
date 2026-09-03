@@ -349,7 +349,7 @@
 			"count": 1
 		}
 	},
-	"api/providers/fetchers/__tests__/zoo-gateway.spec.ts": {
+	"api/providers/fetchers/__tests__/andy-gateway.spec.ts": {
 		"@typescript-eslint/no-explicit-any": {
 			"count": 8
 		}

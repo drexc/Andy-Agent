@@ -565,7 +565,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requesty: mockModels,
 				unbound: mockModels,
 				"vercel-ai-gateway": mockModels,
-				"zoo-gateway": mockModels,
+				"andy-gateway": mockModels,
 				litellm: mockModels,
 				ollama: {},
 				lmstudio: {},
@@ -813,7 +813,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requesty: mockModels,
 				unbound: mockModels,
 				"vercel-ai-gateway": mockModels,
-				"zoo-gateway": mockModels,
+				"andy-gateway": mockModels,
 				litellm: {},
 				ollama: {},
 				lmstudio: {},
@@ -845,7 +845,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockResolvedValueOnce(mockModels) // unbound
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
-			.mockResolvedValueOnce(mockModels) // zoo-gateway
+			.mockResolvedValueOnce(mockModels) // andy-gateway
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 			.mockResolvedValueOnce(mockModels) // opencode-go
 			.mockResolvedValueOnce(mockModels) // kenari
@@ -878,7 +878,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requesty: {},
 				unbound: mockModels,
 				"vercel-ai-gateway": mockModels,
-				"zoo-gateway": mockModels,
+				"andy-gateway": mockModels,
 				litellm: {},
 				ollama: {},
 				lmstudio: {},
@@ -901,7 +901,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockRejectedValueOnce(new Error("Unbound error")) // unbound
 			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
-			.mockRejectedValueOnce(new Error("Andy Gateway error")) // zoo-gateway
+			.mockRejectedValueOnce(new Error("Andy Gateway error")) // andy-gateway
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")); // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -1795,24 +1795,24 @@ describe("zooCodeSignOut", () => {
 
 		(mockClineProvider as any).contextProxy = {
 			...mockClineProvider.contextProxy,
-			getProviderSettings: vi.fn().mockReturnValue({ apiProvider: providerIdentifiers.zooGateway }),
+			getProviderSettings: vi.fn().mockReturnValue({ apiProvider: providerIdentifiers.andyGateway }),
 			getValues: vi.fn().mockReturnValue({ currentApiConfigName: "Andy Gateway" }),
 		};
 		(mockClineProvider as any).providerSettingsManager = {
 			listConfig: vi.fn().mockResolvedValue([
-				{ name: "Andy Gateway", apiProvider: providerIdentifiers.zooGateway },
-				{ name: "Backup Zoo", apiProvider: providerIdentifiers.zooGateway },
+				{ name: "Andy Gateway", apiProvider: providerIdentifiers.andyGateway },
+				{ name: "Backup Zoo", apiProvider: providerIdentifiers.andyGateway },
 			]),
 			getProfile: vi
 				.fn()
 				.mockResolvedValueOnce({
-					apiProvider: providerIdentifiers.zooGateway,
-					zooSessionToken: "token-active",
-					zooGatewayModelId: "anthropic/claude-sonnet-4",
+					apiProvider: providerIdentifiers.andyGateway,
+					andySessionToken: "token-active",
+					andyGatewayModelId: "anthropic/claude-sonnet-4",
 				})
 				.mockResolvedValueOnce({
-					apiProvider: providerIdentifiers.zooGateway,
-					zooSessionToken: "token-backup",
+					apiProvider: providerIdentifiers.andyGateway,
+					andySessionToken: "token-backup",
 				}),
 			saveConfig,
 		};
@@ -1823,12 +1823,12 @@ describe("zooCodeSignOut", () => {
 		expect(disconnectAndyCode).toHaveBeenCalled();
 		expect(upsertProviderProfile).toHaveBeenCalledWith(
 			"Andy Gateway",
-			expect.not.objectContaining({ zooSessionToken: expect.anything() }),
+			expect.not.objectContaining({ andySessionToken: expect.anything() }),
 			true,
 		);
 		expect(saveConfig).toHaveBeenCalledWith(
 			"Backup Zoo",
-			expect.not.objectContaining({ zooSessionToken: expect.anything() }),
+			expect.not.objectContaining({ andySessionToken: expect.anything() }),
 		);
 		expect(mockClineProvider.postStateToWebview).toHaveBeenCalled();
 	});
@@ -1838,14 +1838,14 @@ describe("zooCodeSignOut", () => {
 
 		(mockClineProvider as any).contextProxy = {
 			...mockClineProvider.contextProxy,
-			getProviderSettings: vi.fn().mockReturnValue({ apiProvider: providerIdentifiers.zooGateway }),
+			getProviderSettings: vi.fn().mockReturnValue({ apiProvider: providerIdentifiers.andyGateway }),
 			getValues: vi.fn().mockReturnValue({ currentApiConfigName: "Andy Gateway" }),
 		};
 		(mockClineProvider as any).providerSettingsManager = {
-			listConfig: vi.fn().mockResolvedValue([{ name: "Andy Gateway", apiProvider: providerIdentifiers.zooGateway }]),
+			listConfig: vi.fn().mockResolvedValue([{ name: "Andy Gateway", apiProvider: providerIdentifiers.andyGateway }]),
 			getProfile: vi.fn().mockResolvedValue({
-				apiProvider: providerIdentifiers.zooGateway,
-				zooGatewayModelId: "anthropic/claude-sonnet-4",
+				apiProvider: providerIdentifiers.andyGateway,
+				andyGatewayModelId: "anthropic/claude-sonnet-4",
 			}),
 			saveConfig: vi.fn(),
 		};
@@ -1855,7 +1855,7 @@ describe("zooCodeSignOut", () => {
 
 		expect(upsertProviderProfile).toHaveBeenCalledWith(
 			"Andy Gateway",
-			expect.not.objectContaining({ zooSessionToken: expect.anything() }),
+			expect.not.objectContaining({ andySessionToken: expect.anything() }),
 			true,
 		);
 	});

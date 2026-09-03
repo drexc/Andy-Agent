@@ -9,9 +9,9 @@ import {
 	type CodeActionId,
 	type CodeActionName,
 	type CreateTaskOptions,
-	DEFAULT_AUTO_CLOSE_ZOO_OPENED_FILES,
-	DEFAULT_AUTO_CLOSE_ZOO_OPENED_FILES_AFTER_USER_EDITED,
-	DEFAULT_AUTO_CLOSE_ZOO_OPENED_NEW_FILES,
+	DEFAULT_AUTO_CLOSE_ANDY_OPENED_FILES,
+	DEFAULT_AUTO_CLOSE_ANDY_OPENED_FILES_AFTER_USER_EDITED,
+	DEFAULT_AUTO_CLOSE_ANDY_OPENED_NEW_FILES,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 	DEFAULT_DESTRUCTIVE_COMMAND_GUARD_ENABLED,
 	DEFAULT_DIFF_FUZZY_THRESHOLD,
@@ -1114,55 +1114,55 @@ export class ClineProvider
 			await this.removeClineFromStack();
 		}
 
-		// Ensure zoo-gateway profile is seeded for users who signed in before this feature existed.
-		// Without this, users with a valid cached token but no zoo-gateway profile would need to
+		// Ensure andy-gateway profile is seeded for users who signed in before this feature existed.
+		// Without this, users with a valid cached token but no andy-gateway profile would need to
 		// re-authenticate to use Andy Gateway. Fire-and-forget to avoid blocking webview init.
-		void this.ensureZooGatewayProfileSeeded().catch((err) => {
-			this.log(`[ensureZooGatewayProfileSeeded] Error: ${err instanceof Error ? err.message : String(err)}`);
+		void this.ensureAndyGatewayProfileSeeded().catch((err) => {
+			this.log(`[ensureAndyGatewayProfileSeeded] Error: ${err instanceof Error ? err.message : String(err)}`);
 		});
 	}
 
 	/**
-	 * Seeds the zoo-gateway provider profile for users who have a cached auth token
+	 * Seeds the andy-gateway provider profile for users who have a cached auth token
 	 * but no profile (e.g., users who signed in before Andy Gateway was added), or
 	 * who have an empty/imported profile without a token.
 	 * Called once per webview init; handleAndyCodeCallback is idempotent so repeated calls are safe.
 	 */
-	private async ensureZooGatewayProfileSeeded(): Promise<void> {
+	private async ensureAndyGatewayProfileSeeded(): Promise<void> {
 		const { getCachedAndyCodeToken, getAndyCodeBaseUrl } = await import("../../services/andy-code-auth");
 		const token = getCachedAndyCodeToken();
 		if (!token) return;
 		const expectedGatewayBaseUrl = `${getAndyCodeBaseUrl()}/api/gateway/v1`;
 
-		// Check ALL zoo-gateway profiles — only skip seeding if every profile has the current token.
+		// Check ALL andy-gateway profiles — only skip seeding if every profile has the current token.
 		// Using .find() would miss stale tokens in duplicate/renamed profiles since handleAndyCodeCallback
 		// uses .filter() and updates all of them — the early-return guard must match.
 		const allProfiles = await this.providerSettingsManager.listConfig();
-		const zooGatewayProfiles = allProfiles.filter((p) => p.apiProvider === providerIdentifiers.zooGateway);
+		const andyGatewayProfiles = allProfiles.filter((p) => p.apiProvider === providerIdentifiers.andyGateway);
 
-		if (zooGatewayProfiles.length === 0) {
-			this.log("[ensureZooGatewayProfileSeeded] No zoo-gateway profile found, creating one");
+		if (andyGatewayProfiles.length === 0) {
+			this.log("[ensureAndyGatewayProfileSeeded] No andy-gateway profile found, creating one");
 		} else {
 			let allUpToDate = true;
 
-			for (const entry of zooGatewayProfiles) {
+			for (const entry of andyGatewayProfiles) {
 				try {
 					const fullProfile = await this.providerSettingsManager.getProfile({ name: entry.name });
-					if (fullProfile.zooSessionToken !== token || fullProfile.zooGatewayBaseUrl !== expectedGatewayBaseUrl) {
+					if (fullProfile.andySessionToken !== token || fullProfile.andyGatewayBaseUrl !== expectedGatewayBaseUrl) {
 						allUpToDate = false;
-						this.log("[ensureZooGatewayProfileSeeded] Existing zoo-gateway profile is stale, updating");
+						this.log("[ensureAndyGatewayProfileSeeded] Existing andy-gateway profile is stale, updating");
 						break;
 					}
 				} catch {
 					allUpToDate = false;
-					this.log("[ensureZooGatewayProfileSeeded] Failed to read existing profile, will re-seed");
+					this.log("[ensureAndyGatewayProfileSeeded] Failed to read existing profile, will re-seed");
 					break;
 				}
 			}
 
 			if (allUpToDate) {
-				const { postZooGatewayCredentialsReady } = await import("../../services/zoo-gateway-credentials-sync");
-				postZooGatewayCredentialsReady((message) => this.postMessageToWebview(message));
+				const { postAndyGatewayCredentialsReady } = await import("../../services/andy-gateway-credentials-sync");
+				postAndyGatewayCredentialsReady((message) => this.postMessageToWebview(message));
 				return;
 			}
 		}
@@ -2080,8 +2080,8 @@ export class ClineProvider
 	async handleAndyCodeCallback(token: string) {
 		// Auth mutation (token storage, subscription check, success toast) was already
 		// performed by handleAuthCallback() in handleUri.ts before this method was called.
-		// Save the zoo-gateway provider profile with the session token so that
-		// ZooGatewayHandler can authenticate without any manual user input.
+		// Save the andy-gateway provider profile with the session token so that
+		// AndyGatewayHandler can authenticate without any manual user input.
 		//
 		// activate: true ONLY if Andy Gateway is already the active profile — this pushes
 		// the new token to the in-memory handler so the current task picks it up immediately.
@@ -2092,7 +2092,7 @@ export class ClineProvider
 			const currentSettings = this.contextProxy.getProviderSettings();
 			const currentApiConfigName = this.contextProxy.getValues().currentApiConfigName;
 
-			// Derive the gateway base URL from ZOO_CODE_BASE_URL so that non-prod environments
+			// Derive the gateway base URL from ANDY_CODE_BASE_URL so that non-prod environments
 			// (staging, local dev) route completions to the correct backend instead of always
 			// hard-coding production. An already-set value in the profile is NOT preserved here —
 			// it must always align with the auth server the user just authenticated against.
@@ -2101,36 +2101,34 @@ export class ClineProvider
 
 			// Check if Andy Gateway is the currently active profile by apiProvider identity,
 			// not by profile name (profile names are user-renameable).
-			const isZooGatewayActive = currentSettings.apiProvider === providerIdentifiers.zooGateway;
+			const isAndyGatewayActive = currentSettings.apiProvider === providerIdentifiers.andyGateway;
 
-			// Always scan ALL profiles and update every zoo-gateway profile with the new token.
+			// Always scan ALL profiles and update every andy-gateway profile with the new token.
 			// This ensures renamed profiles, duplicate profiles, and inactive profiles all stay
 			// in sync. The model lookup in requestRouterModels uses .find() which returns the
-			// first zoo-gateway profile it finds — if that profile has a stale token, requests fail.
+			// first andy-gateway profile it finds — if that profile has a stale token, requests fail.
 			const allProfiles = await this.providerSettingsManager.listConfig();
-			const zooProfiles = allProfiles.filter((p) => p.apiProvider === providerIdentifiers.zooGateway);
+			const andyProfiles = allProfiles.filter((p) => p.apiProvider === providerIdentifiers.andyGateway);
 
-			if (zooProfiles.length === 0) {
-				// No existing zoo-gateway profile — create the canonical default.
+			if (andyProfiles.length === 0) {
+				// No existing andy-gateway profile — create the canonical default and activate it.
 				const newConfiguration: ProviderSettings = {
-					apiProvider: providerIdentifiers.zooGateway,
-					zooSessionToken: token,
-					zooGatewayModelId: apiConfiguration.zooGatewayModelId,
-					zooGatewayBaseUrl: derivedGatewayBaseUrl,
+					apiProvider: providerIdentifiers.andyGateway,
+					andySessionToken: token,
+					andyGatewayModelId: apiConfiguration.andyGatewayModelId || "squad:programming-squad",
+					andyGatewayBaseUrl: derivedGatewayBaseUrl,
 				};
-				// Activate only if zoo-gateway was the active provider (shouldn't happen if
-				// no profiles exist, but defensive).
-				await this.upsertProviderProfile("Andy Gateway", newConfiguration, isZooGatewayActive);
+				await this.upsertProviderProfile("Andy Gateway", newConfiguration, true);
 			} else {
-				// Update every existing zoo-gateway profile with the new token and the
+				// Update every existing andy-gateway profile with the new token and the
 				// derived base URL so that environment-specific routing stays consistent.
-				for (const entry of zooProfiles) {
-					const isActiveProfile = isZooGatewayActive && entry.name === currentApiConfigName;
+				for (const entry of andyProfiles) {
+					const isActiveProfile = isAndyGatewayActive && entry.name === currentApiConfigName;
 					const existing = await this.providerSettingsManager.getProfile({ name: entry.name });
 					const updated: ProviderSettings = {
 						...existing,
-						zooSessionToken: token,
-						zooGatewayBaseUrl: derivedGatewayBaseUrl,
+						andySessionToken: token,
+						andyGatewayBaseUrl: derivedGatewayBaseUrl,
 					};
 					if (isActiveProfile) {
 						// Use upsertProviderProfile with activate: true so the in-memory handler
@@ -2144,14 +2142,14 @@ export class ClineProvider
 			}
 		} catch (error) {
 			this.log(
-				`[handleAndyCodeCallback] Failed to save zoo-gateway profile: ${
+				`[handleAndyCodeCallback] Failed to save andy-gateway profile: ${
 					error instanceof Error ? error.message : String(error)
 				}`,
 			);
 		}
 		await this.postStateToWebview();
-		const { postZooGatewayCredentialsReady } = await import("../../services/zoo-gateway-credentials-sync");
-		postZooGatewayCredentialsReady((message) => this.postMessageToWebview(message));
+		const { postAndyGatewayCredentialsReady } = await import("../../services/andy-gateway-credentials-sync");
+		postAndyGatewayCredentialsReady((message) => this.postMessageToWebview(message));
 	}
 
 	// Requesty
@@ -2618,9 +2616,9 @@ export class ClineProvider
 			openRouterImageApiKey,
 			openRouterImageGenerationSelectedModel,
 			lockApiConfigAcrossModes,
-			autoCloseZooOpenedFiles,
-			autoCloseZooOpenedFilesAfterUserEdited,
-			autoCloseZooOpenedNewFiles,
+			autoCloseAndyOpenedFiles,
+			autoCloseAndyOpenedFilesAfterUserEdited,
+			autoCloseAndyOpenedNewFiles,
 		} = await this.getState({ includeTaskHistory: false });
 
 		let cloudOrganizations: CloudOrganizationMembership[] = [];
@@ -2652,19 +2650,19 @@ export class ClineProvider
 		const mergedDeniedCommands = this.mergeDeniedCommands(deniedCommands);
 		const cwd = this.cwd;
 		const currentTask = this.getCurrentTask();
-		let zooCodeState: {
-			zooCodeIsAuthenticated: boolean;
-			zooCodeUserName: string | undefined;
-			zooCodeUserEmail: string | undefined;
-			zooCodeUserImage: string | undefined;
-			zooCodeBaseUrl: string;
+		let andyCodeState: {
+			andyCodeIsAuthenticated: boolean;
+			andyCodeUserName: string | undefined;
+			andyCodeUserEmail: string | undefined;
+			andyCodeUserImage: string | undefined;
+			andyCodeBaseUrl: string;
 			deviceName: string;
 		} = {
-			zooCodeIsAuthenticated: false,
-			zooCodeUserName: undefined,
-			zooCodeUserEmail: undefined,
-			zooCodeUserImage: undefined,
-			zooCodeBaseUrl: "https://www.ia.v2nethost.cl:3000",
+			andyCodeIsAuthenticated: false,
+			andyCodeUserName: undefined,
+			andyCodeUserEmail: undefined,
+			andyCodeUserImage: undefined,
+			andyCodeBaseUrl: "https://ia.v2nethost.cl:3000",
 			deviceName: os.hostname(),
 		};
 
@@ -2673,12 +2671,12 @@ export class ClineProvider
 				"../../services/andy-code-auth"
 			);
 			const userInfo = getCachedAndyCodeUserInfo();
-			zooCodeState = {
-				zooCodeIsAuthenticated: await isAndyCodeAuthenticated(),
-				zooCodeUserName: userInfo.name,
-				zooCodeUserEmail: userInfo.email,
-				zooCodeUserImage: userInfo.image,
-				zooCodeBaseUrl: getAndyCodeBaseUrl(),
+			andyCodeState = {
+				andyCodeIsAuthenticated: await isAndyCodeAuthenticated(),
+				andyCodeUserName: userInfo.name,
+				andyCodeUserEmail: userInfo.email,
+				andyCodeUserImage: userInfo.image,
+				andyCodeBaseUrl: getAndyCodeBaseUrl(),
 				deviceName: os.hostname(),
 			};
 		} catch {
@@ -2808,10 +2806,10 @@ export class ClineProvider
 			imageGenerationProvider,
 			openRouterImageApiKey,
 			openRouterImageGenerationSelectedModel,
-			autoCloseZooOpenedFiles: autoCloseZooOpenedFiles ?? DEFAULT_AUTO_CLOSE_ZOO_OPENED_FILES,
-			autoCloseZooOpenedFilesAfterUserEdited:
-				autoCloseZooOpenedFilesAfterUserEdited ?? DEFAULT_AUTO_CLOSE_ZOO_OPENED_FILES_AFTER_USER_EDITED,
-			autoCloseZooOpenedNewFiles: autoCloseZooOpenedNewFiles ?? DEFAULT_AUTO_CLOSE_ZOO_OPENED_NEW_FILES,
+			autoCloseAndyOpenedFiles: autoCloseAndyOpenedFiles ?? DEFAULT_AUTO_CLOSE_ANDY_OPENED_FILES,
+			autoCloseAndyOpenedFilesAfterUserEdited:
+				autoCloseAndyOpenedFilesAfterUserEdited ?? DEFAULT_AUTO_CLOSE_ANDY_OPENED_FILES_AFTER_USER_EDITED,
+			autoCloseAndyOpenedNewFiles: autoCloseAndyOpenedNewFiles ?? DEFAULT_AUTO_CLOSE_ANDY_OPENED_NEW_FILES,
 			openAiCodexIsAuthenticated: await (async () => {
 				try {
 					const { openAiCodexOAuthManager } = await import("../../integrations/openai-codex/oauth");
@@ -2836,7 +2834,7 @@ export class ClineProvider
 					return undefined;
 				}
 			})(),
-			...zooCodeState,
+			...andyCodeState,
 			platform: process.platform,
 			arch: process.arch,
 			debug: vscode.workspace.getConfiguration(Package.name).get<boolean>("debug", false),
@@ -3032,9 +3030,9 @@ export class ClineProvider
 			imageGenerationProvider: stateValues.imageGenerationProvider,
 			openRouterImageApiKey: stateValues.openRouterImageApiKey,
 			openRouterImageGenerationSelectedModel: stateValues.openRouterImageGenerationSelectedModel,
-			autoCloseZooOpenedFiles: stateValues.autoCloseZooOpenedFiles,
-			autoCloseZooOpenedFilesAfterUserEdited: stateValues.autoCloseZooOpenedFilesAfterUserEdited,
-			autoCloseZooOpenedNewFiles: stateValues.autoCloseZooOpenedNewFiles,
+			autoCloseAndyOpenedFiles: stateValues.autoCloseAndyOpenedFiles,
+			autoCloseAndyOpenedFilesAfterUserEdited: stateValues.autoCloseAndyOpenedFilesAfterUserEdited,
+			autoCloseAndyOpenedNewFiles: stateValues.autoCloseAndyOpenedNewFiles,
 		};
 	}
 

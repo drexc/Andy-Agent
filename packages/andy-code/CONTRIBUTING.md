@@ -71,7 +71,7 @@ Mention alignment with these areas in your PRs.
 
 All contributions start with a GitHub Issue using our skinny templates.
 
-- **Check existing issues**: Search [GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues).
+- **Check existing issues**: Search [GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues).
 - **Create an issue** using:
     - **Enhancements:** "Enhancement Request" template (plain language focused on user benefit).
     - **Bugs:** "Bug Report" template (minimal repro + expected vs actual + version).
@@ -80,17 +80,17 @@ All contributions start with a GitHub Issue using our skinny templates.
 
 ### Deciding What to Work On
 
-- Check the [GitHub Issues page](https://github.com/Zoo-Code-Org/Zoo-Code/issues) for issues.
-- For docs, visit [Andy Code Docs](https://github.com/Zoo-Code-Org/Zoo-Code-Docs).
+- Check the [GitHub Issues page](https://github.com/Andy-Code-Org/Andy-Code/issues) for issues.
+- For docs, visit [Andy Code Docs](https://github.com/Andy-Code-Org/Andy-Code-Docs).
 
 ### Reporting Bugs
 
 - Check for existing reports first.
-- Create a new bug using the ["Bug Report" template](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) with:
+- Create a new bug using the ["Bug Report" template](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) with:
     - Clear, numbered reproduction steps
     - Expected vs actual result
     - Andy Code version (required); API provider/model if relevant
-- **Security issues**: Report privately via [security advisories](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new).
+- **Security issues**: Report privately via [security advisories](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new).
 
 ## Development & Submission Process
 
@@ -99,7 +99,7 @@ All contributions start with a GitHub Issue using our skinny templates.
 1. **Fork & Clone:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Install Dependencies:**

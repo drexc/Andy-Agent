@@ -71,7 +71,7 @@ PR'lerinizde bu alanlarla uyumu belirtin.
 
 Tüm katkılar, basit şablonlarımızı kullanarak bir GitHub Sorunu ile başlar.
 
-- **Mevcut sorunları kontrol edin**: [GitHub Sorunları](https://github.com/Zoo-Code-Org/Zoo-Code/issues)nda arama yapın.
+- **Mevcut sorunları kontrol edin**: [GitHub Sorunları](https://github.com/Andy-Code-Org/Andy-Code/issues)nda arama yapın.
 - **Bir sorun oluşturun**:
     - **İyileştirmeler:** "İyileştirme İsteği" şablonu (kullanıcı yararına odaklanan sade bir dil).
     - **Hatalar:** "Hata Raporu" şablonu (minimum yeniden oluşturma + beklenen vs gerçek + sürüm).
@@ -80,17 +80,17 @@ Tüm katkılar, basit şablonlarımızı kullanarak bir GitHub Sorunu ile başla
 
 ### Ne Üzerinde Çalışılacağına Karar Verme
 
-- Issue bulmak için [GitHub Issues sayfasına](https://github.com/Zoo-Code-Org/Zoo-Code/issues) bak.
-- Belgeler için [Andy Code Belgeleri](https://github.com/Zoo-Code-Org/Zoo-Code-Docs)ni ziyaret edin.
+- Issue bulmak için [GitHub Issues sayfasına](https://github.com/Andy-Code-Org/Andy-Code/issues) bak.
+- Belgeler için [Andy Code Belgeleri](https://github.com/Andy-Code-Org/Andy-Code-Docs)ni ziyaret edin.
 
 ### Hataları Bildirme
 
 - Önce mevcut raporları kontrol edin.
-- Aşağıdakilerle ["Hata Raporu" şablonunu](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) kullanarak yeni bir hata oluşturun:
+- Aşağıdakilerle ["Hata Raporu" şablonunu](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) kullanarak yeni bir hata oluşturun:
     - Açık, numaralandırılmış yeniden oluşturma adımları
     - Beklenen vs gerçek sonuç
     - Andy Code sürümü (gerekli); ilgiliyse API sağlayıcısı/modeli
-- **Güvenlik sorunları**: [Güvenlik tavsiyeleri](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new) aracılığıyla özel olarak bildirin.
+- **Güvenlik sorunları**: [Güvenlik tavsiyeleri](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new) aracılığıyla özel olarak bildirin.
 
 ## Geliştirme ve Gönderme Süreci
 
@@ -99,7 +99,7 @@ Tüm katkılar, basit şablonlarımızı kullanarak bir GitHub Sorunu ile başla
 1. **Çatallayın ve Klonlayın:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Bağımlılıkları Yükleyin:**

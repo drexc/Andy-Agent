@@ -71,7 +71,7 @@ Sebutkan keselarasan dengan area-area ini di PR Anda.
 
 Semua kontribusi dimulai dengan Masalah GitHub menggunakan template ramping kami.
 
-- **Periksa masalah yang ada**: Cari di [Masalah GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues).
+- **Periksa masalah yang ada**: Cari di [Masalah GitHub](https://github.com/Andy-Code-Org/Andy-Code/issues).
 - **Buat masalah** menggunakan:
     - **Penyempurnaan:** Template "Permintaan Penyempurnaan" (bahasa sederhana yang berfokus pada manfaat pengguna).
     - **Bug:** Template "Laporan Bug" (repro minimal + yang diharapkan vs aktual + versi).
@@ -80,17 +80,17 @@ Semua kontribusi dimulai dengan Masalah GitHub menggunakan template ramping kami
 
 ### Memutuskan Apa yang Akan Dikerjakan
 
-- Periksa [halaman GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues) untuk melihat issues.
-- Untuk dokumentasi, kunjungi [Dokumentasi Andy Code](https://github.com/Zoo-Code-Org/Zoo-Code-Docs).
+- Periksa [halaman GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues) untuk melihat issues.
+- Untuk dokumentasi, kunjungi [Dokumentasi Andy Code](https://github.com/Andy-Code-Org/Andy-Code-Docs).
 
 ### Melaporkan Bug
 
 - Periksa laporan yang ada terlebih dahulu.
-- Buat bug baru menggunakan [template "Laporan Bug"](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) dengan:
+- Buat bug baru menggunakan [template "Laporan Bug"](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) dengan:
     - Langkah-langkah reproduksi yang jelas dan bernomor
     - Hasil yang diharapkan vs aktual
     - Versi Andy Code (wajib); penyedia/model API jika relevan
-- **Masalah keamanan**: Laporkan secara pribadi melalui [saran keamanan](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new).
+- **Masalah keamanan**: Laporkan secara pribadi melalui [saran keamanan](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new).
 
 ## Proses Pengembangan & Pengajuan
 
@@ -99,7 +99,7 @@ Semua kontribusi dimulai dengan Masalah GitHub menggunakan template ramping kami
 1. **Fork & Klon:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Instal Ketergantungan:**

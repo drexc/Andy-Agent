@@ -4,11 +4,11 @@ import { GLOBAL_SECRET_KEYS, type ProviderSettings, providerIdentifiers, SECRET_
  * Returns whether a provider profile is sufficiently configured to leave the
  * welcome/setup gate.
  *
- * `zooCodeIsAuthenticated` is needed for Andy Gateway: auth lives in global
- * secret storage (`andy-code-auth`), and `zooSessionToken` is not part of
+ * `andyCodeIsAuthenticated` is needed for Andy Gateway: auth lives in global
+ * secret storage (`andy-code-auth`), and `andySessionToken` is not part of
  * `SECRET_STATE_KEYS`, so session-auth alone would otherwise look unconfigured.
  */
-export function checkExistKey(config: ProviderSettings | undefined, zooCodeIsAuthenticated?: boolean) {
+export function checkExistKey(config: ProviderSettings | undefined, andyCodeIsAuthenticated?: boolean) {
 	if (!config) {
 		return false;
 	}
@@ -29,8 +29,8 @@ export function checkExistKey(config: ProviderSettings | undefined, zooCodeIsAut
 
 	// Andy Gateway uses session auth (profile token and/or global Andy Code login),
 	// not a traditional API key listed in SECRET_STATE_KEYS.
-	if (config.apiProvider === providerIdentifiers.zooGateway) {
-		return Boolean(config.zooSessionToken) || Boolean(zooCodeIsAuthenticated);
+	if (config.apiProvider === providerIdentifiers.andyGateway) {
+		return Boolean(config.andySessionToken) || Boolean(andyCodeIsAuthenticated);
 	}
 
 	// Check all secret keys from the centralized SECRET_STATE_KEYS array.

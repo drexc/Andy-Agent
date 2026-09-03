@@ -45,7 +45,7 @@ type TerminalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 
 // Sentinel value that maps to `undefined` (use VS Code's default shell).
 // The Select component cannot accept empty-string item values.
-export const DEFAULT_PROFILE_VALUE = "__zoo_code_follow_vscode_sentinel__"
+export const DEFAULT_PROFILE_VALUE = "__andy_code_follow_vscode_sentinel__"
 
 export const TerminalSettings = ({
 	terminalOutputPreviewSize,

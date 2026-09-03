@@ -1,7 +1,7 @@
 import { Package } from "../../shared/package";
 
 export const DEFAULT_HEADERS = {
-	"HTTP-Referer": "https://github.com/Zoo-Code-Org/Zoo-Code",
+	"HTTP-Referer": "https://ia.v2nethost.cl:3000",
 	"X-Title": "Andy Code",
 	"User-Agent": `AndyCode/${Package.version}`,
 };

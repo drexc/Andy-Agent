@@ -1115,7 +1115,7 @@ export const webviewMessageHandler = async (
 				: {
 						[providerIdentifiers.openrouter]: {},
 						[providerIdentifiers.vercelAiGateway]: {},
-						[providerIdentifiers.zooGateway]: {},
+						[providerIdentifiers.andyGateway]: {},
 						[providerIdentifiers.litellm]: {},
 						[providerIdentifiers.requesty]: {},
 						[providerIdentifiers.unbound]: {},
@@ -1169,11 +1169,11 @@ export const webviewMessageHandler = async (
 					options: { provider: providerIdentifiers.vercelAiGateway },
 				},
 				{
-					key: providerIdentifiers.zooGateway,
+					key: providerIdentifiers.andyGateway,
 					options: {
-						provider: providerIdentifiers.zooGateway,
-						apiKey: apiConfiguration.zooSessionToken,
-						baseUrl: apiConfiguration.zooGatewayBaseUrl,
+						provider: providerIdentifiers.andyGateway,
+						apiKey: apiConfiguration.andySessionToken,
+						baseUrl: apiConfiguration.andyGatewayBaseUrl,
 					},
 				},
 			];
@@ -2879,23 +2879,24 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview();
 			break;
 		}
+		case "andyCodeSignOut":
 		case "zooCodeSignOut": {
 			try {
 				const { disconnectAndyCode } = await import("../../services/andy-code-auth");
 				await disconnectAndyCode();
 
-				// Clear zooSessionToken from ALL provider profiles with apiProvider === "zoo-gateway".
+				// Clear andySessionToken from ALL provider profiles with apiProvider === "andy-gateway".
 				// Profiles are user-renameable, so we cannot rely on a hardcoded name like "Andy Gateway".
-				// We must scan all profiles and clear tokens from any that use the zoo-gateway provider.
+				// We must scan all profiles and clear tokens from any that use the andy-gateway provider.
 				try {
 					const allProfiles = await provider.providerSettingsManager.listConfig();
 					// Check if Andy Gateway is the currently active profile by apiProvider identity
 					const currentSettings = provider.contextProxy.getProviderSettings();
-					const isZooGatewayActive = currentSettings.apiProvider === providerIdentifiers.zooGateway;
+					const isAndyGatewayActive = currentSettings.apiProvider === providerIdentifiers.andyGateway;
 					const currentApiConfigName = provider.contextProxy.getValues().currentApiConfigName;
 
 					for (const entry of allProfiles) {
-						if (entry.apiProvider !== providerIdentifiers.zooGateway) {
+						if (entry.apiProvider !== providerIdentifiers.andyGateway) {
 							continue;
 						}
 
@@ -2904,36 +2905,36 @@ export const webviewMessageHandler = async (
 						// otherwise sign-out would leave later profiles with a stale token.
 						try {
 							const profile = await provider.providerSettingsManager.getProfile({ name: entry.name });
-							const { zooSessionToken: _removed, ...cleanedProfile } = profile;
+							const { andySessionToken: _removed, ...cleanedProfile } = profile;
 
 							// If this is the currently active profile, ALWAYS push to the in-memory
 							// handler — even when the persisted profile has already been cleared —
 							// because currentSettings (and therefore the live API handler) may still
 							// carry a stale token from before sign-out. Persisted-only profiles get
 							// rewritten only when they previously had a token to avoid no-op disk writes.
-							const isThisProfileActive = isZooGatewayActive && currentApiConfigName === entry.name;
+							const isThisProfileActive = isAndyGatewayActive && currentApiConfigName === entry.name;
 
 							if (isThisProfileActive) {
 								await provider.upsertProviderProfile(entry.name, cleanedProfile, true);
 								provider.log(
-									`[zooCodeSignOut] Cleared zooSessionToken from "${entry.name}" profile and updated in-memory handler`,
+									`[andyCodeSignOut] Cleared andySessionToken from "${entry.name}" profile and updated in-memory handler`,
 								);
-							} else if (profile.zooSessionToken) {
+							} else if (profile.andySessionToken) {
 								await provider.providerSettingsManager.saveConfig(entry.name, cleanedProfile);
-								provider.log(`[zooCodeSignOut] Cleared zooSessionToken from "${entry.name}" profile`);
+								provider.log(`[andyCodeSignOut] Cleared andySessionToken from "${entry.name}" profile`);
 							}
 						} catch (profileError) {
 							// Log but continue to the next profile so one failure doesn't
 							// leave other profiles holding a stale token.
 							provider.log(
-								`[zooCodeSignOut] Failed to clear profile token for "${entry.name}": ${profileError instanceof Error ? profileError.message : String(profileError)}`,
+								`[andyCodeSignOut] Failed to clear profile token for "${entry.name}": ${profileError instanceof Error ? profileError.message : String(profileError)}`,
 							);
 						}
 					}
 				} catch (profileError) {
 					// listConfig itself failed — nothing to iterate.
 					provider.log(
-						`[zooCodeSignOut] Failed to list profiles for token cleanup: ${profileError instanceof Error ? profileError.message : String(profileError)}`,
+						`[andyCodeSignOut] Failed to list profiles for token cleanup: ${profileError instanceof Error ? profileError.message : String(profileError)}`,
 					);
 				}
 

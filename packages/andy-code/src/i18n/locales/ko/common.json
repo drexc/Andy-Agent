@@ -210,7 +210,7 @@
 		"enter_valid_path": "유효한 경로를 입력하세요"
 	},
 	"input": {
-		"task_prompt": "Zoo에게 무엇을 시킬까요?",
+		"task_prompt": "Andy에게 무엇을 시킬까요?",
 		"task_placeholder": "여기에 작업을 입력하세요"
 	},
 	"settings": {
@@ -270,7 +270,7 @@
 		"label": "Docs",
 		"url": "https://docs.ia.v2nethost.cl:3000"
 	},
-	"zooAuth": {
+	"andyAuth": {
 		"errors": {
 			"invalid_token_received": "Andy Code: 잘못된 인증 token을 수신했습니다.",
 			"token_verification_failed": "Andy Code: Token 검증에 실패했습니다.",

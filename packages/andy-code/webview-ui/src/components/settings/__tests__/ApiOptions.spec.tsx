@@ -4,7 +4,7 @@ import { retiredProviderIdentifiers, providerIdentifiers } from "@roo-code/types
 import { renderWithExtensionState, screen, fireEvent, within } from "@/utils/test-utils"
 
 import { type ModelInfo, type ProviderSettings, openAiModelInfoSaneDefaults } from "@roo-code/types"
-import { openAiCodexDefaultModelId, zooGatewayDefaultModelId } from "@roo-code/types"
+import { openAiCodexDefaultModelId, andyGatewayDefaultModelId } from "@roo-code/types"
 
 import ApiOptions, { ApiOptionsProps } from "../ApiOptions"
 
@@ -313,26 +313,26 @@ describe("ApiOptions", () => {
 		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiModelId", openAiCodexDefaultModelId, false)
 	})
 
-	it("initializes zooGatewayModelId to its default when switching provider to zoo-gateway", () => {
-		// Regression: zoo-gateway was previously missing from PROVIDER_MODEL_CONFIG, so switching
-		// providers never seeded zooGatewayModelId. Configs were left without a model id, which
+	it("initializes andyGatewayModelId to its default when switching provider to andy-gateway", () => {
+		// Regression: andy-gateway was previously missing from PROVIDER_MODEL_CONFIG, so switching
+		// providers never seeded andyGatewayModelId. Configs were left without a model id, which
 		// blocked completion flows that require a dynamic-provider model id.
 		const mockSetApiConfigurationField = vi.fn()
 
 		renderApiOptions({
 			apiConfiguration: {
 				apiProvider: providerIdentifiers.anthropic,
-				// No prior zooGatewayModelId.
+				// No prior andyGatewayModelId.
 			},
 			setApiConfigurationField: mockSetApiConfigurationField,
 		})
 
 		const providerSelectContainer = screen.getByTestId("provider-select")
 		const providerSelect = providerSelectContainer.querySelector("select") as HTMLSelectElement
-		fireEvent.change(providerSelect, { target: { value: "zoo-gateway" } })
+		fireEvent.change(providerSelect, { target: { value: "andy-gateway" } })
 
-		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiProvider", "zoo-gateway")
-		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("zooGatewayModelId", zooGatewayDefaultModelId, false)
+		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("apiProvider", "andy-gateway")
+		expect(mockSetApiConfigurationField).toHaveBeenCalledWith("andyGatewayModelId", andyGatewayDefaultModelId, false)
 	})
 
 	it("renders the Friendli provider form when friendli is selected", () => {

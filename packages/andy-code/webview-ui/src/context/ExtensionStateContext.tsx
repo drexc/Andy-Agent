@@ -343,7 +343,7 @@ export const ExtensionStateContextProvider: React.FC<{
 				case "state": {
 					const newState = message.state ?? {}
 					setState((prevState) => mergeExtensionState(prevState, newState))
-					setShowWelcome(!checkExistKey(newState.apiConfiguration, newState.zooCodeIsAuthenticated))
+					setShowWelcome(!checkExistKey(newState.apiConfiguration, newState.andyCodeIsAuthenticated))
 					setDidHydrateState(true)
 					// Update alwaysAllowFollowupQuestions if present in state message
 					if ((newState as any).alwaysAllowFollowupQuestions !== undefined) {
@@ -523,9 +523,9 @@ export const ExtensionStateContextProvider: React.FC<{
 	useEffect(() => {
 		const root = document.documentElement
 		if (typeof state.chatFontSize === "number") {
-			root.style.setProperty("--zoo-chat-font-size", `${state.chatFontSize}px`)
+			root.style.setProperty("--andy-chat-font-size", `${state.chatFontSize}px`)
 		} else {
-			root.style.removeProperty("--zoo-chat-font-size")
+			root.style.removeProperty("--andy-chat-font-size")
 		}
 	}, [state.chatFontSize])
 

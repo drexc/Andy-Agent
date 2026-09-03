@@ -11,12 +11,12 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/Zoo-Code-Org/Zoo-Code.git"
+		"url": "git+https://github.com/Andy-Code-Org/Andy-Code.git"
 	},
 	"bugs": {
-		"url": "https://github.com/Zoo-Code-Org/Zoo-Code/issues"
+		"url": "https://github.com/Andy-Code-Org/Andy-Code/issues"
 	},
 	"homepage": "https://ia.v2nethost.cl:3000",
-	"keywords": ["zoo", "andy-code", "ai"],
+	"keywords": ["andy", "andy-code", "ai"],
 	"files": ["dist"]
 }

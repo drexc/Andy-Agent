@@ -71,7 +71,7 @@ Vermeld de afstemming met deze gebieden in je PR's.
 
 Alle bijdragen beginnen met een GitHub Issue met behulp van onze slanke sjablonen.
 
-- **Controleer bestaande issues**: Zoek in [GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues).
+- **Controleer bestaande issues**: Zoek in [GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues).
 - **Maak een issue** aan met:
     - **Verbeteringen:** sjabloon "Verbeteringsverzoek" (eenvoudige taal gericht op gebruikersvoordeel).
     - **Bugs:** sjabloon "Bugrapport" (minimale repro + verwacht vs. feitelijk + versie).
@@ -80,17 +80,17 @@ Alle bijdragen beginnen met een GitHub Issue met behulp van onze slanke sjablone
 
 ### Beslissen waaraan je wilt werken
 
-- Bekijk de [GitHub Issues-pagina](https://github.com/Zoo-Code-Org/Zoo-Code/issues) voor issues.
-- Ga voor documentatie naar [Andy Code Docs](https://github.com/Zoo-Code-Org/Zoo-Code-Docs).
+- Bekijk de [GitHub Issues-pagina](https://github.com/Andy-Code-Org/Andy-Code/issues) voor issues.
+- Ga voor documentatie naar [Andy Code Docs](https://github.com/Andy-Code-Org/Andy-Code-Docs).
 
 ### Bugs rapporteren
 
 - Controleer eerst bestaande rapporten.
-- Maak een nieuwe bug aan met het ["Bugrapport"-sjabloon](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) met:
+- Maak een nieuwe bug aan met het ["Bugrapport"-sjabloon](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) met:
     - Duidelijke, genummerde reproductiestappen
     - Verwacht vs. feitelijk resultaat
     - Andy Code-versie (vereist); API-provider/model indien relevant
-- **Beveiligingsproblemen**: Rapporteer privé via [beveiligingsadviezen](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new).
+- **Beveiligingsproblemen**: Rapporteer privé via [beveiligingsadviezen](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new).
 
 ## Ontwikkelings- en indieningsproces
 
@@ -99,7 +99,7 @@ Alle bijdragen beginnen met een GitHub Issue met behulp van onze slanke sjablone
 1. **Fork & Klonen:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Afhankelijkheden installeren:**

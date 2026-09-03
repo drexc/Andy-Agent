@@ -12,10 +12,10 @@ export function getRequestyAuthUrl(uriScheme?: string) {
 	return `https://app.requesty.ai/oauth/authorize?callback_url=${getCallbackUrl("requesty", uriScheme)}`
 }
 
-const ZOO_CODE_DEFAULT_BASE_URL = "https://www.ia.v2nethost.cl:3000"
+const ANDY_CODE_DEFAULT_BASE_URL = "https://ia.v2nethost.cl:3000"
 
 export function getAndyCodeAuthUrl(uriScheme?: string, baseUrl?: string, deviceName?: string) {
-	const resolvedBaseUrl = baseUrl || ZOO_CODE_DEFAULT_BASE_URL
+	const resolvedBaseUrl = baseUrl || ANDY_CODE_DEFAULT_BASE_URL
 	const callbackUri = getCallbackUrl("auth-callback", uriScheme)
 	const resolvedDeviceName = encodeURIComponent(deviceName || "VS Code")
 	const editor = encodeURIComponent("VS Code")

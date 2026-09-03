@@ -22,7 +22,7 @@ const DEFAULT_WELCOME_API_CONFIGURATION: ProviderSettings = {
 
 const getWelcomeApiConfiguration = (
 	apiConfiguration?: ProviderSettings,
-	zooCodeIsAuthenticated?: boolean,
+	andyCodeIsAuthenticated?: boolean,
 ): ProviderSettings => {
 	// validateApiConfiguration treats a missing apiProvider as valid (no switch case matches),
 	// so we explicitly fall back here before delegating to it for incomplete-but-set configs.
@@ -30,7 +30,7 @@ const getWelcomeApiConfiguration = (
 		return DEFAULT_WELCOME_API_CONFIGURATION
 	}
 
-	const validationError = validateApiConfiguration(apiConfiguration, undefined, undefined, zooCodeIsAuthenticated)
+	const validationError = validateApiConfiguration(apiConfiguration, undefined, undefined, andyCodeIsAuthenticated)
 	if (validationError) {
 		return DEFAULT_WELCOME_API_CONFIGURATION
 	}
@@ -39,14 +39,14 @@ const getWelcomeApiConfiguration = (
 }
 
 const WelcomeViewProvider = () => {
-	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme, zooCodeIsAuthenticated } =
+	const { apiConfiguration, currentApiConfigName, setApiConfiguration, uriScheme, andyCodeIsAuthenticated } =
 		useExtensionState()
 	const { t } = useAppTranslation()
 	const [errorMessage, setErrorMessage] = useState<string | undefined>(undefined)
 	const [showProviderSetup, setShowProviderSetup] = useState(false)
 	const [welcomeApiConfiguration, setWelcomeApiConfiguration] = useState<ProviderSettings>()
 	const effectiveApiConfiguration =
-		welcomeApiConfiguration ?? getWelcomeApiConfiguration(apiConfiguration, zooCodeIsAuthenticated)
+		welcomeApiConfiguration ?? getWelcomeApiConfiguration(apiConfiguration, andyCodeIsAuthenticated)
 
 	const setApiConfigurationFieldForApiOptions = useCallback(
 		<K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => {
@@ -61,7 +61,7 @@ const WelcomeViewProvider = () => {
 
 	const handleGetStarted = useCallback(() => {
 		if (!showProviderSetup) {
-			const initialApiConfiguration = getWelcomeApiConfiguration(apiConfiguration, zooCodeIsAuthenticated)
+			const initialApiConfiguration = getWelcomeApiConfiguration(apiConfiguration, andyCodeIsAuthenticated)
 			setWelcomeApiConfiguration(initialApiConfiguration)
 
 			setApiConfiguration(initialApiConfiguration)
@@ -70,7 +70,7 @@ const WelcomeViewProvider = () => {
 			return
 		}
 
-		const error = validateApiConfiguration(effectiveApiConfiguration, undefined, undefined, zooCodeIsAuthenticated)
+		const error = validateApiConfiguration(effectiveApiConfiguration, undefined, undefined, andyCodeIsAuthenticated)
 
 		if (error) {
 			setErrorMessage(error)
@@ -89,7 +89,7 @@ const WelcomeViewProvider = () => {
 		setApiConfiguration,
 		effectiveApiConfiguration,
 		currentApiConfigName,
-		zooCodeIsAuthenticated,
+		andyCodeIsAuthenticated,
 	])
 
 	if (!showProviderSetup) {

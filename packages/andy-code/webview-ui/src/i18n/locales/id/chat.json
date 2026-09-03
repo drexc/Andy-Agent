@@ -151,7 +151,7 @@
 		"title": "Mode",
 		"marketplace": "Marketplace Mode",
 		"settings": "Pengaturan Mode",
-		"description": "Persona khusus yang menyesuaikan perilaku Zoo.",
+		"description": "Persona khusus yang menyesuaikan perilaku Andy.",
 		"searchPlaceholder": "Cari mode...",
 		"noResults": "Tidak ada hasil yang ditemukan"
 	},
@@ -227,51 +227,51 @@
 		}
 	},
 	"skill": {
-		"wantsToLoad": "Zoo ingin memuat keterampilan",
-		"didLoad": "Zoo telah memuat keterampilan"
+		"wantsToLoad": "Andy ingin memuat keterampilan",
+		"didLoad": "Andy telah memuat keterampilan"
 	},
 	"instructions": {
-		"wantsToFetch": "Zoo ingin mengambil instruksi detail untuk membantu tugas saat ini"
+		"wantsToFetch": "Andy ingin mengambil instruksi detail untuk membantu tugas saat ini"
 	},
 	"fileOperations": {
-		"wantsToRead": "Zoo ingin membaca file ini",
-		"wantsToReadMultiple": "Zoo ingin membaca beberapa file",
-		"wantsToReadAndXMore": "Zoo ingin membaca file ini dan {{count}} lainnya",
-		"wantsToReadOutsideWorkspace": "Zoo ingin membaca file ini di luar workspace",
-		"didRead": "Zoo membaca file ini",
-		"wantsToEdit": "Zoo ingin mengedit file ini",
-		"wantsToEditOutsideWorkspace": "Zoo ingin mengedit file ini di luar workspace",
-		"wantsToEditProtected": "Zoo ingin mengedit file konfigurasi yang dilindungi",
-		"wantsToApplyBatchChanges": "Zoo ingin menerapkan perubahan ke beberapa file",
-		"wantsToGenerateImage": "Zoo ingin menghasilkan gambar",
-		"wantsToGenerateImageOutsideWorkspace": "Zoo ingin menghasilkan gambar di luar workspace",
-		"wantsToGenerateImageProtected": "Zoo ingin menghasilkan gambar di lokasi yang dilindungi",
-		"didGenerateImage": "Zoo telah menghasilkan gambar",
-		"wantsToCreate": "Zoo ingin membuat file baru",
-		"wantsToSearchReplace": "Zoo ingin mencari dan mengganti di file ini",
-		"didSearchReplace": "Zoo melakukan pencarian dan penggantian pada file ini",
-		"wantsToInsert": "Zoo ingin menyisipkan konten ke file ini",
-		"wantsToInsertWithLineNumber": "Zoo ingin menyisipkan konten ke file ini di baris {{lineNumber}}",
-		"wantsToInsertAtEnd": "Zoo ingin menambahkan konten ke akhir file ini"
+		"wantsToRead": "Andy ingin membaca file ini",
+		"wantsToReadMultiple": "Andy ingin membaca beberapa file",
+		"wantsToReadAndXMore": "Andy ingin membaca file ini dan {{count}} lainnya",
+		"wantsToReadOutsideWorkspace": "Andy ingin membaca file ini di luar workspace",
+		"didRead": "Andy membaca file ini",
+		"wantsToEdit": "Andy ingin mengedit file ini",
+		"wantsToEditOutsideWorkspace": "Andy ingin mengedit file ini di luar workspace",
+		"wantsToEditProtected": "Andy ingin mengedit file konfigurasi yang dilindungi",
+		"wantsToApplyBatchChanges": "Andy ingin menerapkan perubahan ke beberapa file",
+		"wantsToGenerateImage": "Andy ingin menghasilkan gambar",
+		"wantsToGenerateImageOutsideWorkspace": "Andy ingin menghasilkan gambar di luar workspace",
+		"wantsToGenerateImageProtected": "Andy ingin menghasilkan gambar di lokasi yang dilindungi",
+		"didGenerateImage": "Andy telah menghasilkan gambar",
+		"wantsToCreate": "Andy ingin membuat file baru",
+		"wantsToSearchReplace": "Andy ingin mencari dan mengganti di file ini",
+		"didSearchReplace": "Andy melakukan pencarian dan penggantian pada file ini",
+		"wantsToInsert": "Andy ingin menyisipkan konten ke file ini",
+		"wantsToInsertWithLineNumber": "Andy ingin menyisipkan konten ke file ini di baris {{lineNumber}}",
+		"wantsToInsertAtEnd": "Andy ingin menambahkan konten ke akhir file ini"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Zoo ingin melihat file tingkat atas di direktori ini",
-		"didViewTopLevel": "Zoo melihat file tingkat atas di direktori ini",
-		"wantsToViewRecursive": "Zoo ingin melihat semua file secara rekursif di direktori ini",
-		"didViewRecursive": "Zoo melihat semua file secara rekursif di direktori ini",
-		"wantsToSearch": "Zoo ingin mencari direktori ini untuk <code>{{regex}}</code>",
-		"didSearch": "Zoo mencari direktori ini untuk <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Zoo ingin mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Zoo mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Zoo ingin melihat file tingkat atas di direktori ini (di luar workspace)",
-		"didViewTopLevelOutsideWorkspace": "Zoo melihat file tingkat atas di direktori ini (di luar workspace)",
-		"wantsToViewRecursiveOutsideWorkspace": "Zoo ingin melihat semua file secara rekursif di direktori ini (di luar workspace)",
-		"didViewRecursiveOutsideWorkspace": "Zoo melihat semua file secara rekursif di direktori ini (di luar workspace)",
-		"wantsToViewMultipleDirectories": "Zoo ingin melihat beberapa direktori"
+		"wantsToViewTopLevel": "Andy ingin melihat file tingkat atas di direktori ini",
+		"didViewTopLevel": "Andy melihat file tingkat atas di direktori ini",
+		"wantsToViewRecursive": "Andy ingin melihat semua file secara rekursif di direktori ini",
+		"didViewRecursive": "Andy melihat semua file secara rekursif di direktori ini",
+		"wantsToSearch": "Andy ingin mencari direktori ini untuk <code>{{regex}}</code>",
+		"didSearch": "Andy mencari direktori ini untuk <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Andy ingin mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Andy mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>",
+		"wantsToViewTopLevelOutsideWorkspace": "Andy ingin melihat file tingkat atas di direktori ini (di luar workspace)",
+		"didViewTopLevelOutsideWorkspace": "Andy melihat file tingkat atas di direktori ini (di luar workspace)",
+		"wantsToViewRecursiveOutsideWorkspace": "Andy ingin melihat semua file secara rekursif di direktori ini (di luar workspace)",
+		"didViewRecursiveOutsideWorkspace": "Andy melihat semua file secara rekursif di direktori ini (di luar workspace)",
+		"wantsToViewMultipleDirectories": "Andy ingin melihat beberapa direktori"
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Zoo ingin mencari codebase untuk <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Zoo ingin mencari codebase untuk <code>{{query}}</code> di <code>{{path}}</code>",
+		"wantsToSearch": "Andy ingin mencari codebase untuk <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Andy ingin mencari codebase untuk <code>{{query}}</code> di <code>{{path}}</code>",
 		"didSearch_one": "Ditemukan 1 hasil",
 		"didSearch_other": "Ditemukan {{count}} hasil",
 		"resultTooltip": "Skor kemiripan: {{score}} (klik untuk membuka file)"
@@ -298,24 +298,24 @@
 	"response": "Respons",
 	"arguments": "Argumen",
 	"text": {
-		"rooSaid": "Zoo berkata"
+		"rooSaid": "Andy berkata"
 	},
 	"feedback": {
 		"youSaid": "Anda bilang"
 	},
 	"mcp": {
-		"wantsToUseTool": "Zoo ingin menggunakan tool di server MCP {{serverName}}",
-		"wantsToAccessResource": "Zoo ingin mengakses resource di server MCP {{serverName}}"
+		"wantsToUseTool": "Andy ingin menggunakan tool di server MCP {{serverName}}",
+		"wantsToAccessResource": "Andy ingin mengakses resource di server MCP {{serverName}}"
 	},
 	"modes": {
-		"wantsToSwitch": "Zoo ingin beralih ke mode {{mode}}",
-		"wantsToSwitchWithReason": "Zoo ingin beralih ke mode {{mode}} karena: {{reason}}",
-		"didSwitch": "Zoo beralih ke mode {{mode}}",
-		"didSwitchWithReason": "Zoo beralih ke mode {{mode}} karena: {{reason}}"
+		"wantsToSwitch": "Andy ingin beralih ke mode {{mode}}",
+		"wantsToSwitchWithReason": "Andy ingin beralih ke mode {{mode}} karena: {{reason}}",
+		"didSwitch": "Andy beralih ke mode {{mode}}",
+		"didSwitchWithReason": "Andy beralih ke mode {{mode}} karena: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Zoo ingin membuat subtugas baru dalam mode {{mode}}",
-		"wantsToFinish": "Zoo ingin menyelesaikan subtugas ini",
+		"wantsToCreate": "Andy ingin membuat subtugas baru dalam mode {{mode}}",
+		"wantsToFinish": "Andy ingin menyelesaikan subtugas ini",
 		"newTaskContent": "Instruksi Subtugas",
 		"completionContent": "Subtugas Selesai",
 		"resultContent": "Hasil Subtugas",
@@ -324,7 +324,7 @@
 		"goToSubtask": "Lihat tugas"
 	},
 	"questions": {
-		"hasQuestion": "Zoo punya pertanyaan"
+		"hasQuestion": "Andy punya pertanyaan"
 	},
 	"taskCompleted": "Tugas Selesai",
 	"error": "Error",
@@ -338,14 +338,14 @@
 	"diffError": {
 		"title": "Edit Tidak Berhasil"
 	},
-	"troubleMessage": "Zoo mengalami masalah...",
+	"troubleMessage": "Andy mengalami masalah...",
 	"errorDetails": {
 		"link": "Details",
 		"title": "Detail Kesalahan",
 		"copyToClipboard": "Salin ke Clipboard",
 		"copied": "Disalin!",
 		"diagnostics": "Dapatkan informasi kesalahan terperinci",
-		"proxyProvider": "Tampaknya kamu menggunakan penyedia berbasis proxy. Pastikan untuk memeriksa log-nya dan memastikan tidak menulis ulang permintaan Zoo."
+		"proxyProvider": "Tampaknya kamu menggunakan penyedia berbasis proxy. Pastikan untuk memeriksa log-nya dan memastikan tidak menulis ulang permintaan Andy."
 	},
 	"powershell": {
 		"issues": "Sepertinya kamu mengalami masalah Windows PowerShell, silakan lihat ini"
@@ -413,12 +413,12 @@
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Batas Permintaan yang Disetujui Otomatis Tercapai",
-			"description": "Zoo telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah Anda ingin mengatur ulang hitungan dan melanjutkan tugas?",
+			"description": "Andy telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah Anda ingin mengatur ulang hitungan dan melanjutkan tugas?",
 			"button": "Setel Ulang dan Lanjutkan"
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "Batas Biaya yang Disetujui Otomatis Tercapai",
-			"description": "Zoo telah mencapai batas biaya yang disetujui otomatis sebesar ${{count}}. Apakah Anda ingin mengatur ulang biaya dan melanjutkan tugas?",
+			"description": "Andy telah mencapai batas biaya yang disetujui otomatis sebesar ${{count}}. Apakah Anda ingin mengatur ulang biaya dan melanjutkan tugas?",
 			"button": "Setel Ulang dan Lanjutkan"
 		}
 	},
@@ -475,8 +475,8 @@
 		"clickToEdit": "Klik untuk mengedit pesan"
 	},
 	"slashCommand": {
-		"wantsToRun": "Zoo ingin menjalankan perintah slash",
-		"didRun": "Zoo telah menjalankan perintah slash"
+		"wantsToRun": "Andy ingin menjalankan perintah slash",
+		"didRun": "Andy telah menjalankan perintah slash"
 	},
 	"todo": {
 		"partial": "{{completed}} dari {{total}} to-do selesai",
@@ -495,7 +495,7 @@
 		"openMcpSettings": "Buka Pengaturan MCP"
 	},
 	"readCommandOutput": {
-		"title": "Zoo read command output"
+		"title": "Andy read command output"
 	},
 	"retiredProvider": {
 		"title": "Penyedia tidak lagi didukung",

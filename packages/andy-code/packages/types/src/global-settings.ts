@@ -23,18 +23,21 @@ import { languagesSchema } from "./vscode.js"
 export const DEFAULT_WRITE_DELAY_MS = 1000
 
 /**
- * Default values for the "auto-close files Zoo opened" settings.
+ * Default values for the "auto-close files Andy opened" settings.
  *
  * These are defined once here and consumed by every site that reads the setting
  * (DiffViewProvider save/revert, ClineProvider state serialization, and the
  * UISettings checkboxes) so there is a single source of truth for the default
- * behavior. Auto-closing edited tabs is opt-in: by default, files Zoo edits stay
+ * behavior. Auto-closing edited tabs is opt-in: by default, files Andy edits stay
  * open in the editor (the long-standing behavior). Users who want to save
  * context tokens by closing the edited tab after each edit can enable it.
  */
-export const DEFAULT_AUTO_CLOSE_ZOO_OPENED_FILES = false
-export const DEFAULT_AUTO_CLOSE_ZOO_OPENED_FILES_AFTER_USER_EDITED = false
-export const DEFAULT_AUTO_CLOSE_ZOO_OPENED_NEW_FILES = false
+export const DEFAULT_AUTO_CLOSE_ANDY_OPENED_FILES = false
+export const DEFAULT_AUTO_CLOSE_ANDY_OPENED_FILES_AFTER_USER_EDITED = false
+export const DEFAULT_AUTO_CLOSE_ANDY_OPENED_NEW_FILES = false
+export const DEFAULT_AUTO_CLOSE_ZOO_OPENED_FILES = DEFAULT_AUTO_CLOSE_ANDY_OPENED_FILES
+export const DEFAULT_AUTO_CLOSE_ZOO_OPENED_FILES_AFTER_USER_EDITED = DEFAULT_AUTO_CLOSE_ANDY_OPENED_FILES_AFTER_USER_EDITED
+export const DEFAULT_AUTO_CLOSE_ZOO_OPENED_NEW_FILES = DEFAULT_AUTO_CLOSE_ANDY_OPENED_NEW_FILES
 
 /**
  * Default fuzzy matching threshold for the multi-search-replace diff strategy.
@@ -226,9 +229,9 @@ export const globalSettingsSchema = z.object({
 	execaShellPath: z.string().optional(),
 
 	diagnosticsEnabled: z.boolean().optional(),
-	autoCloseZooOpenedFiles: z.boolean().optional(),
-	autoCloseZooOpenedFilesAfterUserEdited: z.boolean().optional(),
-	autoCloseZooOpenedNewFiles: z.boolean().optional(),
+	autoCloseAndyOpenedFiles: z.boolean().optional(),
+	autoCloseAndyOpenedFilesAfterUserEdited: z.boolean().optional(),
+	autoCloseAndyOpenedNewFiles: z.boolean().optional(),
 
 	rateLimitSeconds: z.number().optional(),
 	experiments: experimentsSchema.optional(),

@@ -21,7 +21,7 @@ import {
 	mainlandZAiDefaultModelId,
 	openRouterDefaultModelId,
 	vscodeLlmDefaultModelId,
-	zooGatewayDefaultModelId,
+	andyGatewayDefaultModelId,
 } from "../providers/index.js"
 
 describe("getProviderDefaultModelId", () => {
@@ -35,7 +35,7 @@ describe("getProviderDefaultModelId", () => {
 
 	it.each([
 		[providerIdentifiers.kimiCode, kimiCodeDefaultModelId],
-		[providerIdentifiers.zooGateway, zooGatewayDefaultModelId],
+		[providerIdentifiers.andyGateway, andyGatewayDefaultModelId],
 	])("preserves the %s default added on main", (provider, expectedModelId) => {
 		expect(getProviderDefaultModelId(provider)).toBe(expectedModelId)
 	})

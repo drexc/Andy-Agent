@@ -1,6 +1,6 @@
 {
 	"input": {
-		"task_prompt": "O que você quer que o Zoo faça?",
+		"task_prompt": "O que você quer que o Andy faça?",
 		"task_placeholder": "Digite sua tarefa aqui"
 	},
 	"extension": {
@@ -270,7 +270,7 @@
 		"label": "Docs",
 		"url": "https://docs.ia.v2nethost.cl:3000"
 	},
-	"zooAuth": {
+	"andyAuth": {
 		"errors": {
 			"invalid_token_received": "Andy Code: Token de autenticação inválido recebido.",
 			"token_verification_failed": "Andy Code: Falha na verificação do token.",

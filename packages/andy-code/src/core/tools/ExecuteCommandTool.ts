@@ -151,7 +151,7 @@ export class ExecuteCommandTool extends BaseTool<"execute_command"> {
 			}
 
 			// DCG-approved commands are auto-approved by checkAutoApproval. A DCG
-			// block is presented as Zoo's normal command prompt, with isProtected
+			// block is presented as Andy's normal command prompt, with isProtected
 			// forcing the user to explicitly choose whether to execute it.
 			const didApprove = dcgBlocked
 				? await askApproval("command", canonicalCommand, undefined, true)

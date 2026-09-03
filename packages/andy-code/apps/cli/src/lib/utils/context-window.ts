@@ -58,8 +58,8 @@ function getModelIdForProvider(config: ProviderSettings): string | undefined {
 			return config.kenariModelId
 		case providerIdentifiers.nanogpt:
 			return config.nanoGptModelId
-		case providerIdentifiers.zooGateway:
-			return config.zooGatewayModelId
+		case providerIdentifiers.andyGateway:
+			return config.andyGatewayModelId
 		case providerIdentifiers.anthropic:
 		case providerIdentifiers.bedrock:
 		case providerIdentifiers.baseten:

@@ -26,7 +26,7 @@ import { getPoeModels } from "./poe";
 import { getRequestyModels } from "./requesty";
 import { getUnboundModels } from "./unbound";
 import { getVercelAiGatewayModels } from "./vercel-ai-gateway";
-import { getZooGatewayModels } from "./zoo-gateway";
+import { getAndyGatewayModels } from "./andy-gateway";
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 });
 
@@ -60,7 +60,7 @@ function captureModelCacheEmptyResponseOnce(
 
 // Providers whose model list is determined by the server URL, not just by the provider name.
 // Each unique baseUrl must be cached independently so that switching endpoints never serves
-// stale results from a previously-cached server. zoo-gateway is included too: although it's
+// stale results from a previously-cached server. andy-gateway is included too: although it's
 // auth-scoped and never actually persisted (see shouldSkipCache), getCacheKey() also keys the
 // empty-response throttle (reportedEmptyModelResponse) and the in-flight fetch map, both of
 // which must still discriminate by endpoint (e.g. staging vs. production gateway) even when
@@ -73,13 +73,13 @@ const URL_SCOPED_PROVIDERS: ReadonlySet<RouterName> = new Set([
 	providerIdentifiers.ollama,
 	providerIdentifiers.lmstudio,
 	providerIdentifiers.requesty,
-	providerIdentifiers.zooGateway,
+	providerIdentifiers.andyGateway,
 ]);
 
 // Providers where the API key itself determines which models are visible (e.g. per-key
 // allowlists). For these the cache key also includes a short hash of
 // the API key so that two different keys on the same server never share a cache entry.
-// zoo-gateway and kimi-code are included so a sign-out/sign-in cycle to a different account
+// andy-gateway and kimi-code are included so a sign-out/sign-in cycle to a different account
 // (same server, different session token) doesn't collapse into the same throttle/in-flight
 // identity -- see the URL_SCOPED_PROVIDERS comment above for why this matters despite caching
 // being skipped for both.
@@ -88,7 +88,7 @@ const KEY_SCOPED_PROVIDERS: ReadonlySet<RouterName> = new Set([
 	providerIdentifiers.poe, // Per-account model availability
 	providerIdentifiers.requesty, // Per-account custom model policies
 	providerIdentifiers.moonshot, // Per-key model visibility (api.moonshot.ai vs api.moonshot.cn)
-	providerIdentifiers.zooGateway, // Per-session-token account identity
+	providerIdentifiers.andyGateway, // Per-session-token account identity
 	providerIdentifiers.kimiCode, // Per-session-token account identity
 	providerIdentifiers.nanogpt, // Public catalog can still vary by API-key allowlist
 ]);
@@ -98,7 +98,7 @@ const KEY_SCOPED_PROVIDERS: ReadonlySet<RouterName> = new Set([
 // in memory: a sign-in/out cycle could otherwise serve a previous user's model
 // list to the next user, and stale data could mask backend allowlist updates.
 const AUTH_SCOPED_PROVIDERS: ReadonlySet<RouterName> = new Set([
-	providerIdentifiers.zooGateway,
+	providerIdentifiers.andyGateway,
 	providerIdentifiers.kimiCode,
 ]);
 
@@ -119,7 +119,7 @@ const cacheDigestCache = new Map<string, string>();
 // CodeQL's js/insufficient-password-hash sink, which flags any password-tainted value flowing
 // into a non-password hashing operation -- and that taint propagates to anything derived from
 // the key, including the compound cache key hashed for the on-disk filename.
-const CACHE_DIGEST_SALT = "zoo-model-cache-key-v1";
+const CACHE_DIGEST_SALT = "andy-model-cache-key-v1";
 const CACHE_DIGEST_ITERATIONS = 10_000;
 
 /**
@@ -261,8 +261,8 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 		case providerIdentifiers.moonshot:
 			models = await getMoonshotModels(options.baseUrl, options.apiKey);
 			break;
-		case providerIdentifiers.zooGateway:
-			models = await getZooGatewayModels({ zooSessionToken: options.apiKey, zooGatewayBaseUrl: options.baseUrl });
+		case providerIdentifiers.andyGateway:
+			models = await getAndyGatewayModels({ andySessionToken: options.apiKey, andyGatewayBaseUrl: options.baseUrl });
 			break;
 		case providerIdentifiers.kimiCode:
 			models = await getKimiCodeModels(options.apiKey);
@@ -429,7 +429,7 @@ export const refreshModels = async (options: GetModelsOptions): Promise<ModelRec
 		return models;
 	} catch (error) {
 		// Log the error for debugging, then return existing cache if available (graceful degradation).
-		// For auth-scoped providers (zoo-gateway) we MUST NOT return cached models from a prior
+		// For auth-scoped providers (andy-gateway) we MUST NOT return cached models from a prior
 		// session, since they could belong to a different user -- return empty instead.
 		console.error(`[refreshModels] Failed to refresh ${cacheKey} models:`, error);
 		if (shouldSkipCache) {
@@ -505,7 +505,7 @@ export const flushModels = async (options: GetModelsOptions, refresh: boolean = 
  * @returns Models from memory cache, disk cache, or undefined if not cached.
  */
 export function getModelsFromCache(options: GetModelsOptions | ProviderName): ModelRecord | undefined {
-	// Auth-scoped providers (e.g. zoo-gateway) must never be served from cache --
+	// Auth-scoped providers (e.g. andy-gateway) must never be served from cache --
 	// their model lists are user-specific and a stale file left over from a previous
 	// session could leak another user's list. Mirror the guards in getModels/refreshModels.
 	const providerName = typeof options === "string" ? options : options.provider;

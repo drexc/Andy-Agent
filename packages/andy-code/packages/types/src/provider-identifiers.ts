@@ -6,7 +6,7 @@
 export const providerIdentifiers = {
 	openrouter: "openrouter",
 	vercelAiGateway: "vercel-ai-gateway",
-	zooGateway: "zoo-gateway",
+	andyGateway: "andy-gateway",
 	litellm: "litellm",
 	requesty: "requesty",
 	unbound: "unbound",

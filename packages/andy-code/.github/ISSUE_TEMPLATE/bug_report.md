@@ -27,7 +27,7 @@ If applicable, add screenshots to help explain your problem.
 **Video**
 Add a video of the incident happening, it will help us debug
 
-**What version of zoo are you running**
+**What version of andy are you running**
 i.e. 3.55
 
 **Additional context**

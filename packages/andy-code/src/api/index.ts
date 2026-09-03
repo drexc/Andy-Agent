@@ -43,7 +43,7 @@ import {
 	VsCodeLmHandler,
 	XAIHandler,
 	ZAiHandler,
-	ZooGatewayHandler,
+	AndyGatewayHandler,
 } from "./providers";
 import { NativeOllamaHandler } from "./providers/native-ollama";
 import type { ApiStream } from "./transform/stream";
@@ -225,8 +225,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new KenariHandler(options);
 		case providerIdentifiers.nanogpt:
 			return new NanoGptHandler(options);
-		case providerIdentifiers.zooGateway:
-			return new ZooGatewayHandler(options);
+		case providerIdentifiers.andyGateway:
+			return new AndyGatewayHandler(options);
 		case providerIdentifiers.minimax:
 			return new MiniMaxHandler(options);
 		case providerIdentifiers.baseten:

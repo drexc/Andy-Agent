@@ -71,7 +71,7 @@ Andy Code एक समुदाय-संचालित परियोजन�
 
 सभी योगदान हमारे पतले टेम्पलेट्स का उपयोग करके एक गिटहब समस्या से शुरू होते हैं।
 
-- **मौजूदा समस्याओं की जाँच करें**: [गिटहब समस्याएँ](https://github.com/Zoo-Code-Org/Zoo-Code/issues) में खोजें।
+- **मौजूदा समस्याओं की जाँच करें**: [गिटहब समस्याएँ](https://github.com/Andy-Code-Org/Andy-Code/issues) में खोजें।
 - **एक समस्या बनाएँ** का उपयोग करके:
     - **सुधार:** "सुधार अनुरोध" टेम्पलेट (उपयोगकर्ता लाभ पर केंद्रित सरल भाषा)।
     - **बग:** "बग रिपोर्ट" टेम्पलेट (न्यूनतम प्रतिकृति + अपेक्षित बनाम वास्तविक + संस्करण)।
@@ -80,17 +80,17 @@ Andy Code एक समुदाय-संचालित परियोजन�
 
 ### क्या काम करना है यह तय करना
 
-- Issues के लिए [GitHub Issues page](https://github.com/Zoo-Code-Org/Zoo-Code/issues) देखें।
-- दस्तावेज़ों के लिए, [Andy Code दस्तावेज़](https://github.com/Zoo-Code-Org/Zoo-Code-Docs) पर जाएँ।
+- Issues के लिए [GitHub Issues page](https://github.com/Andy-Code-Org/Andy-Code/issues) देखें।
+- दस्तावेज़ों के लिए, [Andy Code दस्तावेज़](https://github.com/Andy-Code-Org/Andy-Code-Docs) पर जाएँ।
 
 ### बग की रिपोर्ट करना
 
 - पहले मौजूदा रिपोर्ट की जाँच करें।
-- ["बग रिपोर्ट" टेम्पलेट](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) का उपयोग करके एक नया बग बनाएँ:
+- ["बग रिपोर्ट" टेम्पलेट](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) का उपयोग करके एक नया बग बनाएँ:
     - स्पष्ट, क्रमांकित पुनरुत्पादन चरण
     - अपेक्षित बनाम वास्तविक परिणाम
     - Andy Code संस्करण (आवश्यक); यदि प्रासंगिक हो तो एपीआई प्रदाता/मॉडल
-- **सुरक्षा समस्याएँ**: [सुरक्षा सलाहकारों](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new) के माध्यम से निजी तौर पर रिपोर्ट करें।
+- **सुरक्षा समस्याएँ**: [सुरक्षा सलाहकारों](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new) के माध्यम से निजी तौर पर रिपोर्ट करें।
 
 ## विकास और प्रस्तुत करने की प्रक्रिया
 
@@ -99,7 +99,7 @@ Andy Code एक समुदाय-संचालित परियोजन�
 1. **फोर्क और क्लोन:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **निर्भरताएँ स्थापित करें:**

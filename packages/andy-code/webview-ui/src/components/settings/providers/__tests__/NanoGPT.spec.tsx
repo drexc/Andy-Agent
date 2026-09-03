@@ -93,7 +93,7 @@ describe("NanoGPT", () => {
 	const routerModels: RouterModels = {
 		openrouter: {},
 		"vercel-ai-gateway": {},
-		"zoo-gateway": {},
+		"andy-gateway": {},
 		litellm: {},
 		requesty: {},
 		unbound: {},

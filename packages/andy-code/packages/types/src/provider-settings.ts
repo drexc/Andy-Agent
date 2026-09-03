@@ -62,7 +62,7 @@ export const DEFAULT_CONSECUTIVE_MISTAKE_LIMIT = 3
 export const dynamicProviders = [
 	providerIdentifiers.openrouter,
 	providerIdentifiers.vercelAiGateway,
-	providerIdentifiers.zooGateway,
+	providerIdentifiers.andyGateway,
 	providerIdentifiers.litellm,
 	providerIdentifiers.requesty,
 	providerIdentifiers.unbound,
@@ -286,7 +286,7 @@ export const modelIdKeys = [
 	"opencodeGoModelId",
 	"kenariModelId",
 	"nanoGptModelId",
-	"zooGatewayModelId",
+	"andyGatewayModelId",
 ] as const satisfies readonly ModelIdKey[]
 
 /**
@@ -343,7 +343,7 @@ export const ANTHROPIC_STYLE_PROVIDERS: ProviderName[] = [
 
 const ANTHROPIC_MODEL_GATEWAY_PROVIDERS: ProviderName[] = [
 	providerIdentifiers.vercelAiGateway,
-	providerIdentifiers.zooGateway,
+	providerIdentifiers.andyGateway,
 ]
 
 const ANTHROPIC_MODEL_ID_PREFIX = "anthropic/"
@@ -515,7 +515,7 @@ export const MODELS_BY_PROVIDER: Record<
 	[providerIdentifiers.opencodeGo]: { id: providerIdentifiers.opencodeGo, label: "Opencode Go", models: [] },
 	[providerIdentifiers.kenari]: { id: providerIdentifiers.kenari, label: "Kenari", models: [] },
 	[providerIdentifiers.nanogpt]: { id: providerIdentifiers.nanogpt, label: "NanoGPT", models: [] },
-	[providerIdentifiers.zooGateway]: { id: providerIdentifiers.zooGateway, label: "Andy Gateway", models: [] },
+	[providerIdentifiers.andyGateway]: { id: providerIdentifiers.andyGateway, label: "Andy Gateway", models: [] },
 
 	// Local providers; models discovered from localhost endpoints.
 	[providerIdentifiers.lmstudio]: { id: providerIdentifiers.lmstudio, label: "LM Studio", models: [] },

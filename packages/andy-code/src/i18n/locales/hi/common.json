@@ -210,7 +210,7 @@
 		"enter_valid_path": "कृपया एक वैध पाथ दर्ज करें"
 	},
 	"input": {
-		"task_prompt": "Zoo को क्या करना है?",
+		"task_prompt": "Andy को क्या करना है?",
 		"task_placeholder": "अपना कार्य यहाँ लिखें"
 	},
 	"settings": {
@@ -270,7 +270,7 @@
 		"label": "Docs",
 		"url": "https://docs.ia.v2nethost.cl:3000"
 	},
-	"zooAuth": {
+	"andyAuth": {
 		"errors": {
 			"invalid_token_received": "Andy Code: अमान्य प्रमाणीकरण token प्राप्त हुआ।",
 			"token_verification_failed": "Andy Code: Token सत्यापन विफल रहा।",

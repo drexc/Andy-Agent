@@ -287,7 +287,7 @@ vi.mock("../../../api/providers/fetchers/lmstudio", () => ({
 }));
 
 vi.mock("../../../services/andy-code-auth", () => ({
-	getAndyCodeBaseUrl: vi.fn(() => "https://www.ia.v2nethost.cl:3000"),
+	getAndyCodeBaseUrl: vi.fn(() => "https://ia.v2nethost.cl:3000"),
 	getCachedAndyCodeToken: vi.fn(),
 	handleAuthCallback: vi.fn(),
 	setAndyCodeUserInfo: vi.fn(),
@@ -1563,52 +1563,52 @@ describe("ClineProvider", () => {
 	});
 
 	describe("auto-close settings are included in posted state", () => {
-		it("getStateToPostToWebview returns saved autoCloseZooOpenedFiles value", async () => {
+		it("getStateToPostToWebview returns saved autoCloseAndyOpenedFiles value", async () => {
 			await provider.resolveWebviewView(mockWebviewView);
 
 			// Simulate the updateSettings handler storing the value.
-			await provider.contextProxy.setValue("autoCloseZooOpenedFiles", false);
-			await provider.contextProxy.setValue("autoCloseZooOpenedFilesAfterUserEdited", true);
-			await provider.contextProxy.setValue("autoCloseZooOpenedNewFiles", true);
+			await provider.contextProxy.setValue("autoCloseAndyOpenedFiles", false);
+			await provider.contextProxy.setValue("autoCloseAndyOpenedFilesAfterUserEdited", true);
+			await provider.contextProxy.setValue("autoCloseAndyOpenedNewFiles", true);
 
 			const state = await provider.getStateToPostToWebview();
 
 			// The saved values must be present in the state posted to the webview.
-			expect(state.autoCloseZooOpenedFiles).toBe(false);
-			expect(state.autoCloseZooOpenedFilesAfterUserEdited).toBe(true);
-			expect(state.autoCloseZooOpenedNewFiles).toBe(true);
+			expect(state.autoCloseAndyOpenedFiles).toBe(false);
+			expect(state.autoCloseAndyOpenedFilesAfterUserEdited).toBe(true);
+			expect(state.autoCloseAndyOpenedNewFiles).toBe(true);
 		});
 
-		it("getStateToPostToWebview defaults autoCloseZooOpenedFiles to false when unset", async () => {
+		it("getStateToPostToWebview defaults autoCloseAndyOpenedFiles to false when unset", async () => {
 			await provider.resolveWebviewView(mockWebviewView);
 
 			// Ensure the settings are not set.
-			await provider.contextProxy.setValue("autoCloseZooOpenedFiles", undefined);
-			await provider.contextProxy.setValue("autoCloseZooOpenedFilesAfterUserEdited", undefined);
-			await provider.contextProxy.setValue("autoCloseZooOpenedNewFiles", undefined);
+			await provider.contextProxy.setValue("autoCloseAndyOpenedFiles", undefined);
+			await provider.contextProxy.setValue("autoCloseAndyOpenedFilesAfterUserEdited", undefined);
+			await provider.contextProxy.setValue("autoCloseAndyOpenedNewFiles", undefined);
 
 			const state = await provider.getStateToPostToWebview();
 
 			// Unset values should default to their documented defaults (opt-in).
-			expect(state.autoCloseZooOpenedFiles).toBe(false);
-			expect(state.autoCloseZooOpenedFilesAfterUserEdited).toBe(false);
-			expect(state.autoCloseZooOpenedNewFiles).toBe(false);
+			expect(state.autoCloseAndyOpenedFiles).toBe(false);
+			expect(state.autoCloseAndyOpenedFilesAfterUserEdited).toBe(false);
+			expect(state.autoCloseAndyOpenedNewFiles).toBe(false);
 		});
 
-		it("getState returns saved autoCloseZooOpenedFiles value for DiffViewProvider", async () => {
+		it("getState returns saved autoCloseAndyOpenedFiles value for DiffViewProvider", async () => {
 			await provider.resolveWebviewView(mockWebviewView);
 
-			await provider.contextProxy.setValue("autoCloseZooOpenedFiles", false);
-			await provider.contextProxy.setValue("autoCloseZooOpenedFilesAfterUserEdited", true);
-			await provider.contextProxy.setValue("autoCloseZooOpenedNewFiles", true);
+			await provider.contextProxy.setValue("autoCloseAndyOpenedFiles", false);
+			await provider.contextProxy.setValue("autoCloseAndyOpenedFilesAfterUserEdited", true);
+			await provider.contextProxy.setValue("autoCloseAndyOpenedNewFiles", true);
 
 			const state = await provider.getState();
 
 			// DiffViewProvider reads from getState(); all three fields must be present
 			// so a regression that drops any of them is caught.
-			expect(state.autoCloseZooOpenedFiles).toBe(false);
-			expect(state.autoCloseZooOpenedFilesAfterUserEdited).toBe(true);
-			expect(state.autoCloseZooOpenedNewFiles).toBe(true);
+			expect(state.autoCloseAndyOpenedFiles).toBe(false);
+			expect(state.autoCloseAndyOpenedFilesAfterUserEdited).toBe(true);
+			expect(state.autoCloseAndyOpenedNewFiles).toBe(true);
 		});
 	});
 
@@ -3615,7 +3615,7 @@ describe("ClineProvider - Router Models", () => {
 				requesty: mockModels,
 				unbound: mockModels,
 				"vercel-ai-gateway": mockModels,
-				"zoo-gateway": mockModels,
+				"andy-gateway": mockModels,
 				litellm: mockModels,
 				ollama: {},
 				lmstudio: {},
@@ -3655,7 +3655,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
 			.mockResolvedValueOnce(mockModels) // unbound success
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
-			.mockResolvedValueOnce(mockModels) // zoo-gateway success
+			.mockResolvedValueOnce(mockModels) // andy-gateway success
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 			.mockResolvedValueOnce(mockModels) // opencode-go (public endpoint)
 			.mockResolvedValueOnce(mockModels) // kenari (public endpoint)
@@ -3671,7 +3671,7 @@ describe("ClineProvider - Router Models", () => {
 				requesty: {},
 				unbound: mockModels,
 				"vercel-ai-gateway": mockModels,
-				"zoo-gateway": mockModels,
+				"andy-gateway": mockModels,
 				ollama: {},
 				lmstudio: {},
 				litellm: {},
@@ -3772,7 +3772,7 @@ describe("ClineProvider - Router Models", () => {
 				requesty: mockModels,
 				unbound: mockModels,
 				"vercel-ai-gateway": mockModels,
-				"zoo-gateway": mockModels,
+				"andy-gateway": mockModels,
 				litellm: {},
 				ollama: {},
 				lmstudio: {},
@@ -4842,7 +4842,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 		describe("handleAndyCodeCallback", () => {
 			it("creates a Andy Gateway profile when none exists", async () => {
 				vi.spyOn(provider, "getState").mockResolvedValue({
-					apiConfiguration: { zooGatewayModelId: "anthropic/claude-sonnet-4" },
+					apiConfiguration: { andyGatewayModelId: "anthropic/claude-sonnet-4" },
 				} as any);
 				vi.spyOn(provider.contextProxy, "getProviderSettings").mockReturnValue({
 					apiProvider: providerIdentifiers.anthropic,
@@ -4859,24 +4859,24 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 				await provider.handleAndyCodeCallback("zoo_ext_token");
 
-				expect(postMessageSpy).toHaveBeenCalledWith({ type: "zooGatewayCredentialsReady" });
+				expect(postMessageSpy).toHaveBeenCalledWith({ type: "andyGatewayCredentialsReady" });
 				expect(upsertSpy).toHaveBeenCalledWith(
 					"Andy Gateway",
 					expect.objectContaining({
-						apiProvider: providerIdentifiers.zooGateway,
-						zooSessionToken: "zoo_ext_token",
-						zooGatewayBaseUrl: "https://www.ia.v2nethost.cl:3000/api/gateway/v1",
+						apiProvider: providerIdentifiers.andyGateway,
+						andySessionToken: "zoo_ext_token",
+						andyGatewayBaseUrl: "https://ia.v2nethost.cl:3000/api/gateway/v1",
 					}),
 					false,
 				);
 			});
 
-			it("updates every zoo-gateway profile and activates only the active one", async () => {
+			it("updates every andy-gateway profile and activates only the active one", async () => {
 				vi.spyOn(provider, "getState").mockResolvedValue({
-					apiConfiguration: { zooGatewayModelId: "anthropic/claude-sonnet-4" },
+					apiConfiguration: { andyGatewayModelId: "anthropic/claude-sonnet-4" },
 				} as any);
 				vi.spyOn(provider.contextProxy, "getProviderSettings").mockReturnValue({
-					apiProvider: providerIdentifiers.zooGateway,
+					apiProvider: providerIdentifiers.andyGateway,
 				} as any);
 				vi.spyOn(provider.contextProxy, "getValues").mockReturnValue({
 					currentApiConfigName: "Andy Gateway",
@@ -4886,19 +4886,19 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				vi.spyOn(provider, "postStateToWebview").mockResolvedValue(undefined);
 				(provider as any).providerSettingsManager = {
 					listConfig: vi.fn().mockResolvedValue([
-						{ name: "Andy Gateway", apiProvider: providerIdentifiers.zooGateway },
-						{ name: "Backup Zoo", apiProvider: providerIdentifiers.zooGateway },
+						{ name: "Andy Gateway", apiProvider: providerIdentifiers.andyGateway },
+						{ name: "Backup Zoo", apiProvider: providerIdentifiers.andyGateway },
 					]),
 					getProfile: vi
 						.fn()
 						.mockResolvedValueOnce({
-							apiProvider: providerIdentifiers.zooGateway,
-							zooSessionToken: "old-token",
-							zooGatewayBaseUrl: "https://old.example/api/gateway/v1",
+							apiProvider: providerIdentifiers.andyGateway,
+							andySessionToken: "old-token",
+							andyGatewayBaseUrl: "https://old.example/api/gateway/v1",
 						})
 						.mockResolvedValueOnce({
-							apiProvider: providerIdentifiers.zooGateway,
-							zooSessionToken: "old-token",
+							apiProvider: providerIdentifiers.andyGateway,
+							andySessionToken: "old-token",
 						}),
 					saveConfig,
 				};
@@ -4908,16 +4908,16 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				expect(upsertSpy).toHaveBeenCalledWith(
 					"Andy Gateway",
 					expect.objectContaining({
-						zooSessionToken: "new-token",
-						zooGatewayBaseUrl: "https://www.ia.v2nethost.cl:3000/api/gateway/v1",
+						andySessionToken: "new-token",
+						andyGatewayBaseUrl: "https://ia.v2nethost.cl:3000/api/gateway/v1",
 					}),
 					true,
 				);
 				expect(saveConfig).toHaveBeenCalledWith(
 					"Backup Zoo",
 					expect.objectContaining({
-						zooSessionToken: "new-token",
-						zooGatewayBaseUrl: "https://www.ia.v2nethost.cl:3000/api/gateway/v1",
+						andySessionToken: "new-token",
+						andyGatewayBaseUrl: "https://ia.v2nethost.cl:3000/api/gateway/v1",
 					}),
 				);
 			});
@@ -4932,14 +4932,14 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				await provider.handleAndyCodeCallback("zoo_ext_token");
 
 				expect(mockOutputChannel.appendLine).toHaveBeenCalledWith(
-					expect.stringContaining("[handleAndyCodeCallback] Failed to save zoo-gateway profile"),
+					expect.stringContaining("[handleAndyCodeCallback] Failed to save andy-gateway profile"),
 				);
 				// State must still be refreshed even when profile persistence fails.
 				expect(provider.postStateToWebview).toHaveBeenCalled();
 			});
 		});
 
-		describe("ensureZooGatewayProfileSeeded", () => {
+		describe("ensureAndyGatewayProfileSeeded", () => {
 			it("does nothing when no cached auth token exists", async () => {
 				const handleSpy = vi.spyOn(provider, "handleAndyCodeCallback").mockResolvedValue(undefined);
 
@@ -4947,12 +4947,12 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 					listConfig: vi.fn(),
 				};
 
-				await (provider as any).ensureZooGatewayProfileSeeded();
+				await (provider as any).ensureAndyGatewayProfileSeeded();
 
 				expect(handleSpy).not.toHaveBeenCalled();
 			});
 
-			it("skips seeding when every zoo-gateway profile already has the current token and base URL", async () => {
+			it("skips seeding when every andy-gateway profile already has the current token and base URL", async () => {
 				const { getCachedAndyCodeToken } = await import("../../../services/andy-code-auth");
 				vi.mocked(getCachedAndyCodeToken).mockReturnValue("current-token");
 				const handleSpy = vi.spyOn(provider, "handleAndyCodeCallback").mockResolvedValue(undefined);
@@ -4961,20 +4961,20 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				(provider as any).providerSettingsManager = {
 					listConfig: vi
 						.fn()
-						.mockResolvedValue([{ name: "Andy Gateway", apiProvider: providerIdentifiers.zooGateway }]),
+						.mockResolvedValue([{ name: "Andy Gateway", apiProvider: providerIdentifiers.andyGateway }]),
 					getProfile: vi.fn().mockResolvedValue({
-						zooSessionToken: "current-token",
-						zooGatewayBaseUrl: "https://www.ia.v2nethost.cl:3000/api/gateway/v1",
+						andySessionToken: "current-token",
+						andyGatewayBaseUrl: "https://ia.v2nethost.cl:3000/api/gateway/v1",
 					}),
 				};
 
-				await (provider as any).ensureZooGatewayProfileSeeded();
+				await (provider as any).ensureAndyGatewayProfileSeeded();
 
 				expect(handleSpy).not.toHaveBeenCalled();
-				expect(postMessageSpy).toHaveBeenCalledWith({ type: "zooGatewayCredentialsReady" });
+				expect(postMessageSpy).toHaveBeenCalledWith({ type: "andyGatewayCredentialsReady" });
 			});
 
-			it("re-seeds when any zoo-gateway profile has a stale or missing token", async () => {
+			it("re-seeds when any andy-gateway profile has a stale or missing token", async () => {
 				const { getCachedAndyCodeToken } = await import("../../../services/andy-code-auth");
 				vi.mocked(getCachedAndyCodeToken).mockReturnValue("fresh-token");
 				const handleSpy = vi.spyOn(provider, "handleAndyCodeCallback").mockResolvedValue(undefined);
@@ -4982,19 +4982,19 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				(provider as any).providerSettingsManager = {
 					listConfig: vi
 						.fn()
-						.mockResolvedValue([{ name: "Andy Gateway", apiProvider: providerIdentifiers.zooGateway }]),
+						.mockResolvedValue([{ name: "Andy Gateway", apiProvider: providerIdentifiers.andyGateway }]),
 					getProfile: vi.fn().mockResolvedValue({
-						zooSessionToken: "stale-token",
-						zooGatewayBaseUrl: "https://www.ia.v2nethost.cl:3000/api/gateway/v1",
+						andySessionToken: "stale-token",
+						andyGatewayBaseUrl: "https://ia.v2nethost.cl:3000/api/gateway/v1",
 					}),
 				};
 
-				await (provider as any).ensureZooGatewayProfileSeeded();
+				await (provider as any).ensureAndyGatewayProfileSeeded();
 
 				expect(handleSpy).toHaveBeenCalledWith("fresh-token");
 			});
 
-			it("re-seeds when any zoo-gateway profile has a stale base URL", async () => {
+			it("re-seeds when any andy-gateway profile has a stale base URL", async () => {
 				const { getCachedAndyCodeToken } = await import("../../../services/andy-code-auth");
 				vi.mocked(getCachedAndyCodeToken).mockReturnValue("current-token");
 				const handleSpy = vi.spyOn(provider, "handleAndyCodeCallback").mockResolvedValue(undefined);
@@ -5002,14 +5002,14 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				(provider as any).providerSettingsManager = {
 					listConfig: vi
 						.fn()
-						.mockResolvedValue([{ name: "Andy Gateway", apiProvider: providerIdentifiers.zooGateway }]),
+						.mockResolvedValue([{ name: "Andy Gateway", apiProvider: providerIdentifiers.andyGateway }]),
 					getProfile: vi.fn().mockResolvedValue({
-						zooSessionToken: "current-token",
-						zooGatewayBaseUrl: "https://staging.ia.v2nethost.cl:3000/api/gateway/v1",
+						andySessionToken: "current-token",
+						andyGatewayBaseUrl: "https://staging.ia.v2nethost.cl:3000/api/gateway/v1",
 					}),
 				};
 
-				await (provider as any).ensureZooGatewayProfileSeeded();
+				await (provider as any).ensureAndyGatewayProfileSeeded();
 
 				expect(handleSpy).toHaveBeenCalledWith("current-token");
 			});

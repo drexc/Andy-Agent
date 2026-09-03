@@ -41,6 +41,7 @@ export interface PantheonExecutionEvent {
 		| "tool_start"
 		| "tool_result"
 		| "file_change"
+		| "user_question"
 		| "error"
 		| "done";
 	agentId?: string;
@@ -58,7 +59,15 @@ export interface PantheonExecutionEvent {
 	message?: PantheonMessage;
 	delegation?: PantheonTaskDelegation;
 	graftData?: any;
+	question?: string;
+	options?: Array<{ text: string }>;
 	error?: string;
+}
+
+export interface UserActionRequired {
+	question: string;
+	options: Array<{ text: string }>;
+	rawMatch?: string;
 }
 
 export type PantheonEventCallback = (event: PantheonExecutionEvent) => void | Promise<void>;
@@ -207,8 +216,23 @@ export class PantheonOrchestrator {
 			if (found) targetAgentId = found.id;
 		}
 
-		// Determine starting agent
-		const activeAgentId = targetAgentId || squad.leaderId || "hermes";
+		// Determine starting agent (resuming after interactive question if applicable)
+		let resolvedStartingAgentId = targetAgentId;
+		if (
+			!resolvedStartingAgentId &&
+			((roomState as any).status === "waiting_user_input" || (roomState as any).lastAskingAgentId)
+		) {
+			const lastAsking = (roomState as any).lastAskingAgentId;
+			if (lastAsking === "architect" || lastAsking === "athena" || lastAsking === "hermes") {
+				const coderId = squad.memberIds.find((id) => id === "developer" || id === "hephaestus");
+				if (coderId) resolvedStartingAgentId = coderId;
+			}
+			roomState.status = "active";
+			delete (roomState as any).pendingUserQuestion;
+			delete (roomState as any).lastAskingAgentId;
+		}
+
+		const activeAgentId = resolvedStartingAgentId || squad.leaderId || "hermes";
 		const primaryAgent = this.registry.getAgent(activeAgentId) || this.registry.getAgents()[0];
 
 		// Detect if userPrompt mentions an explicit project path on disk
@@ -382,6 +406,25 @@ export class PantheonOrchestrator {
 				agentId: currentAgent.id,
 				message: agentMsg,
 			});
+
+			// Check if agent requested user action / interactive decision
+			const userActionReq = this.detectUserActionRequired(fullResponseText);
+			if (userActionReq) {
+				roomState.status = "waiting_user_input";
+				(roomState as any).pendingUserQuestion = userActionReq;
+				(roomState as any).lastAskingAgentId = currentAgent.id;
+
+				await onEvent({
+					type: "user_question",
+					agentId: currentAgent.id,
+					question: userActionReq.question,
+					options: userActionReq.options,
+				});
+
+				// Pause squad execution: empty the queue so peer agents don't execute prematurely
+				agentsQueue.length = 0;
+				break;
+			}
 
 			// Check if current agent explicitly delegated to peer agents in the same squad
 			const peerDelegations = this.detectPeerDelegations(fullResponseText, currentAgent.id, squad);
@@ -1300,7 +1343,8 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 			agent.id.includes("architect") || agent.id.includes("athena")
 				? `\n\n# 🏛️ DIRECTIVA DE ARQUITECTURA PARA @${agent.name.toUpperCase()}
 1. Diseña la arquitectura técnica, patrones, interfaces y especifica con precisión los nombres de archivos y rutas que deben implementarse.
-2. Al finalizar tu diseño, delega a @Developer ordenándole explícitamente qué archivos de código debe escribir en disco.`
+2. Si te falta información crítica o datos del usuario (como hojas Excel, especificaciones de protocolos o confirmación de opciones), formula una sección clara titulada "🚨 **Acción Necesaria del Usuario**" con opciones concretas (1. **Opción A**: ..., 2. **Opción B**: ...) y TERMINA TU MENSAJE esperando su respuesta. NO delegues a @Developer hasta que el usuario elija su opción.
+3. Si el diseño está completo y no se requiere información del usuario, delega a @Developer ordenándole explícitamente qué archivos de código debe escribir en disco.`
 				: "";
 
 		const testerMandate =
@@ -1431,5 +1475,113 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 		}
 
 		return delegations;
+	}
+
+	public detectUserActionRequired(text: string): UserActionRequired | null {
+		if (!text) return null;
+
+		// 1. Direct XML tag check
+		const xmlMatch = text.match(
+			/<ask_followup_question>[\s\S]*?<question>([\s\S]*?)<\/question>[\s\S]*?(?:<follow_up>([\s\S]*?)<\/follow_up>)?[\s\S]*?<\/ask_followup_question>/i,
+		);
+		if (xmlMatch) {
+			const q = xmlMatch[1].trim();
+			let options: Array<{ text: string }> = [];
+			if (xmlMatch[2]) {
+				try {
+					const parsed = JSON.parse(xmlMatch[2].trim());
+					if (Array.isArray(parsed)) {
+						options = parsed.map((item: any) => ({
+							text: typeof item === "string" ? item : item.text || item.answer || JSON.stringify(item),
+						}));
+					}
+				} catch {}
+			}
+			if (options.length === 0) {
+				options = [{ text: "Confirmar y Continuar" }, { text: "Modificar Requerimiento" }];
+			}
+			return { question: q, options };
+		}
+
+		// 2. Header pattern check (Acción Necesaria, Próximos Pasos, etc.)
+		const headerRegex =
+			/(?:🚨|🎯|📌|❓|⚠️)?\s*(?:\*{1,3})?(?:Acci[oó]n\s+(?:Necesaria|Requerida)|Pr[oó]ximos\s+Pasos|Pregunta|Confirmaci[oó]n\s+Requerida|Decisi[oó]n\s+Requerida)(?:\s+(?:del|para\s+el|por\s+el|de)\s+Usuario)?(?:\*{1,3})?:?([^\n\r]*)/i;
+		const match = text.match(headerRegex);
+
+		let sectionText = "";
+		let rawMatch = "";
+
+		if (match) {
+			rawMatch = match[0];
+			const startIndex = match.index! + match[0].length;
+			const remaining = text.slice(startIndex);
+			const stopMatch = remaining.match(
+				/(?:\n\s*---|\n\s*#{1,4}\s+|\n\s*📌\s*|\n\s*\*{1,2}(?:Decisi[oó]n|Delegaci[oó]n|Procedo)|@Developer|@Tester)/i,
+			);
+			sectionText = (stopMatch ? remaining.slice(0, stopMatch.index) : remaining).trim();
+		} else {
+			// 3. Fallback: check if the text ends with an interactive user question (¿Quieres..., ¿Deseas..., etc.)
+			const closingQuestionMatch = text.match(
+				/(?:^|\n)\s*(?:(?:Por\s+favor|Recuerda|Nota)[^\n]*\n\s*)?(¿(?:Quieres|Deseas|Prefieres|Confirmas|Indicas|Puedes|Te\s+gustar[ií]a)[^?\n]+\?[\s\S]*)$/i,
+			);
+			if (closingQuestionMatch) {
+				rawMatch = "ClosingQuestion";
+				sectionText = closingQuestionMatch[1].trim();
+			}
+		}
+
+		if (!sectionText) {
+			return null;
+		}
+
+		// Parse options (Opción A, Opción B, 1. Opción A, - Opción 1, etc.)
+		const options: Array<{ text: string }> = [];
+		const optionLines = sectionText.split(/\r?\n/);
+		const questionLines: string[] = [];
+
+		const optionPattern = /^(?:[\d*+-]+[.)]\s*)?(?:\*{1,2})?Opci[oó]n\s+([A-Za-z0-9]+)(?:\*{1,2})?:?\s*(.+)$/i;
+
+		for (const line of optionLines) {
+			const optMatch = line.trim().match(optionPattern);
+			if (optMatch) {
+				const cleanText = optMatch[2].replace(/^\*+|\*+$/g, "").trim();
+				options.push({ text: `Opción ${optMatch[1]}: ${cleanText}` });
+				continue;
+			}
+			questionLines.push(line);
+		}
+
+		// Check if there is an "o prefieres" choice inside the question
+		if (options.length === 0) {
+			const eitherOrMatch = sectionText.match(
+				/¿(?:Quieres\s+que|Deseas\s+que)?\s*([^,?]+?)(?:,\s*o\s+(?:prefieres|deseas)?\s*([^?]+))\?/i,
+			);
+			if (eitherOrMatch) {
+				let opt1 = eitherOrMatch[1]
+					.trim()
+					.replace(/^(?:proceda\s+con\s+la\s+|instale\s+)/i, "")
+					.trim();
+				let opt2 = eitherOrMatch[2]
+					.trim()
+					.replace(/^(?:compartir\s+primero\s+el\s+|proporcionar\s+)/i, "")
+					.trim();
+				opt1 = opt1.charAt(0).toUpperCase() + opt1.slice(1);
+				opt2 = opt2.charAt(0).toUpperCase() + opt2.slice(1);
+				options.push({ text: `Opción 1: ${opt1}` });
+				options.push({ text: `Opción 2: ${opt2}` });
+			}
+		}
+
+		const question = questionLines.join("\n").trim() || sectionText;
+
+		if (options.length === 0) {
+			options.push({ text: "Confirmar y Continuar" }, { text: "Modificar Requerimiento" });
+		}
+
+		return {
+			question,
+			options: options.slice(0, 5),
+			rawMatch,
+		};
 	}
 }

@@ -64,7 +64,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("resolves Roo and Zoo storage roots from extension domains and configured custom paths", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooCustomStoragePath = path.join(tempRoot, "roo-custom");
 		const zooCustomStoragePath = path.join(tempRoot, "zoo-custom");
 
@@ -85,7 +85,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("falls back to the default Roo storage root when reading Roo custom storage fails", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 
 		mockStorageConfiguration({ throwOnRoo: true });
 
@@ -96,7 +96,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("dedupes Roo storage roots when the custom path matches the default Roo storage root", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 
 		mockStorageConfiguration({ roo: rooDefaultStorageRoot });
@@ -107,7 +107,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("copies Roo task directories into the active Zoo storage root", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 		const rooCustomStorageRoot = path.join(tempRoot, "roo-custom");
 		const zooCustomStorageRoot = path.join(tempRoot, "zoo-custom");
@@ -155,7 +155,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("does not overwrite an existing Zoo task directory when the same Roo history is imported again", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 
 		mockStorageConfiguration();
@@ -192,7 +192,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("deterministically keeps the first importable Roo task when duplicate task IDs exist across roots", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 		const rooCustomStorageRoot = path.join(tempRoot, "roo-custom");
 
@@ -238,7 +238,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("reports Roo history import progress as files are copied", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 		const onProgress = vi.fn();
 
@@ -302,7 +302,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("imports only top-level task history files and skips checkpoint directories", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 		const zooCustomStorageRoot = path.join(tempRoot, "shared-storage");
 
@@ -370,7 +370,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("ignores missing Roo task roots while still importing from available roots", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 		const rooMissingCustomStorageRoot = path.join(tempRoot, "roo-missing");
 
@@ -402,7 +402,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("skips tasks that do not have an importable history_item.json", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 
 		mockStorageConfiguration();
@@ -423,7 +423,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("does not delete an existing Zoo task when the Roo task is missing history_item.json", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 		const existingZooTaskDirectory = path.join(zooGlobalStoragePath, "tasks", "task-existing");
 
@@ -442,7 +442,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("does not overwrite an existing Zoo task when the Roo task is otherwise importable", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 		const existingZooTaskDirectory = path.join(zooGlobalStoragePath, "tasks", "task-existing");
 
@@ -467,7 +467,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("rejects task IDs containing dots or underscore prefixes to prevent traversal", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 
 		mockStorageConfiguration();
@@ -499,7 +499,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("rejects tasks whose history_item.json id field does not match the directory name or contains unsafe characters", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 
 		mockStorageConfiguration();
@@ -548,7 +548,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("rethrows unexpected task-root errors while importing Roo history", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 
 		mockStorageConfiguration();
@@ -570,7 +570,7 @@ describe("importRooTaskHistory", () => {
 	});
 
 	it("imports the complete file set when two calls run concurrently against the same Roo task", async () => {
-		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "zoocodeorganization.andy-code");
+		const zooGlobalStoragePath = path.join(tempRoot, "globalStorage", "andycodeorganization.andy-code");
 		const rooDefaultStorageRoot = path.join(tempRoot, "globalStorage", "rooveterinaryinc.roo-cline");
 
 		mockStorageConfiguration();

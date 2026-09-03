@@ -210,7 +210,7 @@
 		"enter_valid_path": "Veuillez entrer un chemin valide"
 	},
 	"input": {
-		"task_prompt": "Que doit faire Zoo ?",
+		"task_prompt": "Que doit faire Andy ?",
 		"task_placeholder": "Écris ta tâche ici"
 	},
 	"settings": {
@@ -270,7 +270,7 @@
 		"label": "Docs",
 		"url": "https://docs.ia.v2nethost.cl:3000"
 	},
-	"zooAuth": {
+	"andyAuth": {
 		"errors": {
 			"invalid_token_received": "Andy Code: Jeton d'authentification invalide reçu.",
 			"token_verification_failed": "Andy Code: La vérification du jeton a échoué.",

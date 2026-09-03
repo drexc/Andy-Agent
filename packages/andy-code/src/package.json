@@ -42,8 +42,8 @@
 		"sonnet",
 		"ai",
 		"llama",
-		"zoo code",
-		"zoocode"
+		"andy code",
+		"andycode"
 	],
 	"activationEvents": [
 		"onLanguage",

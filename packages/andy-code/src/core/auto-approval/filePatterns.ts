@@ -7,7 +7,7 @@ import path from "path";
  *
  * This is used to grant an access permission for a few named files instead of
  * for the whole workspace, for example `allowedWriteFiles`, which lists the
- * files Zoo may create or edit without asking.
+ * files Andy may create or edit without asking.
  *
  * The syntax is gitignore-inspired, but deliberately differs from it in how a
  * path is anchored, because these patterns can name files anywhere on the

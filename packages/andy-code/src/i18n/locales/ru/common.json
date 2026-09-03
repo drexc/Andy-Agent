@@ -210,7 +210,7 @@
 		"enter_valid_path": "Пожалуйста, введите корректный путь"
 	},
 	"input": {
-		"task_prompt": "Что должен сделать Zoo?",
+		"task_prompt": "Что должен сделать Andy?",
 		"task_placeholder": "Введите вашу задачу здесь"
 	},
 	"settings": {
@@ -270,7 +270,7 @@
 		"label": "Docs",
 		"url": "https://docs.ia.v2nethost.cl:3000"
 	},
-	"zooAuth": {
+	"andyAuth": {
 		"errors": {
 			"invalid_token_received": "Andy Code: Получен недействительный token аутентификации.",
 			"token_verification_failed": "Andy Code: Не удалось проверить token.",

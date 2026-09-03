@@ -55,8 +55,8 @@ vi.mock("@src/components/ui/hooks/useRouterModels", () => ({
 	useRouterModels: () => ({ data: {}, refetch: vi.fn() }),
 }))
 
-vi.mock("@src/components/ui/hooks/useZooGatewayRouterModelsSync", () => ({
-	useZooGatewayRouterModelsSync: vi.fn(),
+vi.mock("@src/components/ui/hooks/useAndyGatewayRouterModelsSync", () => ({
+	useAndyGatewayRouterModelsSync: vi.fn(),
 }))
 
 vi.mock("@src/components/ui/hooks/useOpenRouterModelProviders", () => ({
@@ -105,7 +105,7 @@ vi.mock("../providers", () => {
 		OpenCodeGo: provider("provider-opencode-go"),
 		Kenari: provider("provider-kenari"),
 		NanoGPT: provider("provider-nanogpt"),
-		ZooGateway: provider("provider-zoo-gateway"),
+		AndyGateway: provider("provider-andy-gateway"),
 		MiniMax: provider("provider-minimax"),
 		Mimo: provider("provider-mimo"),
 	}
@@ -352,7 +352,7 @@ describe("ApiOptions interactions", () => {
 		providerIdentifiers.opencodeGo,
 		providerIdentifiers.kenari,
 		providerIdentifiers.nanogpt,
-		providerIdentifiers.zooGateway,
+		providerIdentifiers.andyGateway,
 		providerIdentifiers.fireworks,
 		providerIdentifiers.friendli,
 		providerIdentifiers.poe,
@@ -364,7 +364,7 @@ describe("ApiOptions interactions", () => {
 
 	it("clears parent validation errors for Andy Gateway", () => {
 		const setErrorMessage = vi.fn()
-		renderApiOptions({ apiConfiguration: { apiProvider: providerIdentifiers.zooGateway }, setErrorMessage })
+		renderApiOptions({ apiConfiguration: { apiProvider: providerIdentifiers.andyGateway }, setErrorMessage })
 
 		expect(setErrorMessage).toHaveBeenCalledWith(undefined)
 	})

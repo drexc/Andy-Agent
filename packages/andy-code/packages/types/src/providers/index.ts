@@ -30,7 +30,7 @@ export * from "./kimi-code.js"
 export * from "./zai.js"
 export * from "./minimax.js"
 export * from "./mimo.js"
-export * from "./zoo-gateway.js"
+export * from "./andy-gateway.js"
 
 import { anthropicDefaultModelId } from "./anthropic.js"
 import { basetenDefaultModelId } from "./baseten.js"
@@ -60,7 +60,7 @@ import { kimiCodeDefaultModelId } from "./kimi-code.js"
 import { internationalZAiDefaultModelId, mainlandZAiDefaultModelId } from "./zai.js"
 import { minimaxDefaultModelId } from "./minimax.js"
 import { mimoDefaultModelId } from "./mimo.js"
-import { zooGatewayDefaultModelId } from "./zoo-gateway.js"
+import { andyGatewayDefaultModelId } from "./andy-gateway.js"
 
 // Import the ProviderName type from provider-settings to avoid duplication
 import type { ProviderName } from "../provider-settings.js"
@@ -139,8 +139,8 @@ export function getProviderDefaultModelId(
 			return nanoGptDefaultModelId
 		case providerIdentifiers.kimiCode:
 			return kimiCodeDefaultModelId
-		case providerIdentifiers.zooGateway:
-			return zooGatewayDefaultModelId
+		case providerIdentifiers.andyGateway:
+			return andyGatewayDefaultModelId
 		case providerIdentifiers.anthropic:
 		case providerIdentifiers.geminiCli:
 		case providerIdentifiers.fakeAi:

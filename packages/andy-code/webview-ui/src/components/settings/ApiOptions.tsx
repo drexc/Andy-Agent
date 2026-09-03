@@ -30,7 +30,7 @@ import { vscode } from "@src/utils/vscode"
 import { validateApiConfigurationExcludingModelErrors, getModelValidationError } from "@src/utils/validate"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useRouterModels } from "@src/components/ui/hooks/useRouterModels"
-import { useZooGatewayRouterModelsSync } from "@src/components/ui/hooks/useZooGatewayRouterModelsSync"
+import { useAndyGatewayRouterModelsSync } from "@src/components/ui/hooks/useAndyGatewayRouterModelsSync"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
 import { requestLmStudioModels } from "@src/components/ui/hooks/useLmStudioModels"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -82,7 +82,7 @@ import {
 	OpenCodeGo,
 	Kenari,
 	NanoGPT,
-	ZooGateway,
+	AndyGateway,
 	MiniMax,
 	Mimo,
 } from "./providers"
@@ -182,7 +182,7 @@ const ApiOptions = ({
 		typeof apiConfiguration.apiProvider === "string" && isRetiredProvider(apiConfiguration.apiProvider)
 
 	const { data: routerModels, refetch: refetchRouterModels } = useRouterModels()
-	useZooGatewayRouterModelsSync()
+	useAndyGatewayRouterModelsSync()
 
 	const { data: openRouterModelProviders } = useOpenRouterModelProviders(
 		apiConfiguration?.openRouterModelId,
@@ -274,9 +274,9 @@ const ApiOptions = ({
 		}
 
 		// Andy Gateway renders its own auth-state error inline (sign-in card in
-		// ZooGateway.tsx) so it can react to zooCodeIsAuthenticated changes
+		// AndyGateway.tsx) so it can react to andyCodeIsAuthenticated changes
 		// without re-running this effect or threading auth state through validation.
-		if (apiConfiguration.apiProvider === providerIdentifiers.zooGateway) {
+		if (apiConfiguration.apiProvider === providerIdentifiers.andyGateway) {
 			setErrorMessage(undefined)
 			return
 		}
@@ -693,8 +693,8 @@ const ApiOptions = ({
 						/>
 					)}
 
-					{selectedProvider === providerIdentifiers.zooGateway && (
-						<ZooGateway
+					{selectedProvider === providerIdentifiers.andyGateway && (
+						<AndyGateway
 							apiConfiguration={apiConfiguration}
 							setApiConfigurationField={setApiConfigurationField}
 							routerModels={routerModels}

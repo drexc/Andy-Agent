@@ -8,7 +8,7 @@ import { handleAuthCallback as handleAndyCodeAuthCallback, setAndyCodeUserInfo }
  * Persist the Andy Code session token to every active provider instance.
  *
  * The profile settings write (handleAndyCodeCallback) must run on any active
- * instance — not just the visible one — so the zoo-gateway zooSessionToken is
+ * instance — not just the visible one — so the andy-gateway andySessionToken is
  * persisted even when the sidebar/panel is hidden at callback time.
  *
  * Run sequentially (NOT Promise.all): each ClineProvider's handleAndyCodeCallback
@@ -18,7 +18,7 @@ import { handleAuthCallback as handleAndyCodeAuthCallback, setAndyCodeUserInfo }
  * updates. Serialization is cheap (at most a handful of instances) and avoids
  * the race.
  */
-async function propagateZooGatewayCallback(token: string): Promise<void> {
+async function propagateAndyGatewayCallback(token: string): Promise<void> {
 	const allInstances = ClineProvider.getAllInstances();
 	for (const instance of allInstances) {
 		try {
@@ -78,7 +78,7 @@ export const handleUri = async (uri: vscode.Uri) => {
 						email,
 						image,
 					});
-					await propagateZooGatewayCallback(token);
+					await propagateAndyGatewayCallback(token);
 				}
 			}
 			break;

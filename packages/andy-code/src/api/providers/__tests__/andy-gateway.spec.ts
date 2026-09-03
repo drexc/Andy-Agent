@@ -1,0 +1,960 @@
+// npx vitest run src/api/providers/__tests__/andy-gateway.spec.ts
+
+vitest.mock("../utils/timeout-config", () => ({
+	getApiRequestTimeout: vitest.fn().mockReturnValue(300_000),
+}));
+
+const MOCK_TIMEOUT_MS = 300_000;
+
+const { showErrorMessage, openExternal } = vitest.hoisted(() => ({
+	showErrorMessage: vitest.fn(async () => undefined as string | undefined),
+	openExternal: vitest.fn(async () => true),
+}));
+
+vitest.mock("vscode", () => ({
+	window: { showErrorMessage },
+	env: { openExternal, uriScheme: "vscode", appName: "VS Code" },
+	Uri: { parse: (value: string) => ({ toString: () => value }) },
+	workspace: {
+		getConfiguration: () => ({
+			get: (_key: string, defaultValue?: unknown) => defaultValue,
+		}),
+	},
+}));
+
+vitest.mock("../../../i18n", () => ({
+	t: (key: string) => key,
+}));
+
+import { ZOO_GATEWAY_DEFAULT_TEMPERATURE, andyGatewayDefaultModelId } from "@roo-code/types";
+import OpenAI from "openai";
+import { clearAndyCodeToken } from "../../../services/andy-code-auth";
+import type { ApiHandlerOptions } from "../../../shared/api";
+import { Package } from "../../../shared/package";
+import { clearAllMocks } from "../../../test-utils/reset";
+import { asyncStreamFrom, collectStream } from "../../../test-utils/stream";
+import { classifyGatewayApiError, toGatewayStreamError, AndyGatewayHandler } from "../andy-gateway";
+
+vitest.mock("openai");
+vitest.mock("delay", () => ({
+	default: vitest.fn(() => Promise.resolve()),
+}));
+const DEFAULT_MODEL_CATALOG = vitest.hoisted(() => ({
+	"anthropic/claude-sonnet-4": {
+		maxTokens: 64000,
+		contextWindow: 200000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 3,
+		outputPrice: 15,
+		cacheWritesPrice: 3.75,
+		cacheReadsPrice: 0.3,
+		description: "Claude Sonnet 4",
+	},
+	"anthropic/claude-3.5-haiku": {
+		maxTokens: 32000,
+		contextWindow: 200000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 1,
+		outputPrice: 5,
+		cacheWritesPrice: 1.25,
+		cacheReadsPrice: 0.1,
+		description: "Claude 3.5 Haiku",
+	},
+}));
+
+vitest.mock("../fetchers/modelCache", () => ({
+	getModels: vitest.fn().mockImplementation(() => Promise.resolve(DEFAULT_MODEL_CATALOG)),
+	refreshModels: vitest.fn().mockImplementation(() => Promise.resolve(DEFAULT_MODEL_CATALOG)),
+	getModelsFromCache: vitest.fn().mockReturnValue(undefined),
+}));
+
+const mockGetCachedAndyCodeToken = vitest.hoisted(() => vitest.fn<() => string | undefined>(() => undefined));
+const mockSessionCleared = vitest.hoisted(() => ({ value: false }));
+
+vitest.mock("../../../services/andy-code-auth", () => ({
+	getAndyCodeBaseUrl: vitest.fn(() => "https://ia.v2nethost.cl:3000"),
+	getCachedAndyCodeToken: () => mockGetCachedAndyCodeToken() ?? "",
+	resolveAndyGatewaySessionToken: (profileToken?: string) => {
+		const cached = mockGetCachedAndyCodeToken();
+		if (cached) return cached;
+		if (mockSessionCleared.value) return undefined;
+		return profileToken;
+	},
+	clearAndyCodeToken: vitest.fn(async () => {
+		mockSessionCleared.value = true;
+		mockGetCachedAndyCodeToken.mockReturnValue(undefined);
+	}),
+}));
+
+vitest.mock("../../transform/caching/vercel-ai-gateway", () => ({
+	addCacheBreakpoints: vitest.fn(),
+}));
+
+const mockCreate = vitest.fn();
+
+function mockOpenAIClient() {
+	vitest.mocked(OpenAI).mockImplementation(
+		() =>
+			({
+				chat: {
+					completions: {
+						create: mockCreate,
+					},
+				},
+			}) as unknown as OpenAI,
+	);
+}
+
+mockOpenAIClient();
+
+describe("AndyGatewayHandler", () => {
+	const mockOptions: ApiHandlerOptions = {
+		andySessionToken: "zoo_ext_test_token",
+		andyGatewayModelId: "anthropic/claude-sonnet-4",
+	};
+
+	beforeEach(async () => {
+		clearAllMocks();
+		const { getModels, refreshModels, getModelsFromCache } = await import("../fetchers/modelCache");
+		vitest
+			.mocked(getModels)
+			.mockReset()
+			.mockImplementation(() => Promise.resolve(DEFAULT_MODEL_CATALOG));
+		vitest
+			.mocked(refreshModels)
+			.mockReset()
+			.mockImplementation(() => Promise.resolve(DEFAULT_MODEL_CATALOG));
+		vitest.mocked(getModelsFromCache).mockReset().mockReturnValue(undefined);
+		mockSessionCleared.value = false;
+		mockGetCachedAndyCodeToken.mockReturnValue(undefined);
+		mockCreate.mockClear();
+		showErrorMessage.mockReset();
+		showErrorMessage.mockResolvedValue(undefined);
+		openExternal.mockReset();
+		openExternal.mockResolvedValue(true);
+		mockOpenAIClient();
+	});
+
+	function makeApiError(status: number, options: { code?: string; message?: string } = {}) {
+		const err = new Error(options.message ?? `HTTP ${status}`) as Error & {
+			status: number;
+			code?: string;
+		};
+		err.status = status;
+		if (options.code) err.code = options.code;
+		return err;
+	}
+
+	async function drainCreateMessage(handler: AndyGatewayHandler) {
+		return collectStream(handler.createMessage("system", [{ role: "user", content: "hi" }]));
+	}
+
+	describe("constructor", () => {
+		it("allows construction without a session token (auth is enforced at request time)", () => {
+			expect(() => new AndyGatewayHandler({})).not.toThrow();
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					apiKey: "not-provided",
+				}),
+			);
+		});
+
+		it("prefers the secret-storage cache over a persisted profile token", () => {
+			mockGetCachedAndyCodeToken.mockReturnValue("zoo_ext_cached_token");
+
+			new AndyGatewayHandler({
+				andySessionToken: "zoo_ext_stale_profile_token",
+				andyGatewayModelId: mockOptions.andyGatewayModelId,
+			});
+
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					apiKey: "zoo_ext_cached_token",
+				}),
+			);
+		});
+
+		it("initializes OpenAI with Zoo enrichment headers and session token", () => {
+			const handler = new AndyGatewayHandler({
+				...mockOptions,
+				andyGatewayBaseUrl: "https://staging.ia.v2nethost.cl:3000/api/gateway/v1",
+			});
+
+			expect(handler).toBeInstanceOf(AndyGatewayHandler);
+			expect(OpenAI).toHaveBeenCalledWith({
+				baseURL: "https://staging.ia.v2nethost.cl:3000/api/gateway/v1",
+				apiKey: mockOptions.andySessionToken,
+				defaultHeaders: expect.objectContaining({
+					"HTTP-Referer": "https://github.com/Zoo-Code-Org/Zoo-Code",
+					"X-Title": "Andy Code",
+					"X-Zoo-Editor": "vscode",
+					"X-Zoo-Extension-Version": Package.version,
+				}),
+				timeout: MOCK_TIMEOUT_MS,
+			});
+		});
+
+		it("defaults the gateway base URL from getAndyCodeBaseUrl", () => {
+			new AndyGatewayHandler(mockOptions);
+
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					baseURL: "https://ia.v2nethost.cl:3000/api/gateway/v1",
+				}),
+			);
+		});
+	});
+
+	describe("fetchModel", () => {
+		it("returns configured model info", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			const result = await handler.fetchModel();
+
+			expect(result.id).toBe(mockOptions.andyGatewayModelId);
+			expect(result.info.maxTokens).toBe(64000);
+			expect(result.info.supportsPromptCache).toBe(true);
+		});
+
+		it("falls back to the default model when none is configured", async () => {
+			const handler = new AndyGatewayHandler({ andySessionToken: "zoo_ext_test_token" });
+			const result = await handler.fetchModel();
+
+			expect(result.id).toBe(andyGatewayDefaultModelId);
+		});
+	});
+
+	describe("createMessage", () => {
+		it("requires authentication at request time when no session token is available", async () => {
+			const handler = new AndyGatewayHandler({});
+			await expect(drainCreateMessage(handler)).rejects.toThrow(
+				"Andy Gateway requires authentication. Please sign in to Andy Code first.",
+			);
+		});
+
+		beforeEach(() => {
+			mockCreate.mockImplementation(async () =>
+				asyncStreamFrom([
+					{
+						choices: [{ delta: { content: "Test response" }, index: 0 }],
+						usage: null,
+					},
+					{
+						choices: [{ delta: {}, index: 0 }],
+						usage: {
+							prompt_tokens: 10,
+							completion_tokens: 5,
+							total_tokens: 15,
+							cache_creation_input_tokens: 2,
+							prompt_tokens_details: { cached_tokens: 3 },
+							cost: 0.005,
+						},
+					},
+				]),
+			);
+		});
+
+		it("requires authentication at request time when no session token is available", async () => {
+			const handler = new AndyGatewayHandler({});
+			const stream = handler.createMessage("You are helpful.", [{ role: "user", content: "Hello" }]);
+
+			await expect(collectStream(stream)).rejects.toThrow(
+				"Andy Gateway requires authentication. Please sign in to Andy Code first.",
+			);
+		});
+
+		it("streams text and usage chunks", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			const stream = handler.createMessage("You are helpful.", [{ role: "user", content: "Hello" }]);
+
+			const chunks = await collectStream(stream);
+
+			expect(chunks).toEqual([
+				{ type: "text", text: "Test response" },
+				{
+					type: "usage",
+					inputTokens: 10,
+					outputTokens: 5,
+					cacheWriteTokens: 2,
+					cacheReadTokens: 3,
+					totalCost: 0.005,
+				},
+			]);
+		});
+
+		it("forwards gateway usage.cost as totalCost so the panel matches billing", async () => {
+			mockCreate.mockImplementation(async () =>
+				asyncStreamFrom([
+					{
+						choices: [{ delta: { content: "ok" }, index: 0 }],
+						usage: null,
+					},
+					{
+						choices: [{ delta: {}, index: 0 }],
+						usage: {
+							prompt_tokens: 25694,
+							completion_tokens: 829,
+							total_tokens: 26523,
+							cost: 0.006262,
+						},
+					},
+				]),
+			);
+
+			const handler = new AndyGatewayHandler(mockOptions);
+			const chunks = await collectStream(
+				handler.createMessage("You are helpful.", [{ role: "user", content: "Hello" }]),
+			);
+
+			expect(chunks).toContainEqual({
+				type: "usage",
+				inputTokens: 25694,
+				outputTokens: 829,
+				cacheWriteTokens: undefined,
+				cacheReadTokens: undefined,
+				totalCost: 0.006262,
+			});
+		});
+
+		it("defaults totalCost to 0 when usage omits cost", async () => {
+			mockCreate.mockImplementation(async () =>
+				asyncStreamFrom([
+					{
+						choices: [{ delta: { content: "ok" }, index: 0 }],
+						usage: null,
+					},
+					{
+						choices: [{ delta: {}, index: 0 }],
+						usage: {
+							prompt_tokens: 10,
+							completion_tokens: 5,
+							total_tokens: 15,
+						},
+					},
+				]),
+			);
+
+			const handler = new AndyGatewayHandler(mockOptions);
+			const chunks = await collectStream(
+				handler.createMessage("You are helpful.", [{ role: "user", content: "Hello" }]),
+			);
+
+			expect(chunks).toContainEqual({
+				type: "usage",
+				inputTokens: 10,
+				outputTokens: 5,
+				cacheWriteTokens: undefined,
+				cacheReadTokens: undefined,
+				totalCost: 0,
+			});
+		});
+
+		it("forwards task and mode metadata as request headers", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+
+			await handler.createMessage("prompt", [], { taskId: "task-123", mode: "code" }).next();
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.any(Object),
+				expect.objectContaining({
+					headers: {
+						"X-Zoo-Task-ID": "task-123",
+						"X-Zoo-Mode": "code",
+					},
+				}),
+			);
+		});
+
+		it("uses custom temperature when provided", async () => {
+			const handler = new AndyGatewayHandler({
+				...mockOptions,
+				modelTemperature: 0.5,
+			});
+
+			await handler.createMessage("prompt", [{ role: "user", content: "Hi" }]).next();
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					temperature: 0.5,
+				}),
+				expect.any(Object),
+			);
+		});
+
+		it("uses the default temperature when none is provided", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+
+			await handler.createMessage("prompt", [{ role: "user", content: "Hi" }]).next();
+
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					temperature: ZOO_GATEWAY_DEFAULT_TEMPERATURE,
+				}),
+				expect.any(Object),
+			);
+		});
+
+		it("adds cache breakpoints for supported models", async () => {
+			const { addCacheBreakpoints } = await import("../../transform/caching/vercel-ai-gateway");
+			const handler = new AndyGatewayHandler({
+				...mockOptions,
+				andyGatewayModelId: "anthropic/claude-3.5-haiku",
+			});
+
+			await handler.createMessage("prompt", [{ role: "user", content: "Hi" }]).next();
+
+			expect(addCacheBreakpoints).toHaveBeenCalled();
+		});
+
+		it("yields tool_call_partial chunks when streaming tool calls", async () => {
+			mockCreate.mockImplementation(async () =>
+				asyncStreamFrom([
+					{
+						choices: [
+							{
+								delta: {
+									tool_calls: [
+										{
+											index: 0,
+											id: "call_123",
+											function: { name: "test_tool", arguments: '{"arg1":' },
+										},
+									],
+								},
+								index: 0,
+							},
+						],
+					},
+				]),
+			);
+
+			const handler = new AndyGatewayHandler(mockOptions);
+			const chunks = await collectStream(handler.createMessage("prompt", []));
+
+			expect(chunks).toEqual([
+				{
+					type: "tool_call_partial",
+					index: 0,
+					id: "call_123",
+					name: "test_tool",
+					arguments: '{"arg1":',
+				},
+			]);
+		});
+
+		it("throws the upstream reason when the gateway sends an in-stream error chunk", async () => {
+			mockCreate.mockImplementation(async () =>
+				asyncStreamFrom([
+					{
+						error: {
+							message: "Too many requests, please wait before trying again",
+							status: 429,
+							code: "rate_limited",
+						},
+					},
+				]),
+			);
+
+			const handler = new AndyGatewayHandler(mockOptions);
+
+			await expect(drainCreateMessage(handler)).rejects.toThrow(
+				"Too many requests, please wait before trying again",
+			);
+		});
+
+		it("surfaces the add-credits prompt when an in-stream error carries a budget code", async () => {
+			mockCreate.mockImplementation(async () =>
+				asyncStreamFrom([
+					{
+						error: {
+							message: "Monthly budget exceeded",
+							status: 429,
+							code: "monthly_budget_exceeded",
+						},
+					},
+				]),
+			);
+
+			const handler = new AndyGatewayHandler(mockOptions);
+
+			await expect(drainCreateMessage(handler)).rejects.toThrow();
+			expect(showErrorMessage).toHaveBeenCalledWith(
+				"common:zooAuth.errors.budget_exceeded",
+				"common:zooAuth.buttons.add_credits",
+			);
+		});
+	});
+
+	describe("completePrompt", () => {
+		beforeEach(() => {
+			mockCreate.mockImplementation(async () => ({
+				choices: [{ message: { role: "assistant", content: "Test completion response" } }],
+			}));
+		});
+
+		it("returns completion text from the gateway", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+
+			const result = await handler.completePrompt("Complete this: Hello");
+
+			expect(result).toBe("Test completion response");
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: "anthropic/claude-sonnet-4",
+					messages: [{ role: "user", content: "Complete this: Hello" }],
+					stream: false,
+					temperature: ZOO_GATEWAY_DEFAULT_TEMPERATURE,
+					max_completion_tokens: 64000,
+				}),
+			);
+		});
+
+		it("wraps errors with a Andy Gateway prefix", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			mockCreate.mockImplementation(() => {
+				throw new Error("upstream failure");
+			});
+
+			await expect(handler.completePrompt("Test")).rejects.toThrow("Andy Gateway completion error: upstream failure");
+		});
+
+		it("returns an empty string when the model returns no content", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			mockCreate.mockImplementation(async () => ({
+				choices: [{ message: { role: "assistant", content: null } }],
+			}));
+
+			await expect(handler.completePrompt("Test")).resolves.toBe("");
+		});
+	});
+
+	describe("classifyGatewayApiError", () => {
+		it("returns sign_in on 401", () => {
+			expect(classifyGatewayApiError(makeApiError(401))).toEqual({ kind: "sign_in" });
+		});
+
+		it("returns add_credits (not budget) on 402", () => {
+			expect(classifyGatewayApiError(makeApiError(402))).toEqual({ kind: "add_credits", budgetExceeded: false });
+		});
+
+		it("returns add_credits with budgetExceeded on 429 budget codes", () => {
+			expect(classifyGatewayApiError(makeApiError(429, { code: "monthly_budget_exceeded" }))).toEqual({
+				kind: "add_credits",
+				budgetExceeded: true,
+			});
+			expect(classifyGatewayApiError(makeApiError(429, { code: "daily_budget_exceeded" }))).toEqual({
+				kind: "add_credits",
+				budgetExceeded: true,
+			});
+		});
+
+		it("returns none on 429 without a budget code", () => {
+			expect(classifyGatewayApiError(makeApiError(429, { code: "rate_limited" }))).toEqual({ kind: "none" });
+		});
+
+		it("returns contact_support on 403", () => {
+			expect(classifyGatewayApiError(makeApiError(403))).toEqual({ kind: "contact_support" });
+		});
+
+		it("returns none for errors without an HTTP status", () => {
+			expect(classifyGatewayApiError(new Error("network down"))).toEqual({ kind: "none" });
+		});
+	});
+
+	describe("toGatewayStreamError", () => {
+		it("preserves the message, status, and code from the chunk", () => {
+			const error = toGatewayStreamError({
+				message: "rate limited",
+				status: 429,
+				code: "rate_limited",
+			}) as Error & {
+				status?: number;
+				code?: string;
+			};
+
+			expect(error).toBeInstanceOf(Error);
+			expect(error.message).toBe("rate limited");
+			expect(error.status).toBe(429);
+			expect(error.code).toBe("rate_limited");
+		});
+
+		it("falls back to a default message and leaves status/code undefined", () => {
+			const error = toGatewayStreamError({}) as Error & { status?: number; code?: string };
+
+			expect(error.message).toBe("Andy Gateway stream error");
+			expect(error.status).toBeUndefined();
+			expect(error.code).toBeUndefined();
+		});
+	});
+
+	describe("surfaceGatewayApiError", () => {
+		it("clears the cached token and offers re-sign-in on 401", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			mockCreate.mockImplementation(() => {
+				throw makeApiError(401);
+			});
+			showErrorMessage.mockResolvedValueOnce("common:zooAuth.buttons.sign_in");
+
+			await expect(drainCreateMessage(handler)).rejects.toThrow();
+			expect(clearAndyCodeToken).toHaveBeenCalledTimes(1);
+			expect(showErrorMessage).toHaveBeenCalledWith(
+				"common:zooAuth.errors.session_expired",
+				"common:zooAuth.buttons.sign_in",
+			);
+			expect(openExternal).toHaveBeenCalledTimes(1);
+		});
+
+		it("does not open a URL on 401 when the user dismisses the prompt", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			mockCreate.mockImplementation(() => {
+				throw makeApiError(401);
+			});
+			showErrorMessage.mockResolvedValueOnce(undefined);
+
+			await expect(drainCreateMessage(handler)).rejects.toThrow();
+			expect(clearAndyCodeToken).toHaveBeenCalledTimes(1);
+			expect(openExternal).not.toHaveBeenCalled();
+		});
+
+		it("prompts to add credits on 402", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			mockCreate.mockImplementation(() => {
+				throw makeApiError(402);
+			});
+			showErrorMessage.mockResolvedValueOnce("common:zooAuth.buttons.add_credits");
+
+			await expect(drainCreateMessage(handler)).rejects.toThrow();
+			expect(clearAndyCodeToken).not.toHaveBeenCalled();
+			expect(showErrorMessage).toHaveBeenCalledWith(
+				"common:zooAuth.errors.out_of_credits",
+				"common:zooAuth.buttons.add_credits",
+			);
+			expect(openExternal).toHaveBeenCalledTimes(1);
+		});
+
+		it("shows the budget message on 429 with a budget code", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			mockCreate.mockImplementation(() => {
+				throw makeApiError(429, { code: "monthly_budget_exceeded" });
+			});
+
+			await expect(drainCreateMessage(handler)).rejects.toThrow();
+			expect(showErrorMessage).toHaveBeenCalledWith(
+				"common:zooAuth.errors.budget_exceeded",
+				"common:zooAuth.buttons.add_credits",
+			);
+		});
+
+		it("does not surface a notification on 429 without a budget code", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			mockCreate.mockImplementation(() => {
+				throw makeApiError(429, { code: "rate_limited" });
+			});
+
+			await expect(drainCreateMessage(handler)).rejects.toThrow();
+			expect(showErrorMessage).not.toHaveBeenCalled();
+		});
+
+		it("offers contact support on 403", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			mockCreate.mockImplementation(() => {
+				throw makeApiError(403);
+			});
+			showErrorMessage.mockResolvedValueOnce("common:zooAuth.buttons.contact_support");
+
+			await expect(drainCreateMessage(handler)).rejects.toThrow();
+			expect(showErrorMessage).toHaveBeenCalledWith(
+				"common:zooAuth.errors.account_unavailable",
+				"common:zooAuth.buttons.contact_support",
+			);
+			expect(openExternal).toHaveBeenCalledTimes(1);
+		});
+
+		it("ignores errors without an HTTP status", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			mockCreate.mockImplementation(() => {
+				throw new Error("network down");
+			});
+
+			await expect(drainCreateMessage(handler)).rejects.toThrow("network down");
+			expect(showErrorMessage).not.toHaveBeenCalled();
+			expect(clearAndyCodeToken).not.toHaveBeenCalled();
+		});
+
+		it("surfaces the gateway error then wraps the message in completePrompt", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			mockCreate.mockImplementation(() => {
+				throw makeApiError(402, { message: "out of credits" });
+			});
+
+			await expect(handler.completePrompt("ping")).rejects.toThrow("Andy Gateway completion error: out of credits");
+			expect(showErrorMessage).toHaveBeenCalledWith(
+				"common:zooAuth.errors.out_of_credits",
+				"common:zooAuth.buttons.add_credits",
+			);
+		});
+	});
+
+	describe("ensureModelFetched", () => {
+		it("fetches models when instance models are empty", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			const { getModels, refreshModels } = await import("../fetchers/modelCache");
+
+			expect(handler.getModel().info.contextWindow).toBe(200000);
+
+			await handler.ensureModelFetched();
+
+			expect(getModels).toHaveBeenCalled();
+			expect(refreshModels).not.toHaveBeenCalled();
+		});
+
+		it("skips the fetch when models are already populated", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			const { getModels, refreshModels } = await import("../fetchers/modelCache");
+
+			await handler.ensureModelFetched();
+			vitest.mocked(getModels).mockClear();
+			vitest.mocked(refreshModels).mockClear();
+
+			await handler.ensureModelFetched();
+			expect(getModels).not.toHaveBeenCalled();
+			expect(refreshModels).not.toHaveBeenCalled();
+		});
+
+		it("short-circuits a subsequent fetchModel call after models are populated", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			const { getModels, refreshModels } = await import("../fetchers/modelCache");
+
+			await handler.ensureModelFetched();
+			vitest.mocked(getModels).mockClear();
+			vitest.mocked(refreshModels).mockClear();
+
+			await handler.fetchModel();
+			expect(getModels).not.toHaveBeenCalled();
+			expect(refreshModels).not.toHaveBeenCalled();
+		});
+
+		it("refetches when the configured model is missing from a populated map", async () => {
+			vitest.useFakeTimers();
+			try {
+				const { getModels, refreshModels } = await import("../fetchers/modelCache");
+				const staleCatalog = {
+					"anthropic/claude-sonnet-4": {
+						maxTokens: 64000,
+						contextWindow: 200000,
+						supportsImages: true,
+						supportsPromptCache: true,
+						inputPrice: 3,
+						outputPrice: 15,
+					},
+				};
+				vitest.mocked(getModels).mockResolvedValueOnce(staleCatalog);
+				vitest.mocked(refreshModels).mockResolvedValueOnce(staleCatalog);
+
+				const handler = new AndyGatewayHandler({
+					...mockOptions,
+					andyGatewayModelId: "alibaba/qwen3.8-max",
+				});
+
+				await handler.ensureModelFetched();
+				expect(handler.getModel().info.inputPrice).toBe(0);
+
+				const freshCatalog = {
+					"alibaba/qwen3.8-max": {
+						maxTokens: 65536,
+						contextWindow: 1_000_000,
+						supportsImages: true,
+						supportsPromptCache: true,
+						inputPrice: 0.222,
+						outputPrice: 0.667,
+					},
+				};
+				vitest.mocked(getModels).mockClear();
+				vitest.mocked(refreshModels).mockClear();
+				vitest.mocked(getModels).mockResolvedValueOnce(freshCatalog);
+
+				vitest.advanceTimersByTime(5 * 60 * 1000 + 1);
+				await handler.ensureModelFetched();
+
+				expect(getModels).toHaveBeenCalled();
+				expect(refreshModels).not.toHaveBeenCalled();
+				expect(handler.getModel().info.inputPrice).toBe(0.222);
+				expect(handler.getModel().info.outputPrice).toBe(0.667);
+			} finally {
+				vitest.useRealTimers();
+			}
+		});
+
+		it("does not reuse default model prices for an unknown configured model", async () => {
+			const { getModels, refreshModels } = await import("../fetchers/modelCache");
+			vitest.mocked(getModels).mockResolvedValueOnce({});
+			vitest.mocked(refreshModels).mockResolvedValueOnce({});
+
+			const handler = new AndyGatewayHandler({
+				...mockOptions,
+				andyGatewayModelId: "alibaba/qwen3.8-max",
+			});
+
+			await handler.ensureModelFetched();
+
+			const { id, info } = handler.getModel();
+			expect(id).toBe("alibaba/qwen3.8-max");
+			expect(info.inputPrice).toBe(0);
+			expect(info.outputPrice).toBe(0);
+			expect(info.cacheWritesPrice).toBe(0);
+			expect(info.cacheReadsPrice).toBe(0);
+		});
+
+		it("does not refetch an unresolved model on every ensureModelFetched call", async () => {
+			const { getModels, refreshModels } = await import("../fetchers/modelCache");
+			const catalog = {
+				"anthropic/claude-sonnet-4": {
+					maxTokens: 64000,
+					contextWindow: 200000,
+					supportsImages: true,
+					supportsPromptCache: true,
+					inputPrice: 3,
+					outputPrice: 15,
+				},
+			};
+			vitest.mocked(getModels).mockResolvedValue(catalog);
+			vitest.mocked(refreshModels).mockResolvedValue(catalog);
+
+			const handler = new AndyGatewayHandler({
+				...mockOptions,
+				andyGatewayModelId: "alibaba/qwen3.8-max",
+			});
+
+			await handler.ensureModelFetched();
+			vitest.mocked(getModels).mockClear();
+			vitest.mocked(refreshModels).mockClear();
+
+			await handler.ensureModelFetched();
+			await handler.ensureModelFetched();
+
+			expect(getModels).not.toHaveBeenCalled();
+			expect(refreshModels).not.toHaveBeenCalled();
+			expect(handler.getModel().info.inputPrice).toBe(0);
+		});
+
+		it("negative-caches an empty catalog response for a missing model", async () => {
+			const { getModels, refreshModels } = await import("../fetchers/modelCache");
+			vitest.mocked(getModels).mockResolvedValue({});
+			vitest.mocked(refreshModels).mockResolvedValue({});
+
+			const handler = new AndyGatewayHandler({
+				...mockOptions,
+				andyGatewayModelId: "alibaba/qwen3.8-max",
+			});
+
+			await handler.ensureModelFetched();
+			vitest.mocked(getModels).mockClear();
+			vitest.mocked(refreshModels).mockClear();
+
+			await handler.ensureModelFetched();
+
+			expect(getModels).not.toHaveBeenCalled();
+			expect(refreshModels).not.toHaveBeenCalled();
+			expect(handler.getModel().info.inputPrice).toBe(0);
+		});
+
+		it("force-refreshes before negative-caching when shared catalog is stale", async () => {
+			const { getModels, refreshModels } = await import("../fetchers/modelCache");
+			vitest.mocked(getModels).mockResolvedValueOnce({
+				"anthropic/claude-sonnet-4": {
+					maxTokens: 64000,
+					contextWindow: 200000,
+					supportsImages: true,
+					supportsPromptCache: true,
+					inputPrice: 3,
+					outputPrice: 15,
+				},
+			});
+			vitest.mocked(refreshModels).mockResolvedValueOnce({
+				"alibaba/qwen3.8-max": {
+					maxTokens: 65536,
+					contextWindow: 1_000_000,
+					supportsImages: true,
+					supportsPromptCache: true,
+					inputPrice: 0.222,
+					outputPrice: 0.667,
+				},
+			});
+
+			const handler = new AndyGatewayHandler({
+				...mockOptions,
+				andyGatewayModelId: "alibaba/qwen3.8-max",
+			});
+
+			await handler.ensureModelFetched();
+
+			expect(getModels).toHaveBeenCalled();
+			expect(refreshModels).toHaveBeenCalled();
+			expect(handler.getModel().info.inputPrice).toBe(0.222);
+			expect(handler.getModel().info.outputPrice).toBe(0.667);
+
+			vitest.mocked(getModels).mockClear();
+			vitest.mocked(refreshModels).mockClear();
+			await handler.ensureModelFetched();
+			expect(getModels).not.toHaveBeenCalled();
+			expect(refreshModels).not.toHaveBeenCalled();
+		});
+
+		it("deduplicates concurrent calls into a single fetch", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			const { getModels, refreshModels } = await import("../fetchers/modelCache");
+			vitest.mocked(getModels).mockClear();
+			vitest.mocked(refreshModels).mockClear();
+
+			await Promise.all([handler.ensureModelFetched(), handler.ensureModelFetched()]);
+
+			expect(getModels).toHaveBeenCalledTimes(1);
+			expect(refreshModels).not.toHaveBeenCalled();
+		});
+
+		it("recovers after a rejected fetch so later calls are not poisoned", async () => {
+			const handler = new AndyGatewayHandler(mockOptions);
+			const { getModels } = await import("../fetchers/modelCache");
+
+			vitest.mocked(getModels).mockRejectedValueOnce(new Error("network down"));
+			await expect(handler.ensureModelFetched()).rejects.toThrow("network down");
+
+			vitest.mocked(getModels).mockResolvedValueOnce({
+				"anthropic/claude-sonnet-4": {
+					maxTokens: 64000,
+					contextWindow: 1000000,
+					supportsImages: true,
+					supportsPromptCache: true,
+				},
+			});
+			await handler.ensureModelFetched();
+
+			expect(handler.getModel().info.contextWindow).toBe(1000000);
+		});
+
+		it("makes getModel return the fetched context window instead of the default", async () => {
+			const { getModels, refreshModels } = await import("../fetchers/modelCache");
+			vitest.mocked(getModels).mockResolvedValueOnce({
+				"google/gemini-2.5-pro": {
+					maxTokens: 65536,
+					contextWindow: 1048576,
+					supportsImages: true,
+					supportsPromptCache: false,
+				},
+			});
+
+			const handler = new AndyGatewayHandler({
+				...mockOptions,
+				andyGatewayModelId: "google/gemini-2.5-pro",
+			});
+
+			expect(handler.getModel().info.contextWindow).toBe(200000);
+
+			await handler.ensureModelFetched();
+
+			expect(handler.getModel().info.contextWindow).toBe(1048576);
+			expect(refreshModels).not.toHaveBeenCalled();
+		});
+	});
+});

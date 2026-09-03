@@ -3,7 +3,7 @@
           <a href="https://x.com/AndyCodeDev"><img src="https://img.shields.io/badge/AndyCode-000000?style=flat&logo=x&logoColor=white" alt="X"></a>
           <a href="https://discord.gg/VxfP4Vx3gX"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Join Discord"></a>
           <a href="https://www.reddit.com/r/AndyCode/"><img src="https://img.shields.io/badge/Join%20r%2FAndyCode-FF4500?style=flat&logo=reddit&logoColor=white" alt="Join r/AndyCode"></a>
-          <a href="https://github.com/Zoo-Code-Org/Zoo-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
+          <a href="https://github.com/Andy-Code-Org/Andy-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
         </p>
         <p align="center">
           <em>Obtén ajuda ràpid → <a href="https://discord.gg/VxfP4Vx3gX">Uneix-te a Discord</a> • Prefereixes anar al teu ritme? → <a href="https://www.reddit.com/r/AndyCode/">Uneix-te a r/AndyCode</a></em>
@@ -27,13 +27,13 @@
 > especial. Uneix-te a nosaltres a
 > [Discord](https://discord.gg/VxfP4Vx3gX),
 > [Reddit](https://www.reddit.com/r/AndyCode), o
-> [obre una PR o issue](https://github.com/Zoo-Code-Org/Zoo-Code).
+> [obre una PR o issue](https://github.com/Andy-Code-Org/Andy-Code).
 >
 > _-Andy Code Team_
 
 ## Migració de Roo Code a Andy Code
 
-Pots trobar una guia ràpida per passar de Roo Code a Andy Code a la [guia de migració Roo→Zoo](https://docs.ia.v2nethost.cl:3000/roo-to-zoo-migration). Volem ajudar tant com puguem durant la transició, i per això tens el nostre [Reddit](https://www.reddit.com/r/AndyCode) i [Discord](https://discord.gg/VxfP4Vx3gX) per a aquest suport. Si tens problemes o algun dubte, entra i pregunta.
+Pots trobar una guia ràpida per passar de Roo Code a Andy Code a la [guia de migració Roo→Andy](https://docs.ia.v2nethost.cl:3000/roo-to-andy-migration). Volem ajudar tant com puguem durant la transició, i per això tens el nostre [Reddit](https://www.reddit.com/r/AndyCode) i [Discord](https://discord.gg/VxfP4Vx3gX) per a aquest suport. Si tens problemes o algun dubte, entra i pregunta.
 
 ## Què ha afegit Andy Code des de Roo Code
 
@@ -81,8 +81,8 @@ Més informació: [Ús de Modes](https://docs.ia.v2nethost.cl:3000/basic-usage/u
 - **[Documentació](https://docs.ia.v2nethost.cl:3000):** La guia oficial per instal·lar, configurar i dominar Andy Code.
 - **[Servidor de Discord](https://discord.gg/VxfP4Vx3gX):** Uneix-te a la comunitat per obtenir ajuda i discutir en temps real.
 - **[Comunitat de Reddit](https://www.reddit.com/r/AndyCode):** Comparteix les teves experiències i veu què estan construint altres.
-- **[Incidències de GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues):** Informa d'errors i segueix el desenvolupament.
-- **[Sol·licituds de funcionalitats](https://github.com/Zoo-Code-Org/Zoo-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** Tens una idea? Comparteix-la amb els desenvolupadors.
+- **[Incidències de GitHub](https://github.com/Andy-Code-Org/Andy-Code/issues):** Informa d'errors i segueix el desenvolupament.
+- **[Sol·licituds de funcionalitats](https://github.com/Andy-Code-Org/Andy-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** Tens una idea? Comparteix-la amb els desenvolupadors.
 
 ---
 
@@ -91,7 +91,7 @@ Més informació: [Ús de Modes](https://docs.ia.v2nethost.cl:3000/basic-usage/u
 1. **Clona** el repositori:
 
 ```sh
-git clone https://github.com/Zoo-Code-Org/Zoo-Code.git
+git clone https://github.com/Andy-Code-Org/Andy-Code.git
 ```
 
 2. **Instal·la les dependències**:
@@ -172,4 +172,4 @@ Ens encanten les contribucions de la comunitat! Comença llegint el nostre [CONT
 
 ---
 
-**Gaudeix de Andy Code!** Tant si el portes curt com si el deixes voltar de manera autònoma, tenim moltes ganes de veure què construiràs. Si tens preguntes o idees de funcionalitats, obre una [issue](https://github.com/Zoo-Code-Org/Zoo-Code/issues) o inicia una [discussion](https://github.com/Zoo-Code-Org/Zoo-Code/discussions). Feliç codi!
+**Gaudeix de Andy Code!** Tant si el portes curt com si el deixes voltar de manera autònoma, tenim moltes ganes de veure què construiràs. Si tens preguntes o idees de funcionalitats, obre una [issue](https://github.com/Andy-Code-Org/Andy-Code/issues) o inicia una [discussion](https://github.com/Andy-Code-Org/Andy-Code/discussions). Feliç codi!

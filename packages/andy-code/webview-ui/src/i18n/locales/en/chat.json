@@ -125,7 +125,7 @@
 	},
 	"scrollToBottom": "Scroll to bottom of chat",
 	"scrollToLatestCheckpoint": "Scroll to previous checkpoint",
-	"about": "Zoo is a whole AI dev team in your editor",
+	"about": "Andy is a whole AI dev team in your editor",
 	"docs": "Check our <DocsLink>docs</DocsLink> to get started",
 	"onboarding": "What would you like to do?",
 	"rooTips": {
@@ -135,7 +135,7 @@
 		},
 		"modelAgnostic": {
 			"title": "Bring your own model, no markup or lock-in",
-			"description": "Use your own provider key or even run local inference — Zoo doesn't charge for it"
+			"description": "Use your own provider key or even run local inference — Andy doesn't charge for it"
 		}
 	},
 	"selectMode": "Select mode for interaction",
@@ -147,7 +147,7 @@
 		"title": "Modes",
 		"marketplace": "Mode Marketplace",
 		"settings": "Mode Settings",
-		"description": "Specialized personas that tailor Zoo's behavior.",
+		"description": "Specialized personas that tailor Andy's behavior.",
 		"searchPlaceholder": "Search modes...",
 		"noResults": "No results found"
 	},
@@ -224,46 +224,46 @@
 		}
 	},
 	"skill": {
-		"wantsToLoad": "Zoo wants to load a skill",
-		"didLoad": "Zoo loaded a skill"
+		"wantsToLoad": "Andy wants to load a skill",
+		"didLoad": "Andy loaded a skill"
 	},
 	"fileOperations": {
-		"wantsToRead": "Zoo wants to read this file",
-		"wantsToReadMultiple": "Zoo wants to read multiple files",
-		"wantsToReadAndXMore": "Zoo wants to read this file and {{count}} more",
-		"wantsToReadOutsideWorkspace": "Zoo wants to read this file outside of the workspace",
-		"didRead": "Zoo read this file",
-		"wantsToEdit": "Zoo wants to edit this file",
-		"wantsToEditOutsideWorkspace": "Zoo wants to edit this file outside of the workspace",
-		"wantsToEditProtected": "Zoo wants to edit a protected configuration file",
-		"wantsToApplyBatchChanges": "Zoo wants to apply changes to multiple files",
-		"wantsToGenerateImage": "Zoo wants to generate an image",
-		"wantsToGenerateImageOutsideWorkspace": "Zoo wants to generate an image outside of the workspace",
-		"wantsToGenerateImageProtected": "Zoo wants to generate an image in a protected location",
-		"didGenerateImage": "Zoo generated an image",
-		"wantsToCreate": "Zoo wants to create a new file",
-		"wantsToInsert": "Zoo wants to insert content into this file",
-		"wantsToInsertWithLineNumber": "Zoo wants to insert content into this file at line {{lineNumber}}",
-		"wantsToInsertAtEnd": "Zoo wants to append content to the end of this file"
+		"wantsToRead": "Andy wants to read this file",
+		"wantsToReadMultiple": "Andy wants to read multiple files",
+		"wantsToReadAndXMore": "Andy wants to read this file and {{count}} more",
+		"wantsToReadOutsideWorkspace": "Andy wants to read this file outside of the workspace",
+		"didRead": "Andy read this file",
+		"wantsToEdit": "Andy wants to edit this file",
+		"wantsToEditOutsideWorkspace": "Andy wants to edit this file outside of the workspace",
+		"wantsToEditProtected": "Andy wants to edit a protected configuration file",
+		"wantsToApplyBatchChanges": "Andy wants to apply changes to multiple files",
+		"wantsToGenerateImage": "Andy wants to generate an image",
+		"wantsToGenerateImageOutsideWorkspace": "Andy wants to generate an image outside of the workspace",
+		"wantsToGenerateImageProtected": "Andy wants to generate an image in a protected location",
+		"didGenerateImage": "Andy generated an image",
+		"wantsToCreate": "Andy wants to create a new file",
+		"wantsToInsert": "Andy wants to insert content into this file",
+		"wantsToInsertWithLineNumber": "Andy wants to insert content into this file at line {{lineNumber}}",
+		"wantsToInsertAtEnd": "Andy wants to append content to the end of this file"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Zoo wants to view the top level files in this directory",
-		"didViewTopLevel": "Zoo viewed the top level files in this directory",
-		"wantsToViewTopLevelOutsideWorkspace": "Zoo wants to view the top level files in this directory (outside workspace)",
-		"didViewTopLevelOutsideWorkspace": "Zoo viewed the top level files in this directory (outside workspace)",
-		"wantsToViewRecursive": "Zoo wants to recursively view all files in this directory",
-		"didViewRecursive": "Zoo recursively viewed all files in this directory",
-		"wantsToViewRecursiveOutsideWorkspace": "Zoo wants to recursively view all files in this directory (outside workspace)",
-		"didViewRecursiveOutsideWorkspace": "Zoo recursively viewed all files in this directory (outside workspace)",
-		"wantsToViewMultipleDirectories": "Zoo wants to view multiple directories",
-		"wantsToSearch": "Zoo wants to search this directory for <code>{{regex}}</code>",
-		"didSearch": "Zoo searched this directory for <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Zoo wants to search this directory (outside workspace) for <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Zoo searched this directory (outside workspace) for <code>{{regex}}</code>"
+		"wantsToViewTopLevel": "Andy wants to view the top level files in this directory",
+		"didViewTopLevel": "Andy viewed the top level files in this directory",
+		"wantsToViewTopLevelOutsideWorkspace": "Andy wants to view the top level files in this directory (outside workspace)",
+		"didViewTopLevelOutsideWorkspace": "Andy viewed the top level files in this directory (outside workspace)",
+		"wantsToViewRecursive": "Andy wants to recursively view all files in this directory",
+		"didViewRecursive": "Andy recursively viewed all files in this directory",
+		"wantsToViewRecursiveOutsideWorkspace": "Andy wants to recursively view all files in this directory (outside workspace)",
+		"didViewRecursiveOutsideWorkspace": "Andy recursively viewed all files in this directory (outside workspace)",
+		"wantsToViewMultipleDirectories": "Andy wants to view multiple directories",
+		"wantsToSearch": "Andy wants to search this directory for <code>{{regex}}</code>",
+		"didSearch": "Andy searched this directory for <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Andy wants to search this directory (outside workspace) for <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Andy searched this directory (outside workspace) for <code>{{regex}}</code>"
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Zoo wants to search the codebase for <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Zoo wants to search the codebase for <code>{{query}}</code> in <code>{{path}}</code>",
+		"wantsToSearch": "Andy wants to search the codebase for <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Andy wants to search the codebase for <code>{{query}}</code> in <code>{{path}}</code>",
 		"didSearch_one": "Found 1 result",
 		"didSearch_other": "Found {{count}} results",
 		"resultTooltip": "Similarity score: {{score}} (click to open file)"
@@ -290,24 +290,24 @@
 	"response": "Response",
 	"arguments": "Arguments",
 	"text": {
-		"rooSaid": "Zoo said"
+		"rooSaid": "Andy said"
 	},
 	"feedback": {
 		"youSaid": "You said"
 	},
 	"mcp": {
-		"wantsToUseTool": "Zoo wants to use a tool on the {{serverName}} MCP server",
-		"wantsToAccessResource": "Zoo wants to access a resource on the {{serverName}} MCP server"
+		"wantsToUseTool": "Andy wants to use a tool on the {{serverName}} MCP server",
+		"wantsToAccessResource": "Andy wants to access a resource on the {{serverName}} MCP server"
 	},
 	"modes": {
-		"wantsToSwitch": "Zoo wants to switch to {{mode}} mode",
-		"wantsToSwitchWithReason": "Zoo wants to switch to {{mode}} mode because: {{reason}}",
-		"didSwitch": "Zoo switched to {{mode}} mode",
-		"didSwitchWithReason": "Zoo switched to {{mode}} mode because: {{reason}}"
+		"wantsToSwitch": "Andy wants to switch to {{mode}} mode",
+		"wantsToSwitchWithReason": "Andy wants to switch to {{mode}} mode because: {{reason}}",
+		"didSwitch": "Andy switched to {{mode}} mode",
+		"didSwitchWithReason": "Andy switched to {{mode}} mode because: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Zoo wants to create a new subtask in {{mode}} mode",
-		"wantsToFinish": "Zoo wants to mark this as completed",
+		"wantsToCreate": "Andy wants to create a new subtask in {{mode}} mode",
+		"wantsToFinish": "Andy wants to mark this as completed",
 		"newTaskContent": "Subtask Instructions",
 		"resultContent": "Subtask completed",
 		"defaultResult": "Please continue to the next task.",
@@ -315,7 +315,7 @@
 		"goToSubtask": "View task"
 	},
 	"questions": {
-		"hasQuestion": "Zoo has a question"
+		"hasQuestion": "Andy has a question"
 	},
 	"taskCompleted": "Task Completed",
 	"error": "Error",
@@ -332,12 +332,12 @@
 		"copyToClipboard": "Copy basic error info",
 		"copied": "Copied!",
 		"diagnostics": "Get detailed error info",
-		"proxyProvider": "You seem to be using a proxy-based provider. Make sure to check its logs and to ensure it's not rewriting Zoo's requests."
+		"proxyProvider": "You seem to be using a proxy-based provider. Make sure to check its logs and to ensure it's not rewriting Andy's requests."
 	},
 	"diffError": {
 		"title": "Edit Unsuccessful"
 	},
-	"troubleMessage": "Zoo is having trouble...",
+	"troubleMessage": "Andy is having trouble...",
 	"powershell": {
 		"issues": "It seems like you're having Windows PowerShell issues, please see this"
 	},
@@ -403,12 +403,12 @@
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Auto-Approved Request Limit Reached",
-			"description": "Zoo has reached the auto-approved limit of {{count}} API request(s). Would you like to reset the count and proceed with the task?",
+			"description": "Andy has reached the auto-approved limit of {{count}} API request(s). Would you like to reset the count and proceed with the task?",
 			"button": "Reset and Continue"
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "Auto-Approved Cost Limit Reached",
-			"description": "Zoo has reached the auto-approved cost limit of ${{count}}. Would you like to reset the cost and proceed with the task?",
+			"description": "Andy has reached the auto-approved cost limit of ${{count}}. Would you like to reset the cost and proceed with the task?",
 			"button": "Reset and Continue"
 		}
 	},
@@ -447,8 +447,8 @@
 		}
 	},
 	"slashCommand": {
-		"wantsToRun": "Zoo wants to run a slash command",
-		"didRun": "Zoo ran a slash command"
+		"wantsToRun": "Andy wants to run a slash command",
+		"didRun": "Andy ran a slash command"
 	},
 	"queuedMessages": {
 		"title": "Queued Messages",
@@ -477,7 +477,7 @@
 		"openMcpSettings": "Open MCP Settings"
 	},
 	"readCommandOutput": {
-		"title": "Zoo read command output"
+		"title": "Andy read command output"
 	},
 	"retiredProvider": {
 		"title": "Provider no longer supported",

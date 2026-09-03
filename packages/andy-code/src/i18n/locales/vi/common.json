@@ -210,7 +210,7 @@
 		"enter_valid_path": "Vui lòng nhập đường dẫn hợp lệ"
 	},
 	"input": {
-		"task_prompt": "Bạn muốn Zoo làm gì?",
+		"task_prompt": "Bạn muốn Andy làm gì?",
 		"task_placeholder": "Nhập nhiệm vụ của bạn ở đây"
 	},
 	"settings": {
@@ -277,7 +277,7 @@
 		"label": "Docs",
 		"url": "https://docs.ia.v2nethost.cl:3000"
 	},
-	"zooAuth": {
+	"andyAuth": {
 		"errors": {
 			"invalid_token_received": "Andy Code: Nhận được token xác thực không hợp lệ.",
 			"token_verification_failed": "Andy Code: Xác minh token thất bại.",

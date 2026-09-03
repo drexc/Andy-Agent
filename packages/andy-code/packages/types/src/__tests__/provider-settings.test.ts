@@ -96,7 +96,7 @@ describe("getApiProtocol", () => {
 
 	describe("Gateway providers", () => {
 		it("uses the canonical Andy Gateway identifier for Anthropic model protocol selection", () => {
-			expect(getApiProtocol(providerIdentifiers.zooGateway, "anthropic/claude-3-opus")).toBe(
+			expect(getApiProtocol(providerIdentifiers.andyGateway, "anthropic/claude-3-opus")).toBe(
 				ANTHROPIC_API_PROTOCOL,
 			)
 		})

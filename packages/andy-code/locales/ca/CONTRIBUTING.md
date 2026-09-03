@@ -71,7 +71,7 @@ Mencioneu l'alineació amb aquestes àrees a les vostres sol·licituds d'extracc
 
 Totes les contribucions comencen amb una incidència de GitHub utilitzant les nostres plantilles bàsiques.
 
-- **Comproveu les incidències existents**: cerqueu a [Incidències de GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues).
+- **Comproveu les incidències existents**: cerqueu a [Incidències de GitHub](https://github.com/Andy-Code-Org/Andy-Code/issues).
 - **Creeu una incidència** utilitzant:
     - **Millores:** plantilla "Sol·licitud de millora" (llenguatge senzill centrat en el benefici per a l'usuari).
     - **Errors:** plantilla "Informe d'error" (reproducció mínima + esperat vs real + versió).
@@ -80,17 +80,17 @@ Totes les contribucions comencen amb una incidència de GitHub utilitzant les no
 
 ### Decidir en què treballar
 
-- Consulta la [pàgina de GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues) per veure les issues.
-- Per a documents, visiteu [Documents de Andy Code](https://github.com/Zoo-Code-Org/Zoo-Code-Docs).
+- Consulta la [pàgina de GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues) per veure les issues.
+- Per a documents, visiteu [Documents de Andy Code](https://github.com/Andy-Code-Org/Andy-Code-Docs).
 
 ### Informar d'errors
 
 - Comproveu primer si hi ha informes existents.
-- Creeu un error nou utilitzant la [plantilla "Informe d'error"](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) amb:
+- Creeu un error nou utilitzant la [plantilla "Informe d'error"](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) amb:
     - Passos de reproducció clars i numerats
     - Resultat esperat vs real
     - Versió de Andy Code (obligatori); proveïdor/model d'API si és rellevant
-- **Problemes de seguretat**: informeu de manera privada a través d'[avisos de seguretat](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new).
+- **Problemes de seguretat**: informeu de manera privada a través d'[avisos de seguretat](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new).
 
 ## Procés de desenvolupament i submissió
 
@@ -99,7 +99,7 @@ Totes les contribucions comencen amb una incidència de GitHub utilitzant les no
 1. **Bifurcació i clonació:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Instal·leu les dependències:**

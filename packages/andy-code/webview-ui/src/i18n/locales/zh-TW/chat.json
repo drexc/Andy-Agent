@@ -125,7 +125,7 @@
 	},
 	"scrollToBottom": "捲動至對話底部",
 	"scrollToLatestCheckpoint": "捲動至上一個檢查點",
-	"about": "Zoo 是編輯器中的完整 AI 開發團隊。",
+	"about": "Andy 是編輯器中的完整 AI 開發團隊。",
 	"docs": "請參閱 <DocsLink>說明文件</DocsLink> 開始使用。",
 	"onboarding": "想要做什麼呢？",
 	"rooTips": {
@@ -135,7 +135,7 @@
 		},
 		"modelAgnostic": {
 			"title": "自備模型，無加價無鎖定",
-			"description": "使用自己的供應商金鑰，甚至可執行本機推論 - Zoo 不額外收費"
+			"description": "使用自己的供應商金鑰，甚至可執行本機推論 - Andy 不額外收費"
 		}
 	},
 	"selectMode": "選擇互動模式",
@@ -147,7 +147,7 @@
 		"title": "模式",
 		"marketplace": "模式市集",
 		"settings": "模式設定",
-		"description": "專門量身打造 Zoo 行為的角色。",
+		"description": "專門量身打造 Andy 行為的角色。",
 		"searchPlaceholder": "搜尋模式...",
 		"noResults": "找不到結果"
 	},
@@ -224,49 +224,49 @@
 		}
 	},
 	"skill": {
-		"wantsToLoad": "Zoo 想要載入技能",
-		"didLoad": "Zoo 載入了技能"
+		"wantsToLoad": "Andy 想要載入技能",
+		"didLoad": "Andy 載入了技能"
 	},
 	"instructions": {
-		"wantsToFetch": "Zoo 想要取得詳細指示以協助目前工作"
+		"wantsToFetch": "Andy 想要取得詳細指示以協助目前工作"
 	},
 	"fileOperations": {
-		"wantsToRead": "Zoo 想要讀取此檔案",
-		"wantsToReadMultiple": "Zoo 想要讀取多個檔案",
-		"wantsToReadAndXMore": "Zoo 想要讀取此檔案以及另外 {{count}} 個檔案",
-		"wantsToReadOutsideWorkspace": "Zoo 想要讀取此工作區外的檔案",
-		"didRead": "Zoo 已讀取此檔案",
-		"wantsToEdit": "Zoo 想要編輯此檔案",
-		"wantsToEditOutsideWorkspace": "Zoo 想要編輯此工作區外的檔案",
-		"wantsToEditProtected": "Zoo 想要編輯受保護的設定檔案",
-		"wantsToApplyBatchChanges": "Zoo 想要對多個檔案套用變更",
-		"wantsToGenerateImage": "Zoo 想要產生圖片",
-		"wantsToGenerateImageOutsideWorkspace": "Zoo 想要在工作區外產生圖片",
-		"wantsToGenerateImageProtected": "Zoo 想要在受保護位置產生圖片",
-		"didGenerateImage": "Zoo 已產生圖片",
-		"wantsToCreate": "Zoo 想要建立新檔案",
-		"wantsToInsert": "Zoo 想要在此檔案中插入內容",
-		"wantsToInsertWithLineNumber": "Zoo 想要在此檔案第 {{lineNumber}} 行插入內容",
-		"wantsToInsertAtEnd": "Zoo 想要在此檔案尾端新增內容"
+		"wantsToRead": "Andy 想要讀取此檔案",
+		"wantsToReadMultiple": "Andy 想要讀取多個檔案",
+		"wantsToReadAndXMore": "Andy 想要讀取此檔案以及另外 {{count}} 個檔案",
+		"wantsToReadOutsideWorkspace": "Andy 想要讀取此工作區外的檔案",
+		"didRead": "Andy 已讀取此檔案",
+		"wantsToEdit": "Andy 想要編輯此檔案",
+		"wantsToEditOutsideWorkspace": "Andy 想要編輯此工作區外的檔案",
+		"wantsToEditProtected": "Andy 想要編輯受保護的設定檔案",
+		"wantsToApplyBatchChanges": "Andy 想要對多個檔案套用變更",
+		"wantsToGenerateImage": "Andy 想要產生圖片",
+		"wantsToGenerateImageOutsideWorkspace": "Andy 想要在工作區外產生圖片",
+		"wantsToGenerateImageProtected": "Andy 想要在受保護位置產生圖片",
+		"didGenerateImage": "Andy 已產生圖片",
+		"wantsToCreate": "Andy 想要建立新檔案",
+		"wantsToInsert": "Andy 想要在此檔案中插入內容",
+		"wantsToInsertWithLineNumber": "Andy 想要在此檔案第 {{lineNumber}} 行插入內容",
+		"wantsToInsertAtEnd": "Andy 想要在此檔案尾端新增內容"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Zoo 想要檢視此目錄中最上層的檔案",
-		"didViewTopLevel": "Zoo 已檢視此目錄中最上層的檔案",
-		"wantsToViewTopLevelOutsideWorkspace": "Zoo 想要檢視此目錄（工作區外）中最上層的檔案",
-		"didViewTopLevelOutsideWorkspace": "Zoo 已檢視此目錄（工作區外）中最上層的檔案",
-		"wantsToViewRecursive": "Zoo 想要遞迴檢視此目錄中的所有檔案",
-		"didViewRecursive": "Zoo 已遞迴檢視此目錄中的所有檔案",
-		"wantsToViewRecursiveOutsideWorkspace": "Zoo 想要遞迴檢視此目錄（工作區外）中的所有檔案",
-		"didViewRecursiveOutsideWorkspace": "Zoo 已遞迴檢視此目錄（工作區外）中的所有檔案",
-		"wantsToSearch": "Zoo 想要在此目錄中搜尋 <code>{{regex}}</code>",
-		"didSearch": "Zoo 已在此目錄中搜尋 <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Zoo 想要在此目錄（工作區外）中搜尋 <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Zoo 已在此目錄（工作區外）中搜尋 <code>{{regex}}</code>",
-		"wantsToViewMultipleDirectories": "Zoo 想要查看多個目錄"
+		"wantsToViewTopLevel": "Andy 想要檢視此目錄中最上層的檔案",
+		"didViewTopLevel": "Andy 已檢視此目錄中最上層的檔案",
+		"wantsToViewTopLevelOutsideWorkspace": "Andy 想要檢視此目錄（工作區外）中最上層的檔案",
+		"didViewTopLevelOutsideWorkspace": "Andy 已檢視此目錄（工作區外）中最上層的檔案",
+		"wantsToViewRecursive": "Andy 想要遞迴檢視此目錄中的所有檔案",
+		"didViewRecursive": "Andy 已遞迴檢視此目錄中的所有檔案",
+		"wantsToViewRecursiveOutsideWorkspace": "Andy 想要遞迴檢視此目錄（工作區外）中的所有檔案",
+		"didViewRecursiveOutsideWorkspace": "Andy 已遞迴檢視此目錄（工作區外）中的所有檔案",
+		"wantsToSearch": "Andy 想要在此目錄中搜尋 <code>{{regex}}</code>",
+		"didSearch": "Andy 已在此目錄中搜尋 <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Andy 想要在此目錄（工作區外）中搜尋 <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Andy 已在此目錄（工作區外）中搜尋 <code>{{regex}}</code>",
+		"wantsToViewMultipleDirectories": "Andy 想要查看多個目錄"
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Zoo 想要在程式碼庫中搜尋 <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Zoo 想要在 <code>{{path}}</code> 中搜尋程式碼庫 <code>{{query}}</code>",
+		"wantsToSearch": "Andy 想要在程式碼庫中搜尋 <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Andy 想要在 <code>{{path}}</code> 中搜尋程式碼庫 <code>{{query}}</code>",
 		"didSearch_one": "找到 1 個結果",
 		"didSearch_other": "找到 {{count}} 個結果",
 		"resultTooltip": "相似度評分：{{score}}（點選以開啟檔案）"
@@ -293,24 +293,24 @@
 	"response": "回應",
 	"arguments": "參數",
 	"text": {
-		"rooSaid": "Zoo 說"
+		"rooSaid": "Andy 說"
 	},
 	"feedback": {
 		"youSaid": "您說"
 	},
 	"mcp": {
-		"wantsToUseTool": "Zoo 想要在 {{serverName}} MCP 伺服器上使用工具",
-		"wantsToAccessResource": "Zoo 想要存取 {{serverName}} MCP 伺服器上的資源"
+		"wantsToUseTool": "Andy 想要在 {{serverName}} MCP 伺服器上使用工具",
+		"wantsToAccessResource": "Andy 想要存取 {{serverName}} MCP 伺服器上的資源"
 	},
 	"modes": {
-		"wantsToSwitch": "Zoo 想要切換至 {{mode}} 模式",
-		"wantsToSwitchWithReason": "Zoo 想要切換至 {{mode}} 模式，原因：{{reason}}",
-		"didSwitch": "Zoo 已切換至 {{mode}} 模式",
-		"didSwitchWithReason": "Zoo 已切換至 {{mode}} 模式，原因：{{reason}}"
+		"wantsToSwitch": "Andy 想要切換至 {{mode}} 模式",
+		"wantsToSwitchWithReason": "Andy 想要切換至 {{mode}} 模式，原因：{{reason}}",
+		"didSwitch": "Andy 已切換至 {{mode}} 模式",
+		"didSwitchWithReason": "Andy 已切換至 {{mode}} 模式，原因：{{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Zoo 想要在 {{mode}} 模式下建立新的子任務",
-		"wantsToFinish": "Zoo 想要完成此子任務",
+		"wantsToCreate": "Andy 想要在 {{mode}} 模式下建立新的子任務",
+		"wantsToFinish": "Andy 想要完成此子任務",
 		"newTaskContent": "子任務指示",
 		"resultContent": "子任務結果",
 		"defaultResult": "請繼續下一個工作。",
@@ -318,7 +318,7 @@
 		"goToSubtask": "查看工作"
 	},
 	"questions": {
-		"hasQuestion": "Zoo 有一個問題"
+		"hasQuestion": "Andy 有一個問題"
 	},
 	"taskCompleted": "工作完成",
 	"error": "錯誤",
@@ -335,12 +335,12 @@
 		"copyToClipboard": "複製基本錯誤資訊",
 		"copied": "已複製！",
 		"diagnostics": "取得詳細錯誤資訊",
-		"proxyProvider": "似乎正在使用代理型供應商。請檢查記錄，並確保不會重寫 Zoo 的請求。"
+		"proxyProvider": "似乎正在使用代理型供應商。請檢查記錄，並確保不會重寫 Andy 的請求。"
 	},
 	"diffError": {
 		"title": "編輯失敗"
 	},
-	"troubleMessage": "Zoo 遇到問題...",
+	"troubleMessage": "Andy 遇到問題...",
 	"powershell": {
 		"issues": "似乎遇到 Windows PowerShell 問題，請參閱此說明文件"
 	},
@@ -406,12 +406,12 @@
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "已達自動核准請求上限",
-			"description": "Zoo 已達到 {{count}} 次 API 請求的自動核准上限。您想重設計數並繼續工作嗎？",
+			"description": "Andy 已達到 {{count}} 次 API 請求的自動核准上限。您想重設計數並繼續工作嗎？",
 			"button": "重設並繼續"
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "已達自動核准費用上限",
-			"description": "Zoo 已達到 ${{count}} 的自動核准費用上限。您想重設費用並繼續工作嗎？",
+			"description": "Andy 已達到 ${{count}} 的自動核准費用上限。您想重設費用並繼續工作嗎？",
 			"button": "重設並繼續"
 		}
 	},
@@ -450,8 +450,8 @@
 		}
 	},
 	"slashCommand": {
-		"wantsToRun": "Zoo 想要執行斜線指令",
-		"didRun": "Zoo 執行了斜線指令"
+		"wantsToRun": "Andy 想要執行斜線指令",
+		"didRun": "Andy 執行了斜線指令"
 	},
 	"queuedMessages": {
 		"title": "佇列中的訊息",
@@ -480,7 +480,7 @@
 		"openMcpSettings": "開啟 MCP 設定"
 	},
 	"readCommandOutput": {
-		"title": "Zoo read command output"
+		"title": "Andy read command output"
 	},
 	"retiredProvider": {
 		"title": "供應商不再受支援",

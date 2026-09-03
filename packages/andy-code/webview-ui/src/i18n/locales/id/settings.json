@@ -165,7 +165,7 @@
 		"footer": "Aturan memuat panduan khusus mode sebelum panduan umum. Aturan global dimuat sebelum aturan workspace."
 	},
 	"prompts": {
-		"description": "Konfigurasi support prompt yang digunakan untuk aksi cepat seperti meningkatkan prompt, menjelaskan kode, dan memperbaiki masalah. Prompt ini membantu Zoo memberikan bantuan yang lebih baik untuk tugas pengembangan umum."
+		"description": "Konfigurasi support prompt yang digunakan untuk aksi cepat seperti meningkatkan prompt, menjelaskan kode, dan memperbaiki masalah. Prompt ini membantu Andy memberikan bantuan yang lebih baik untuk tugas pengembangan umum."
 	},
 	"codeIndex": {
 		"title": "Pengindeksan Codebase",
@@ -283,16 +283,16 @@
 	},
 	"autoApprove": {
 		"toggleShortcut": "Anda dapat mengonfigurasi pintasan global untuk pengaturan ini <SettingsLink>di preferensi IDE Anda</SettingsLink>.",
-		"description": "Izinkan Zoo untuk secara otomatis melakukan operasi tanpa memerlukan persetujuan. Aktifkan pengaturan ini hanya jika kamu sepenuhnya mempercayai AI dan memahami risiko keamanan yang terkait.",
+		"description": "Izinkan Andy untuk secara otomatis melakukan operasi tanpa memerlukan persetujuan. Aktifkan pengaturan ini hanya jika kamu sepenuhnya mempercayai AI dan memahami risiko keamanan yang terkait.",
 		"enabled": "Auto-Approve Diaktifkan",
 		"toggleAriaLabel": "Beralih persetujuan otomatis",
 		"disabledAriaLabel": "Persetujuan otomatis dinonaktifkan - pilih opsi terlebih dahulu",
 		"readOnly": {
 			"label": "Baca",
-			"description": "Ketika diaktifkan, Zoo akan secara otomatis melihat konten direktori dan membaca file tanpa memerlukan kamu mengklik tombol Setujui.",
+			"description": "Ketika diaktifkan, Andy akan secara otomatis melihat konten direktori dan membaca file tanpa memerlukan kamu mengklik tombol Setujui.",
 			"outsideWorkspace": {
 				"label": "Sertakan file di luar workspace",
-				"description": "Izinkan Zoo membaca file di luar workspace saat ini tanpa memerlukan persetujuan."
+				"description": "Izinkan Andy membaca file di luar workspace saat ini tanpa memerlukan persetujuan."
 			}
 		},
 		"write": {
@@ -301,11 +301,11 @@
 			"delayLabel": "Delay setelah menulis untuk memungkinkan diagnostik mendeteksi masalah potensial",
 			"outsideWorkspace": {
 				"label": "Sertakan file di luar workspace",
-				"description": "Izinkan Zoo membuat dan mengedit file di luar workspace saat ini tanpa memerlukan persetujuan."
+				"description": "Izinkan Andy membuat dan mengedit file di luar workspace saat ini tanpa memerlukan persetujuan."
 			},
 			"protected": {
 				"label": "Sertakan file yang dilindungi",
-				"description": "Izinkan Zoo membuat dan mengedit file yang dilindungi (seperti .rooignore dan file konfigurasi .roo/) tanpa memerlukan persetujuan."
+				"description": "Izinkan Andy membuat dan mengedit file yang dilindungi (seperti .rooignore dan file konfigurasi .roo/) tanpa memerlukan persetujuan."
 			}
 		},
 		"allowlists": {
@@ -313,12 +313,12 @@
 			"description": "Berikan akses ke file tertentu, tanpa menyetujui otomatis seluruh kategori tindakan. Satu pola per baris, dengan sintaks yang diilhami .gitignore: \"notes.md\" cocok dengan file itu di direktori mana pun dalam workspace, \"docs/scratch/**\" semua yang ada di bawah direktori itu, dan \"*.md\" file Markdown apa pun. Pola selalu menamai file, bukan direktori: \"docs\" hanya memberi akses ke file bernama \"docs\"; tulis \"docs/**\" untuk isi sebuah direktori. Awalan \"./\" berarti root workspace, sedangkan awalan \"/\" berarti root sistem file, sehingga \"/tmp/notes.md\" menjangkau di luar workspace, begitu pula \"~/notes.md\", di mana awalan \"~/\" berarti direktori home kamu. Beri awalan \"!\" pada pola untuk mengecualikan apa yang dicocokkan baris sebelumnya; seperti pada .gitignore, baris terakhir yang cocok menang, jadi urutan penting. Pola relatif terhadap workspace diabaikan selama tidak ada folder yang terbuka. Huruf besar dan kecil dibedakan, kecuali di Windows. Tidak ada yang disetujui otomatis selama \"Persetujuan Otomatis\" di atas nonaktif.",
 			"readFiles": {
 				"label": "Pola daftar izin baca",
-				"description": "File yang boleh dibaca Zoo tanpa persetujuan, bahkan ketika \"Baca\" di atas nonaktif. File pada daftar izin tulis di bawah selalu boleh dibaca juga, jadi tidak perlu ditambahkan dua kali. Daftar direktori dan pencarian selalu mengikuti pengaturan \"Baca\". File yang dikecualikan oleh .rooignore tetap tidak bisa dibaca.",
+				"description": "File yang boleh dibaca Andy tanpa persetujuan, bahkan ketika \"Baca\" di atas nonaktif. File pada daftar izin tulis di bawah selalu boleh dibaca juga, jadi tidak perlu ditambahkan dua kali. Daftar direktori dan pencarian selalu mengikuti pengaturan \"Baca\". File yang dikecualikan oleh .rooignore tetap tidak bisa dibaca.",
 				"placeholder": "Satu pola per baris, misalnya notes.md"
 			},
 			"writeFiles": {
 				"label": "Pola daftar izin tulis",
-				"description": "File yang boleh dibuat dan diedit Zoo tanpa persetujuan, bahkan ketika \"Tulis\" di atas nonaktif. File yang dilindungi tetap memerlukan persetujuan kecuali \"Sertakan file yang dilindungi\" diaktifkan (di pengaturan persetujuan otomatis \"Tulis\"). File yang dikecualikan oleh .rooignore tetap tidak bisa ditulis.",
+				"description": "File yang boleh dibuat dan diedit Andy tanpa persetujuan, bahkan ketika \"Tulis\" di atas nonaktif. File yang dilindungi tetap memerlukan persetujuan kecuali \"Sertakan file yang dilindungi\" diaktifkan (di pengaturan persetujuan otomatis \"Tulis\"). File yang dikecualikan oleh .rooignore tetap tidak bisa ditulis.",
 				"placeholder": "Satu pola per baris, misalnya notes.md"
 			}
 		},
@@ -344,7 +344,7 @@
 			"description": "Secara otomatis mengeksekusi perintah terminal yang diizinkan tanpa memerlukan persetujuan",
 			"destructiveCommandGuard": {
 				"label": "Aktifkan perlindungan perintah destruktif",
-				"description": "Unduh dan gunakan Destructive Command Guard (DCG) untuk platform ini. Perintah yang diizinkan DCG dijalankan secara otomatis. Perintah yang diblokir DCG memerlukan persetujuanmu. Daftar perintah Zoo dinonaktifkan selama opsi ini aktif. File executable yang diunduh tetap disimpan jika kamu menonaktifkannya."
+				"description": "Unduh dan gunakan Destructive Command Guard (DCG) untuk platform ini. Perintah yang diizinkan DCG dijalankan secara otomatis. Perintah yang diblokir DCG memerlukan persetujuanmu. Daftar perintah Andy dinonaktifkan selama opsi ini aktif. File executable yang diunduh tetap disimpan jika kamu menonaktifkannya."
 			},
 			"allowedCommands": "Perintah Auto-Execute yang Diizinkan",
 			"allowedCommandsDescription": "Prefix perintah yang dapat di-auto-execute ketika \"Selalu setujui operasi eksekusi\" diaktifkan. Tambahkan * untuk mengizinkan semua perintah (gunakan dengan hati-hati).",
@@ -656,7 +656,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Batas Kesalahan & Pengulangan",
-			"description": "Jumlah kesalahan berturut-turut atau tindakan berulang sebelum menampilkan dialog 'Zoo mengalami masalah'. Atur ke 0 untuk menonaktifkan mekanisme keamanan ini (tidak akan pernah terpicu).",
+			"description": "Jumlah kesalahan berturut-turut atau tindakan berulang sebelum menampilkan dialog 'Andy mengalami masalah'. Atur ke 0 untuk menonaktifkan mekanisme keamanan ini (tidak akan pernah terpicu).",
 			"unlimitedDescription": "Percobaan ulang tak terbatas diaktifkan (lanjut otomatis). Dialog tidak akan pernah muncul.",
 			"warning": "⚠️ Mengatur ke 0 memungkinkan percobaan ulang tak terbatas yang dapat menghabiskan penggunaan API yang signifikan"
 		},
@@ -685,7 +685,7 @@
 			"maxTokensLabel": "Token Output Maks",
 			"maxTokensDescription": "Jumlah maksimum token output untuk respons Claude Code. Default adalah 8000."
 		},
-		"zooGateway": {
+		"andyGateway": {
 			"account": "Akun Andy Code",
 			"signInButton": "Masuk ke Andy Code",
 			"signInDescription": "Masuk untuk menggunakan Andy Gateway dengan akun Anda",
@@ -700,18 +700,18 @@
 		},
 		"enable": {
 			"label": "Aktifkan checkpoint otomatis",
-			"description": "Ketika diaktifkan, Zoo akan secara otomatis membuat checkpoint selama eksekusi tugas, memudahkan untuk meninjau perubahan atau kembali ke state sebelumnya. <0>Pelajari lebih lanjut</0>"
+			"description": "Ketika diaktifkan, Andy akan secara otomatis membuat checkpoint selama eksekusi tugas, memudahkan untuk meninjau perubahan atau kembali ke state sebelumnya. <0>Pelajari lebih lanjut</0>"
 		}
 	},
 	"notifications": {
 		"sound": {
 			"label": "Aktifkan efek suara",
-			"description": "Ketika diaktifkan, Zoo akan memutar efek suara untuk notifikasi dan event.",
+			"description": "Ketika diaktifkan, Andy akan memutar efek suara untuk notifikasi dan event.",
 			"volumeLabel": "Volume"
 		},
 		"tts": {
 			"label": "Aktifkan text-to-speech",
-			"description": "Ketika diaktifkan, Zoo akan membacakan responnya menggunakan text-to-speech.",
+			"description": "Ketika diaktifkan, Andy akan membacakan responnya menggunakan text-to-speech.",
 			"speedLabel": "Kecepatan"
 		}
 	},
@@ -719,7 +719,7 @@
 		"description": "Kontrol informasi apa yang disertakan dalam context window AI, mempengaruhi penggunaan token dan kualitas respons",
 		"autoCondenseContextPercent": {
 			"label": "Ambang batas untuk memicu kondensasi konteks cerdas",
-			"description": "Ketika context window mencapai ambang batas ini, Zoo akan secara otomatis mengondensasikannya."
+			"description": "Ketika context window mencapai ambang batas ini, Andy akan secara otomatis mengondensasikannya."
 		},
 		"condensingApiConfiguration": {
 			"label": "Konfigurasi API untuk Kondensasi Konteks",
@@ -735,7 +735,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "Secara otomatis memicu kondensasi konteks cerdas",
-			"description": "Ketika diaktifkan, Zoo akan secara otomatis mengondensasi konteks ketika ambang batas tercapai. Ketika dinonaktifkan, kamu masih dapat memicu kondensasi konteks secara manual."
+			"description": "Ketika diaktifkan, Andy akan secara otomatis mengondensasi konteks ketika ambang batas tercapai. Ketika dinonaktifkan, kamu masih dapat memicu kondensasi konteks secara manual."
 		},
 		"diagnostics": {
 			"includeMessages": {
@@ -786,7 +786,7 @@
 		},
 		"maxReadFile": {
 			"label": "Ambang batas auto-truncate pembacaan file",
-			"description": "Zoo membaca sejumlah baris ini ketika model menghilangkan nilai start/end. Jika angka ini kurang dari total file, Zoo menghasilkan indeks nomor baris dari definisi kode. Kasus khusus: -1 menginstruksikan Zoo untuk membaca seluruh file (tanpa indexing), dan 0 menginstruksikannya untuk tidak membaca baris dan hanya menyediakan indeks baris untuk konteks minimal. Nilai yang lebih rendah meminimalkan penggunaan konteks awal, memungkinkan pembacaan rentang baris yang tepat selanjutnya. Permintaan start/end eksplisit tidak dibatasi oleh pengaturan ini.",
+			"description": "Andy membaca sejumlah baris ini ketika model menghilangkan nilai start/end. Jika angka ini kurang dari total file, Andy menghasilkan indeks nomor baris dari definisi kode. Kasus khusus: -1 menginstruksikan Andy untuk membaca seluruh file (tanpa indexing), dan 0 menginstruksikannya untuk tidak membaca baris dan hanya menyediakan indeks baris untuk konteks minimal. Nilai yang lebih rendah meminimalkan penggunaan konteks awal, memungkinkan pembacaan rentang baris yang tepat selanjutnya. Permintaan start/end eksplisit tidak dibatasi oleh pengaturan ini.",
 			"lines": "baris",
 			"always_full_read": "Selalu baca seluruh file"
 		},
@@ -828,15 +828,15 @@
 		},
 		"outputLineLimit": {
 			"label": "Batas keluaran terminal",
-			"description": "Menyimpan baris pertama dan terakhir dan membuang yang tengah agar tetap di bawah batas. Turunkan untuk menghemat token; naikkan untuk memberi Zoo lebih banyak detail tengah. Zoo melihat placeholder di mana konten dilewati.<0>Pelajari lebih lanjut</0>"
+			"description": "Menyimpan baris pertama dan terakhir dan membuang yang tengah agar tetap di bawah batas. Turunkan untuk menghemat token; naikkan untuk memberi Andy lebih banyak detail tengah. Andy melihat placeholder di mana konten dilewati.<0>Pelajari lebih lanjut</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "Batas karakter terminal",
-			"description": "Override batas baris untuk mencegah masalah memori dengan memberlakukan cap keras pada ukuran output. Jika terlampaui, simpan awal dan akhir lalu tampilkan placeholder ke Zoo di mana konten dilewati. <0>Pelajari lebih lanjut</0>"
+			"description": "Override batas baris untuk mencegah masalah memori dengan memberlakukan cap keras pada ukuran output. Jika terlampaui, simpan awal dan akhir lalu tampilkan placeholder ke Andy di mana konten dilewati. <0>Pelajari lebih lanjut</0>"
 		},
 		"outputPreviewSize": {
 			"label": "Ukuran pratinjau keluaran perintah",
-			"description": "Mengontrol seberapa banyak keluaran perintah yang dilihat Zoo secara langsung. Keluaran lengkap selalu disimpan dan dapat diakses saat diperlukan.",
+			"description": "Mengontrol seberapa banyak keluaran perintah yang dilihat Andy secara langsung. Keluaran lengkap selalu disimpan dan dapat diakses saat diperlukan.",
 			"options": {
 				"small": "Kecil (5KB)",
 				"medium": "Sedang (10KB)",
@@ -849,7 +849,7 @@
 		},
 		"shellIntegrationDisabled": {
 			"label": "Gunakan Terminal Inline (disarankan)",
-			"description": "Jalankan perintah di Terminal Inline (obrolan) untuk melewati profil/integrasi shell untuk proses lebih cepat dan andal. Saat dinonaktifkan, Zoo menggunakan terminal VS Code dengan profil shell, prompt, dan plugin Anda. <0>Pelajari lebih lanjut</0>"
+			"description": "Jalankan perintah di Terminal Inline (obrolan) untuk melewati profil/integrasi shell untuk proses lebih cepat dan andal. Saat dinonaktifkan, Andy menggunakan terminal VS Code dengan profil shell, prompt, dan plugin Anda. <0>Pelajari lebih lanjut</0>"
 		},
 		"commandDelay": {
 			"label": "Delay perintah terminal",
@@ -893,7 +893,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Aktifkan editing melalui diff",
-			"description": "Ketika diaktifkan, Zoo akan dapat mengedit file lebih cepat dan akan secara otomatis menolak penulisan file penuh yang terpotong",
+			"description": "Ketika diaktifkan, Andy akan dapat mengedit file lebih cepat dan akan secara otomatis menolak penulisan file penuh yang terpotong",
 			"strategy": {
 				"label": "Strategi diff",
 				"options": {
@@ -910,7 +910,7 @@
 		},
 		"todoList": {
 			"label": "Aktifkan alat daftar tugas",
-			"description": "Saat diaktifkan, Zoo dapat membuat dan mengelola daftar tugas untuk melacak kemajuan tugas. Ini membantu mengatur tugas kompleks menjadi langkah-langkah yang dapat dikelola."
+			"description": "Saat diaktifkan, Andy dapat membuat dan mengelola daftar tugas untuk melacak kemajuan tugas. Ini membantu mengatur tugas kompleks menjadi langkah-langkah yang dapat dikelola."
 		}
 	},
 	"experimental": {
@@ -920,15 +920,15 @@
 		},
 		"INSERT_BLOCK": {
 			"name": "Gunakan tool insert content eksperimental",
-			"description": "Aktifkan tool insert content eksperimental, memungkinkan Zoo menyisipkan konten pada nomor baris spesifik tanpa perlu membuat diff."
+			"description": "Aktifkan tool insert content eksperimental, memungkinkan Andy menyisipkan konten pada nomor baris spesifik tanpa perlu membuat diff."
 		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Aktifkan pembacaan file bersamaan",
-			"description": "Ketika diaktifkan, Zoo dapat membaca beberapa file dalam satu permintaan. Ketika dinonaktifkan, Zoo harus membaca file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap akses file."
+			"description": "Ketika diaktifkan, Andy dapat membaca beberapa file dalam satu permintaan. Ketika dinonaktifkan, Andy harus membaca file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap akses file."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Gunakan tool multi block diff eksperimental",
-			"description": "Ketika diaktifkan, Zoo akan menggunakan tool multi block diff. Ini akan mencoba memperbarui beberapa blok kode dalam file dalam satu permintaan."
+			"description": "Ketika diaktifkan, Andy akan menggunakan tool multi block diff. Ini akan mencoba memperbarui beberapa blok kode dalam file dalam satu permintaan."
 		},
 		"MARKETPLACE": {
 			"name": "Aktifkan Marketplace",
@@ -936,7 +936,7 @@
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Pengeditan Latar Belakang",
-			"description": "Ketika diaktifkan, mencegah gangguan fokus editor. Pengeditan file terjadi di latar belakang tanpa membuka tampilan diff atau mencuri fokus. Anda dapat terus bekerja tanpa gangguan saat Zoo melakukan perubahan. File mungkin dibuka tanpa fokus untuk menangkap diagnostik atau tetap tertutup sepenuhnya."
+			"description": "Ketika diaktifkan, mencegah gangguan fokus editor. Pengeditan file terjadi di latar belakang tanpa membuka tampilan diff atau mencuri fokus. Anda dapat terus bekerja tanpa gangguan saat Andy melakukan perubahan. File mungkin dibuka tanpa fokus untuk menangkap diagnostik atau tetap tertutup sepenuhnya."
 		},
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Gunakan parser pesan baru",
@@ -948,7 +948,7 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Aktifkan pembuatan gambar AI",
-			"description": "Ketika diaktifkan, Zoo dapat menghasilkan gambar dari prompt teks menggunakan model pembuatan gambar.",
+			"description": "Ketika diaktifkan, Andy dapat menghasilkan gambar dari prompt teks menggunakan model pembuatan gambar.",
 			"providerLabel": "Penyedia",
 			"providerDescription": "Pilih penyedia untuk menghasilkan gambar.",
 			"openRouterApiKeyLabel": "Kunci API OpenRouter",
@@ -961,11 +961,11 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Aktifkan perintah slash yang dimulai model",
-			"description": "Ketika diaktifkan, Zoo dapat menjalankan perintah slash Anda untuk mengeksekusi alur kerja."
+			"description": "Ketika diaktifkan, Andy dapat menjalankan perintah slash Anda untuk mengeksekusi alur kerja."
 		},
 		"CUSTOM_TOOLS": {
 			"name": "Aktifkan tool kustom",
-			"description": "Ketika diaktifkan, Zoo dapat memuat dan menggunakan tool TypeScript/JavaScript kustom dari direktori .roo/tools proyek Anda atau ~/.roo/tools untuk tool global. Catatan: tool ini akan disetujui otomatis.",
+			"description": "Ketika diaktifkan, Andy dapat memuat dan menggunakan tool TypeScript/JavaScript kustom dari direktori .roo/tools proyek Anda atau ~/.roo/tools untuk tool global. Catatan: tool ini akan disetujui otomatis.",
 			"toolsHeader": "Tool Kustom yang Tersedia",
 			"noTools": "Tidak ada tool kustom yang dimuat. Tambahkan file .ts atau .js ke direktori .roo/tools proyek Anda atau ~/.roo/tools untuk tool global.",
 			"refreshButton": "Refresh",
@@ -977,7 +977,7 @@
 	},
 	"promptCaching": {
 		"label": "Nonaktifkan prompt caching",
-		"description": "Ketika dicentang, Zoo tidak akan menggunakan prompt caching untuk model ini."
+		"description": "Ketika dicentang, Andy tidak akan menggunakan prompt caching untuk model ini."
 	},
 	"temperature": {
 		"useCustom": "Gunakan temperature kustom",
@@ -1046,7 +1046,7 @@
 		"modelNotAllowed": "Model '{{model}}' tidak diizinkan untuk provider '{{provider}}' oleh organisasi kamu",
 		"profileInvalid": "Profil ini berisi provider atau model yang tidak diizinkan oleh organisasi kamu",
 		"qwenCodeOauthPath": "Kamu harus memberikan jalur kredensial OAuth yang valid",
-		"zooGatewaySignIn": "Masuk ke Andy Code untuk menggunakan Andy Gateway."
+		"andyGatewaySignIn": "Masuk ke Andy Code untuk menggunakan Andy Gateway."
 	},
 	"placeholders": {
 		"apiKey": "Masukkan API Key...",
@@ -1120,17 +1120,17 @@
 			"description": "Atur ukuran font (dalam piksel) untuk obrolan Andy Code. Biarkan pada nilai default agar sesuai dengan ukuran font VS Code.",
 			"reset": "Gunakan default VS Code"
 		},
-		"autoCloseZooOpenedFiles": {
-			"label": "Tutup otomatis file yang dibuka Zoo",
-			"description": "Saat diaktifkan, tab editor yang dibuka Zoo untuk sementara waktu untuk diff akan ditutup secara otomatis setelah perubahan diterima atau ditolak. Tab yang sudah dibuka pengguna sebelum pengeditan tidak pernah ditutup secara otomatis."
+		"autoCloseAndyOpenedFiles": {
+			"label": "Tutup otomatis file yang dibuka Andy",
+			"description": "Saat diaktifkan, tab editor yang dibuka Andy untuk sementara waktu untuk diff akan ditutup secara otomatis setelah perubahan diterima atau ditolak. Tab yang sudah dibuka pengguna sebelum pengeditan tidak pernah ditutup secara otomatis."
 		},
-		"autoCloseZooOpenedFilesAfterUserEdited": {
+		"autoCloseAndyOpenedFilesAfterUserEdited": {
 			"label": "Tutup otomatis meski setelah interaksi pengguna",
-			"description": "Saat diaktifkan, tab yang dibuka Zoo tetap ditutup meski pengguna mengklik atau mengetik di file atau diff selama sesi pengeditan. Tidak berpengaruh jika 'Tutup otomatis file yang dibuka Zoo' dinonaktifkan."
+			"description": "Saat diaktifkan, tab yang dibuka Andy tetap ditutup meski pengguna mengklik atau mengetik di file atau diff selama sesi pengeditan. Tidak berpengaruh jika 'Tutup otomatis file yang dibuka Andy' dinonaktifkan."
 		},
-		"autoCloseZooOpenedNewFiles": {
+		"autoCloseAndyOpenedNewFiles": {
 			"label": "Tutup otomatis file baru yang dibuat",
-			"description": "Saat diaktifkan, tab untuk file yang dibuat Zoo (bukan dimodifikasi) juga ditutup secara otomatis setelah perubahan diterima."
+			"description": "Saat diaktifkan, tab untuk file yang dibuat Andy (bukan dimodifikasi) juga ditutup secara otomatis setelah perubahan diterima."
 		}
 	},
 	"skills": {

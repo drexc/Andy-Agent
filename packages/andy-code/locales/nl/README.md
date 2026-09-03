@@ -3,7 +3,7 @@
           <a href="https://x.com/AndyCodeDev"><img src="https://img.shields.io/badge/AndyCode-000000?style=flat&logo=x&logoColor=white" alt="X"></a>
           <a href="https://discord.gg/VxfP4Vx3gX"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Join Discord"></a>
           <a href="https://www.reddit.com/r/AndyCode/"><img src="https://img.shields.io/badge/Join%20r%2FAndyCode-FF4500?style=flat&logo=reddit&logoColor=white" alt="Join r/AndyCode"></a>
-          <a href="https://github.com/Zoo-Code-Org/Zoo-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
+          <a href="https://github.com/Andy-Code-Org/Andy-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
         </p>
         <p align="center">
           <em>Snel hulp nodig → <a href="https://discord.gg/VxfP4Vx3gX">Word lid van Discord</a> • Liever asynchroon? → <a href="https://www.reddit.com/r/AndyCode/">Word lid van r/AndyCode</a></em>
@@ -27,13 +27,13 @@
 > Doe met ons mee op
 > [Discord](https://discord.gg/VxfP4Vx3gX),
 > [Reddit](https://www.reddit.com/r/AndyCode), of
-> [open een PR of issue](https://github.com/Zoo-Code-Org/Zoo-Code).
+> [open een PR of issue](https://github.com/Andy-Code-Org/Andy-Code).
 >
 > _-Andy Code Team_
 
 ## Migratie van Roo Code naar Andy Code
 
-Je vindt een korte handleiding voor de overstap van Roo Code naar Andy Code in de [Roo→Zoo-migratiegids](https://docs.ia.v2nethost.cl:3000/roo-to-zoo-migration). We willen gebruikers zo goed mogelijk helpen tijdens de overgang, en precies daarvoor zijn onze [Reddit](https://www.reddit.com/r/AndyCode) en [Discord](https://discord.gg/VxfP4Vx3gX) er. Als je ergens tegenaan loopt of vragen hebt, kom langs en vraag het.
+Je vindt een korte handleiding voor de overstap van Roo Code naar Andy Code in de [Roo→Andy-migratiegids](https://docs.ia.v2nethost.cl:3000/roo-to-andy-migration). We willen gebruikers zo goed mogelijk helpen tijdens de overgang, en precies daarvoor zijn onze [Reddit](https://www.reddit.com/r/AndyCode) en [Discord](https://discord.gg/VxfP4Vx3gX) er. Als je ergens tegenaan loopt of vragen hebt, kom langs en vraag het.
 
 ## Wat Andy Code sinds Roo Code heeft toegevoegd
 
@@ -81,8 +81,8 @@ Meer info: [Modi gebruiken](https://docs.ia.v2nethost.cl:3000/basic-usage/using-
 - **[Documentatie](https://docs.ia.v2nethost.cl:3000):** De officiële gids voor het installeren, configureren en beheersen van Andy Code.
 - **[Discord Server](https://discord.gg/VxfP4Vx3gX):** Word lid van de community voor realtime hulp en discussie.
 - **[Reddit Community](https://www.reddit.com/r/AndyCode):** Deel je ervaringen en kijk wat anderen bouwen.
-- **[GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues):** Meld bugs en volg de ontwikkeling.
-- **[Feature Requests](https://github.com/Zoo-Code-Org/Zoo-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** Heb je een idee? Deel het met de ontwikkelaars.
+- **[GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues):** Meld bugs en volg de ontwikkeling.
+- **[Feature Requests](https://github.com/Andy-Code-Org/Andy-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** Heb je een idee? Deel het met de ontwikkelaars.
 
 ---
 
@@ -91,7 +91,7 @@ Meer info: [Modi gebruiken](https://docs.ia.v2nethost.cl:3000/basic-usage/using-
 1. **Kloon** de repo:
 
 ```sh
-git clone https://github.com/Zoo-Code-Org/Zoo-Code.git
+git clone https://github.com/Andy-Code-Org/Andy-Code.git
 ```
 
 2. **Installeer afhankelijkheden**:
@@ -172,4 +172,4 @@ We houden van bijdragen uit de community! Begin met het lezen van onze [CONTRIBU
 
 ---
 
-**Veel plezier met Andy Code!** Of je het nu kort aangelijnd houdt of autonoom laat rondzwerven, we kunnen niet wachten om te zien wat je bouwt. Als je vragen of feature-ideeën hebt, open dan een [issue](https://github.com/Zoo-Code-Org/Zoo-Code/issues) of start een [discussion](https://github.com/Zoo-Code-Org/Zoo-Code/discussions). Veel codeerplezier!
+**Veel plezier met Andy Code!** Of je het nu kort aangelijnd houdt of autonoom laat rondzwerven, we kunnen niet wachten om te zien wat je bouwt. Als je vragen of feature-ideeën hebt, open dan een [issue](https://github.com/Andy-Code-Org/Andy-Code/issues) of start een [discussion](https://github.com/Andy-Code-Org/Andy-Code/discussions). Veel codeerplezier!

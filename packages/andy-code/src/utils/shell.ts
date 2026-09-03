@@ -126,7 +126,7 @@ function preferredWindowsPowerShell(): string {
 
 /**
  * Resolves the shell that VS Code's integrated terminal will use, matching the
- * priority order from Terminal constructor: Zoo profile override first, then
+ * priority order from Terminal constructor: Andy profile override first, then
  * VS Code's configured default profile (trusted scopes only — workspace scope
  * excluded per APPLICATION scope restriction).
  *
@@ -134,7 +134,7 @@ function preferredWindowsPowerShell(): string {
  */
 function getShellFromVSCode(): string | null {
 	try {
-		// Zoo profile override takes precedence — this is the same path
+		// Andy profile override takes precedence — this is the same path
 		// Terminal constructor uses to set shellPath on createTerminal().
 		const profileShell = Terminal.getProfileShell();
 		if (profileShell?.shellPath) {
@@ -274,7 +274,7 @@ export function getShell(): string {
 	//    regardless of VS Code profile settings.
 	shell = BaseTerminal.getExecaShellPath() ?? null;
 
-	// 2. VS Code profile config (Zoo override first, then default profile).
+	// 2. VS Code profile config (Andy override first, then default profile).
 	if (!shell) {
 		shell = getShellFromVSCode();
 	}

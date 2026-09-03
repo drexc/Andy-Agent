@@ -119,6 +119,24 @@ export class ApiKeyManager {
 		return newKey;
 	}
 
+	public createExtensionToken(name: string, device?: string, editor?: string): AndyApiKey {
+		const rawToken = `andy_ext_${crypto.randomBytes(24).toString("hex")}`;
+		const desc = `${name.trim() || "Andy Code Extension"}${editor ? ` (${editor}` : ""}${device ? ` - ${device})` : editor ? ")" : ""}`;
+		const newKey: AndyApiKey = {
+			id: `ext_${crypto.randomBytes(6).toString("hex")}`,
+			name: desc,
+			key: rawToken,
+			maskedKey: this.maskKey(rawToken),
+			createdAt: Date.now(),
+			expiresAt: null,
+			status: "active",
+		};
+
+		this.keys.set(newKey.id, newKey);
+		this.saveKeys();
+		return newKey;
+	}
+
 	public revokeKey(id: string): boolean {
 		const key = this.keys.get(id);
 		if (!key) return false;

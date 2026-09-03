@@ -71,7 +71,7 @@ Mencione la alineación con estas áreas en sus solicitudes de extracción.
 
 Todas las contribuciones comienzan con una incidencia de GitHub utilizando nuestras plantillas simplificadas.
 
-- **Compruebe las incidencias existentes**: busque en [Incidencias de GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues).
+- **Compruebe las incidencias existentes**: busque en [Incidencias de GitHub](https://github.com/Andy-Code-Org/Andy-Code/issues).
 - **Cree una incidencia** utilizando:
     - **Mejoras:** plantilla "Solicitud de mejora" (lenguaje sencillo centrado en el beneficio del usuario).
     - **Errores:** plantilla "Informe de error" (reproducción mínima + esperado vs. real + versión).
@@ -80,17 +80,17 @@ Todas las contribuciones comienzan con una incidencia de GitHub utilizando nuest
 
 ### Decidir en qué trabajar
 
-- Consulta la [página de GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues) para ver las issues.
-- Para la documentación, visite [Documentos de Andy Code](https://github.com/Zoo-Code-Org/Zoo-Code-Docs).
+- Consulta la [página de GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues) para ver las issues.
+- Para la documentación, visite [Documentos de Andy Code](https://github.com/Andy-Code-Org/Andy-Code-Docs).
 
 ### Informar de errores
 
 - Compruebe primero si existen informes.
-- Cree un nuevo error utilizando la [plantilla "Informe de error"](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) con:
+- Cree un nuevo error utilizando la [plantilla "Informe de error"](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) con:
     - Pasos de reproducción claros y numerados
     - Resultado esperado vs. real
     - Versión de Andy Code (obligatorio); proveedor/modelo de API si es relevante
-- **Problemas de seguridad**: informe de forma privada a través de [avisos de seguridad](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new).
+- **Problemas de seguridad**: informe de forma privada a través de [avisos de seguridad](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new).
 
 ## Proceso de desarrollo y envío
 
@@ -99,7 +99,7 @@ Todas las contribuciones comienzan con una incidencia de GitHub utilizando nuest
 1. **Bifurcar y clonar:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Instalar dependencias:**

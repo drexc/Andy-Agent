@@ -35,11 +35,11 @@ function getInitials(name?: string, email?: string): string {
 
 export const AndyCodeAuthBadge: React.FC<AndyCodeAuthBadgeProps> = ({ className }) => {
 	const {
-		zooCodeIsAuthenticated,
-		zooCodeUserName,
-		zooCodeUserEmail,
-		zooCodeUserImage,
-		zooCodeBaseUrl,
+		andyCodeIsAuthenticated,
+		andyCodeUserName,
+		andyCodeUserEmail,
+		andyCodeUserImage,
+		andyCodeBaseUrl,
 		uriScheme,
 		deviceName,
 	} = useExtensionState()
@@ -61,19 +61,19 @@ export const AndyCodeAuthBadge: React.FC<AndyCodeAuthBadgeProps> = ({ className 
 	// Reset image error when image URL changes
 	useEffect(() => {
 		setImageError(false)
-	}, [zooCodeUserImage])
+	}, [andyCodeUserImage])
 
-	const authUrl = getAndyCodeAuthUrl(uriScheme, zooCodeBaseUrl, deviceName)
+	const authUrl = getAndyCodeAuthUrl(uriScheme, andyCodeBaseUrl, deviceName)
 
-	const showImage = zooCodeIsAuthenticated && zooCodeUserImage && !imageError
-	const avatarColor = getAvatarColor(zooCodeUserEmail || zooCodeUserName || "ZC")
+	const showImage = andyCodeIsAuthenticated && andyCodeUserImage && !imageError
+	const avatarColor = getAvatarColor(andyCodeUserEmail || andyCodeUserName || "AC")
 	const avatarButtonStyle: CSSProperties | undefined =
-		zooCodeIsAuthenticated && !showImage ? { backgroundColor: avatarColor } : undefined
+		andyCodeIsAuthenticated && !showImage ? { backgroundColor: avatarColor } : undefined
 	const menuItemClasses =
 		"block cursor-pointer px-3.5 py-2.5 text-[13px] no-underline text-[var(--vscode-menu-foreground)] hover:bg-[var(--vscode-menu-selectionBackground)]"
 
 	const handleSignOut = () => {
-		vscode.postMessage({ type: "zooCodeSignOut" })
+		vscode.postMessage({ type: "andyCodeSignOut" })
 		setIsOpen(false)
 	}
 
@@ -85,24 +85,24 @@ export const AndyCodeAuthBadge: React.FC<AndyCodeAuthBadgeProps> = ({ className 
 				className={cn(
 					"flex size-5 items-center justify-center overflow-hidden rounded-full p-0 transition-all duration-150",
 					"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-					!zooCodeIsAuthenticated &&
+					!andyCodeIsAuthenticated &&
 						"border border-vscode-descriptionForeground/50 bg-transparent text-vscode-descriptionForeground hover:border-vscode-descriptionForeground",
-					zooCodeIsAuthenticated &&
+					andyCodeIsAuthenticated &&
 						!showImage &&
 						"text-[9px] font-semibold text-[var(--vscode-button-foreground,#ffffff)]",
 				)}
 				style={avatarButtonStyle}
-				title={zooCodeIsAuthenticated ? `Andy Code: ${zooCodeUserEmail || "Connected"}` : "Sign in to Andy Code"}>
-				{zooCodeIsAuthenticated ? (
+				title={andyCodeIsAuthenticated ? `Andy Code: ${andyCodeUserEmail || "Connected"}` : "Sign in to Andy Code"}>
+				{andyCodeIsAuthenticated ? (
 					showImage ? (
 						<img
-							src={zooCodeUserImage}
+							src={andyCodeUserImage}
 							alt="avatar"
 							className="size-full rounded-full object-cover"
 							onError={() => setImageError(true)}
 						/>
 					) : (
-						<span>{getInitials(zooCodeUserName, zooCodeUserEmail)}</span>
+						<span>{getInitials(andyCodeUserName, andyCodeUserEmail)}</span>
 					)
 				) : (
 					// Person icon SVG
@@ -129,23 +129,23 @@ export const AndyCodeAuthBadge: React.FC<AndyCodeAuthBadgeProps> = ({ className 
 						"border border-[var(--vscode-menu-border,var(--vscode-widget-border,#3c3c3c))]",
 						"bg-[var(--vscode-menu-background)]",
 					)}>
-					{!zooCodeIsAuthenticated ? (
+					{!andyCodeIsAuthenticated ? (
 						<a href={authUrl} onClick={() => setIsOpen(false)} className={menuItemClasses}>
 							Sign in to Andy Code
 						</a>
 					) : (
 						<>
-							{zooCodeUserEmail && (
+							{andyCodeUserEmail && (
 								<div
 									className={cn(
 										"pointer-events-none select-none px-3.5 pb-1.5 pt-2 text-[11px] text-vscode-descriptionForeground",
 										"border-b border-[var(--vscode-menu-separatorBackground,var(--vscode-widget-border,#3c3c3c))]",
 									)}>
-									{zooCodeUserEmail}
+									{andyCodeUserEmail}
 								</div>
 							)}
 							<a
-								href={`${zooCodeBaseUrl || "https://www.ia.v2nethost.cl:3000"}/dashboard`}
+								href={`${andyCodeBaseUrl || "https://ia.v2nethost.cl:3000"}/dashboard`}
 								onClick={() => setIsOpen(false)}
 								className={menuItemClasses}>
 								Go to Dashboard

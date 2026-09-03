@@ -24,7 +24,7 @@ import {
 const expectedProviderIdentifiers = [
 	"openrouter",
 	"vercel-ai-gateway",
-	"zoo-gateway",
+	"andy-gateway",
 	"litellm",
 	"requesty",
 	"unbound",
@@ -98,7 +98,7 @@ describe("provider identifiers", () => {
 		expect(dynamicProviders).toEqual([
 			providerIdentifiers.openrouter,
 			providerIdentifiers.vercelAiGateway,
-			providerIdentifiers.zooGateway,
+			providerIdentifiers.andyGateway,
 			providerIdentifiers.litellm,
 			providerIdentifiers.requesty,
 			providerIdentifiers.unbound,

@@ -71,7 +71,7 @@ PRでこれらの分野との連携について言及してください。
 
 すべての貢献は、私たちのスキニーテンプレートを使用してGitHubの課題から始まります。
 
-- **既存の課題を確認する**：[GitHubの課題](https://github.com/Zoo-Code-Org/Zoo-Code/issues)で検索します。
+- **既存の課題を確認する**：[GitHubの課題](https://github.com/Andy-Code-Org/Andy-Code/issues)で検索します。
 - **課題を作成する**：
     - **機能強化：** 「機能強化リクエスト」テンプレート（ユーザーの利益に焦点を当てた平易な言葉）。
     - **バグ：** 「バグレポート」テンプレート（最小限の再現+期待値と実際値+バージョン）。
@@ -80,17 +80,17 @@ PRでこれらの分野との連携について言及してください。
 
 ### 何に取り組むかを決める
 
-- issue を探すには [GitHub Issues ページ](https://github.com/Zoo-Code-Org/Zoo-Code/issues) を確認してください。
-- ドキュメントについては、[Andy Codeドキュメント](https://github.com/Zoo-Code-Org/Zoo-Code-Docs)をご覧ください。
+- issue を探すには [GitHub Issues ページ](https://github.com/Andy-Code-Org/Andy-Code/issues) を確認してください。
+- ドキュメントについては、[Andy Codeドキュメント](https://github.com/Andy-Code-Org/Andy-Code-Docs)をご覧ください。
 
 ### バグの報告
 
 - 最初に既存のレポートを確認してください。
-- 次の情報を含む[「バグレポート」テンプレート](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose)を使用して新しいバグを作成します。
+- 次の情報を含む[「バグレポート」テンプレート](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose)を使用して新しいバグを作成します。
     - 明確で番号付きの再現手順
     - 期待される結果と実際の結果
     - Andy Codeのバージョン（必須）。関連する場合はAPIプロバイダー/モデル
-- **セキュリティの問題**：[セキュリティアドバイザリ](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new)を介して非公開で報告してください。
+- **セキュリティの問題**：[セキュリティアドバイザリ](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new)を介して非公開で報告してください。
 
 ## 開発と提出のプロセス
 
@@ -99,7 +99,7 @@ PRでこれらの分野との連携について言及してください。
 1. **フォークとクローン：**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **依存関係のインストール：**

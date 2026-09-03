@@ -19,7 +19,7 @@ import {
 } from "@earendil-works/pi-ai";
 import type { PantheonMessage } from "@earendil-works/pi-coding-agent";
 import { ApiKeyManager } from "./api-key-manager.js";
-import { AuthManager } from "./auth-manager.js";
+import { AuthManager, type AndyUserPublic } from "./auth-manager.js";
 import { AutoLearningEngine } from "./auto-learner.js";
 import { getWebUiHtml } from "./html-bundle.js";
 import { WebUiSessionPool } from "./session-manager.js";
@@ -222,6 +222,42 @@ export class AndyWebUiServer {
 			const token = this.getAuthToken(req);
 			const authValidation = this.authManager.validateSession(token);
 			const currentUser = authValidation.user;
+
+			// --- 2.05 ANDY CODE EXTENSION AUTH & CONNECTION (DASHBOARD/CONNECT) ---
+			if (url === "/dashboard/connect" || url.startsWith("/dashboard/connect")) {
+				await this.handleDashboardConnect(req, res, parsedUrl, currentUser);
+				return;
+			}
+
+			if (method === "POST" && url === "/api/extension/auth/connect") {
+				await this.handleExtensionAuthConnect(req, res, parsedUrl, currentUser);
+				return;
+			}
+
+			if ((method === "GET" || method === "POST") && url === "/api/extension/auth/verify") {
+				await this.handleExtensionAuthVerify(req, res);
+				return;
+			}
+
+			// --- 2.06 ANDY GATEWAY MODELS & AGENT DISCOVERY API ---
+			if (
+				method === "GET" &&
+				(url === "/api/gateway/v1/models" ||
+					url === "/v1/models" ||
+					url === "/api/models" ||
+					url === "/api/gateway/models")
+			) {
+				await this.handleGatewayModels(req, res);
+				return;
+			}
+
+			if (
+				method === "GET" &&
+				(url === "/api/gateway/v1/agent-config" || url === "/api/extension/agent-config")
+			) {
+				await this.handleExtensionAgentConfig(req, res, parsedUrl);
+				return;
+			}
 
 			if (method === "POST" && url === "/api/auth/logout") {
 				if (token) {
@@ -2937,8 +2973,14 @@ ${prompt || ""}`;
 
 		if (normModelId.startsWith("squad:")) {
 			targetSquadId = normModelId.slice(6).trim();
+			if (targetSquadId === "programming-squad" || targetSquadId === "programming") {
+				targetSquadId = "dev-team-squad";
+			}
 		} else if (normModelId.startsWith("pantheon/")) {
 			targetSquadId = normModelId.slice(9).trim();
+			if (targetSquadId === "programming-squad" || targetSquadId === "programming") {
+				targetSquadId = "dev-team-squad";
+			}
 		} else if (allSquads.some((s) => s.id.toLowerCase() === normModelId)) {
 			targetSquadId = allSquads.find((s) => s.id.toLowerCase() === normModelId)!.id;
 		} else if (normModelId.startsWith("agent:")) {
@@ -3795,6 +3837,59 @@ ${prompt || ""}`;
 							}
 						} else if (event.type === "agent_finish") {
 							contentToSend = "\n";
+						} else if (event.type === "user_question") {
+							const uq = event as any;
+							const qText = uq.question || "Acción necesaria por usuario";
+							const optionsArr = (uq.options || []).map((o: any) => ({
+								text: typeof o === "string" ? o : o.text,
+							}));
+
+							const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+							const argsJson = JSON.stringify({
+								question: qText,
+								follow_up: optionsArr,
+							});
+
+							toolCallsEmitted.push({
+								id: toolCallId,
+								type: "function",
+								function: {
+									name: "ask_followup_question",
+									arguments: argsJson,
+								},
+							});
+
+							// Emit tool call chunk for VS Code / Andy Code native tool execution
+							res.write(
+								`data: ${JSON.stringify({
+									id: reqId,
+									object: "chat.completion.chunk",
+									created: Math.floor(Date.now() / 1000),
+									model: returnedModel,
+									choices: [
+										{
+											index: 0,
+											delta: {
+												tool_calls: [
+													{
+														index: toolCallsEmitted.length - 1,
+														id: toolCallId,
+														type: "function",
+														function: {
+															name: "ask_followup_question",
+															arguments: argsJson,
+														},
+													},
+												],
+											},
+											finish_reason: null,
+										},
+									],
+								})}\n\n`,
+							);
+
+							// Also emit XML tag for Andy Code XML tool parser
+							contentToSend = `\n\n<ask_followup_question>\n<question>\n${qText}\n</question>\n<follow_up>\n${JSON.stringify(optionsArr)}\n</follow_up>\n</ask_followup_question>\n\n`;
 						}
 
 						if (contentToSend) {
@@ -3817,12 +3912,73 @@ ${prompt || ""}`;
 					},
 				);
 
-				const finalPromptTokens =
-					totalPromptTokens > 0 ? totalPromptTokens : Math.max(1, Math.ceil((prompt.length + 800) / 3.8));
-				const finalCompletionTokens =
-					totalCompletionTokens > 0
-						? totalCompletionTokens
-						: Math.max(1, Math.ceil(accumulatedFullText.length / 3.8));
+				// Fallback safety check: If no tool call was emitted yet, check if text asked for user action
+				if (toolCallsEmitted.length === 0) {
+					const detectedQ = pantheonOrchestrator.detectUserActionRequired(accumulatedFullText);
+					if (detectedQ) {
+						const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+						const argsJson = JSON.stringify({
+							question: detectedQ.question,
+							follow_up: detectedQ.options,
+						});
+						toolCallsEmitted.push({
+							id: toolCallId,
+							type: "function",
+							function: {
+								name: "ask_followup_question",
+								arguments: argsJson,
+							},
+						});
+						res.write(
+							`data: ${JSON.stringify({
+								id: reqId,
+								object: "chat.completion.chunk",
+								created: Math.floor(Date.now() / 1000),
+								model: returnedModel,
+								choices: [
+									{
+										index: 0,
+										delta: {
+											tool_calls: [
+												{
+													index: 0,
+													id: toolCallId,
+													type: "function",
+													function: {
+														name: "ask_followup_question",
+														arguments: argsJson,
+													},
+												},
+											],
+										},
+										finish_reason: null,
+									},
+								],
+							})}\n\n`,
+						);
+						res.write(
+							`data: ${JSON.stringify({
+								id: reqId,
+								object: "chat.completion.chunk",
+								created: Math.floor(Date.now() / 1000),
+								model: returnedModel,
+								choices: [
+									{
+										index: 0,
+										delta: {
+											content: `\n\n<ask_followup_question>\n<question>\n${detectedQ.question}\n</question>\n<follow_up>\n${JSON.stringify(detectedQ.options)}\n</follow_up>\n</ask_followup_question>\n\n`,
+										},
+										finish_reason: null,
+									},
+								],
+							})}\n\n`,
+						);
+					}
+				}
+
+				// Context window usage must reflect the active turn prompt size (not cumulative internal sub-agent loops)
+				const finalPromptTokens = Math.max(1, Math.ceil((prompt.length + 800) / 3.8));
+				const finalCompletionTokens = Math.max(1, Math.ceil(accumulatedFullText.length / 3.8));
 				const finalTotalTokens = finalPromptTokens + finalCompletionTokens;
 
 				const usagePayload = {
@@ -4392,6 +4548,547 @@ ${prompt || ""}`;
 
 			req.on("error", reject);
 		});
+	}
+	private readBodyText(req: IncomingMessage): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const chunks: Buffer[] = [];
+			let size = 0;
+			const maxSizeBytes = 20 * 1024 * 1024;
+
+			req.on("data", (chunk: Buffer) => {
+				size += chunk.length;
+				if (size > maxSizeBytes) {
+					reject(new Error("Request body payload too large"));
+					req.destroy();
+					return;
+				}
+				chunks.push(chunk);
+			});
+
+			req.on("end", () => {
+				resolve(Buffer.concat(chunks).toString("utf-8"));
+			});
+
+			req.on("error", reject);
+		});
+	}
+
+	private async handleDashboardConnect(
+		req: IncomingMessage,
+		res: ServerResponse,
+		parsedUrl: URL,
+		currentUser: AndyUserPublic | null | undefined,
+	): Promise<void> {
+		const method = req.method || "GET";
+		const device = parsedUrl.searchParams.get("device") || "Mi Equipo";
+		const editor = parsedUrl.searchParams.get("editor") || "VS Code";
+		const version = parsedUrl.searchParams.get("version") || "0.8.0";
+		const callbackUri = parsedUrl.searchParams.get("callback_uri") || "cursor://AndyAgent.andy-code/auth-callback";
+
+		if (method === "POST") {
+			const rawText = await this.readBodyText(req);
+			const body: Record<string, any> = {};
+			if (rawText) {
+				try {
+					Object.assign(body, JSON.parse(rawText));
+				} catch {
+					const params = new URLSearchParams(rawText);
+					for (const [key, val] of params.entries()) {
+						body[key] = val;
+					}
+				}
+			}
+
+			const targetDevice = body.device || device;
+			const targetEditor = body.editor || editor;
+			const targetCallbackUri = body.callback_uri || callbackUri;
+
+			let effectiveUser = currentUser;
+			if (!effectiveUser && body.username && body.password) {
+				const loginResult = this.authManager.login(body.username, body.password, true);
+				if (loginResult.success && loginResult.user) {
+					effectiveUser = loginResult.user;
+					res.setHeader(
+						"Set-Cookie",
+						`andy_session=${loginResult.token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${30 * 24 * 60 * 60}`,
+					);
+				}
+			}
+
+			const userName = effectiveUser?.displayName || effectiveUser?.username || "Andrés";
+			const userEmail = effectiveUser?.username ? `${effectiveUser.username}@v2nethost.cl` : "andres@v2nethost.cl";
+
+			const extKey = this.apiKeyManager.createExtensionToken(userName, targetDevice, targetEditor);
+			this.addLog(
+				"INFO",
+				"Auth",
+				`Andy Code extension authorized for user "${userName}" on ${targetEditor} (${targetDevice})`,
+			);
+
+			const sep = targetCallbackUri.includes("?") ? "&" : "?";
+			const redirectUrl = `${targetCallbackUri}${sep}token=${extKey.key}&name=${encodeURIComponent(userName)}&email=${encodeURIComponent(userEmail)}`;
+
+			const acceptHeader = (req.headers.accept as string) || "";
+			if (acceptHeader.includes("application/json")) {
+				res.writeHead(200, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ success: true, token: extKey.key, redirectUrl }));
+				return;
+			}
+
+			res.writeHead(302, { Location: redirectUrl });
+			res.end();
+			return;
+		}
+
+		// GET - Render approval HTML page
+		const html = this.getConnectPageHtml(device, editor, version, callbackUri, currentUser);
+		res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+		res.end(html);
+	}
+
+	private async handleExtensionAuthConnect(
+		req: IncomingMessage,
+		res: ServerResponse,
+		parsedUrl: URL,
+		currentUser: AndyUserPublic | null | undefined,
+	): Promise<void> {
+		const body = await this.readJsonBody<any>(req);
+		const device = body?.device || parsedUrl.searchParams.get("device") || "Mi Equipo";
+		const editor = body?.editor || parsedUrl.searchParams.get("editor") || "VS Code";
+		const callbackUri =
+			body?.callback_uri ||
+			parsedUrl.searchParams.get("callback_uri") ||
+			"cursor://AndyAgent.andy-code/auth-callback";
+
+		let effectiveUser = currentUser;
+		if (!effectiveUser && body?.username && body?.password) {
+			const loginResult = this.authManager.login(body.username, body.password, true);
+			if (loginResult.success && loginResult.user) {
+				effectiveUser = loginResult.user;
+			}
+		}
+
+		const userName = effectiveUser?.displayName || effectiveUser?.username || "Andrés";
+		const userEmail = effectiveUser?.username ? `${effectiveUser.username}@v2nethost.cl` : "andres@v2nethost.cl";
+
+		const extKey = this.apiKeyManager.createExtensionToken(userName, device, editor);
+		this.addLog(
+			"INFO",
+			"Auth",
+			`Andy Code extension connected via API for user "${userName}" on ${editor} (${device})`,
+		);
+
+		const sep = callbackUri.includes("?") ? "&" : "?";
+		const redirectUrl = `${callbackUri}${sep}token=${extKey.key}&name=${encodeURIComponent(userName)}&email=${encodeURIComponent(userEmail)}`;
+
+		res.writeHead(200, { "Content-Type": "application/json" });
+		res.end(
+			JSON.stringify({
+				success: true,
+				token: extKey.key,
+				redirectUrl,
+				user: { name: userName, email: userEmail },
+			}),
+		);
+	}
+
+	private async handleExtensionAuthVerify(req: IncomingMessage, res: ServerResponse): Promise<void> {
+		const authHeader = (req.headers.authorization as string) || (req.headers["x-api-key"] as string) || "";
+		const authResult = this.apiKeyManager.validateKey(authHeader);
+
+		if (authResult.valid) {
+			const key = authResult.key;
+			const cleanName = key?.name ? key.name.split(" (")[0] : "Andrés";
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(
+				JSON.stringify({
+					valid: true,
+					user: {
+						name: cleanName,
+						email: "andres@v2nethost.cl",
+						image: null,
+					},
+				}),
+			);
+			return;
+		}
+
+		const cleanToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
+		const sessionValidation = this.authManager.validateSession(cleanToken);
+		if (sessionValidation.valid && sessionValidation.user) {
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(
+				JSON.stringify({
+					valid: true,
+					user: {
+						name: sessionValidation.user.displayName || sessionValidation.user.username,
+						email: `${sessionValidation.user.username}@v2nethost.cl`,
+						image: null,
+					},
+				}),
+			);
+			return;
+		}
+
+		res.writeHead(401, { "Content-Type": "application/json" });
+		res.end(JSON.stringify({ valid: false, error: authResult.reason || "Token inválido o expirado" }));
+	}
+
+	private async handleGatewayModels(req: IncomingMessage, res: ServerResponse): Promise<void> {
+		const ideProject = this.pool.getOrCreateIdeProject("default", "Andy Code");
+		const pantheonRegistry = this.pool.getPantheonRegistry(ideProject.id);
+		const squads = pantheonRegistry.getSquads();
+		const agents = pantheonRegistry.getAgents();
+		const availableLlmModels = this.pool.getAvailableModels();
+
+		const data: any[] = [];
+
+		// 1. Pantheon Squads (Multi-Agent Software Engineering Teams)
+		for (const squad of squads) {
+			const agentList = (squad.agents || []).map((a: any) => a.name || a.role || a.id).join(", ");
+			data.push({
+				id: `squad:${squad.id}`,
+				object: "model",
+				name: `Squad: ${squad.name || squad.id}`,
+				description:
+					squad.description ||
+					`Escuadrón autónomo ${squad.name} con especialistas: ${agentList}`,
+				context_window: 128000,
+				max_tokens: 8192,
+				type: "language",
+				tags: ["squad", "pantheon", "multi-agent"],
+				owned_by: "andy-agent",
+				pricing: { input: "0", output: "0" },
+			});
+		}
+
+		// Alias for programming-squad
+		if (squads.some((s) => s.id === "dev-team-squad")) {
+			data.push({
+				id: "squad:programming-squad",
+				object: "model",
+				name: "Squad: Programming Squad (Architect, Developer, Tester, DevOps)",
+				description:
+					"Escuadrón autónomo completo de desarrollo de software con roles de arquitecto, programador, pruebas y devops.",
+				context_window: 128000,
+				max_tokens: 8192,
+				type: "language",
+				tags: ["squad", "pantheon", "multi-agent"],
+				owned_by: "andy-agent",
+				pricing: { input: "0", output: "0" },
+			});
+		}
+
+		// 2. Specialized Agents
+		for (const agent of agents) {
+			data.push({
+				id: `agent:${agent.id}`,
+				object: "model",
+				name: `${agent.name || agent.id} (${agent.role || "Especialista"})`,
+				description: agent.systemPrompt
+					? agent.systemPrompt.slice(0, 180).replace(/\n+/g, " ")
+					: `Agente especialista ${agent.name}`,
+				context_window: 128000,
+				max_tokens: 8192,
+				type: "language",
+				tags: ["agent", agent.role || "specialist"],
+				owned_by: "andy-agent",
+				pricing: { input: "0", output: "0" },
+			});
+		}
+
+		// 3. Raw LLM Models
+		for (const model of availableLlmModels) {
+			data.push({
+				id: model.id,
+				object: "model",
+				name: model.name || model.id,
+				description: `Modelo LLM ${model.name || model.id} (${model.provider || "Andy Agent"})`,
+				context_window: model.contextWindow || 128000,
+				max_tokens: model.maxTokens || 8192,
+				type: "language",
+				tags: [model.provider || "llm"],
+				owned_by: model.provider || "andy-agent",
+				pricing: { input: "0", output: "0" },
+			});
+		}
+
+		res.writeHead(200, { "Content-Type": "application/json" });
+		res.end(JSON.stringify({ object: "list", data }));
+	}
+
+	private async handleExtensionAgentConfig(
+		req: IncomingMessage,
+		res: ServerResponse,
+		parsedUrl: URL,
+	): Promise<void> {
+		const modelId = parsedUrl.searchParams.get("model") || "squad:programming-squad";
+		const ideProject = this.pool.getOrCreateIdeProject("default", "Andy Code");
+		const pantheonRegistry = this.pool.getPantheonRegistry(ideProject.id);
+
+		let squadId = "";
+		if (modelId.startsWith("squad:")) squadId = modelId.slice(6);
+		else if (modelId.startsWith("agent:")) squadId = "fullstack-squad";
+		else squadId = modelId;
+
+		if (squadId === "programming-squad" || squadId === "programming") {
+			squadId = "dev-team-squad";
+		}
+
+		const squad = pantheonRegistry.getSquads().find((s) => s.id.toLowerCase() === squadId.toLowerCase());
+
+		let memory = "";
+		let guidelines = "";
+		try {
+			const memPath = path.join(this.pool.cwd, "MEMORY.md");
+			if (existsSync(memPath)) memory = readFileSync(memPath, "utf-8");
+			const agentsPath = path.join(this.pool.cwd, "AGENTS.md");
+			if (existsSync(agentsPath)) guidelines = readFileSync(agentsPath, "utf-8");
+		} catch {}
+
+		res.writeHead(200, { "Content-Type": "application/json" });
+		res.end(
+			JSON.stringify({
+				success: true,
+				model: modelId,
+				squad: squad || null,
+				memory,
+				guidelines,
+				contextWindow: 128000,
+				maxTokens: 8192,
+			}),
+		);
+	}
+
+	private getConnectPageHtml(
+		device: string,
+		editor: string,
+		version: string,
+		callbackUri: string,
+		currentUser: AndyUserPublic | null | undefined,
+	): string {
+		const esc = (s: string) =>
+			s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+		const safeDevice = esc(device);
+		const safeEditor = esc(editor);
+		const safeVersion = esc(version);
+		const safeCallbackUri = esc(callbackUri);
+		const safeUserName = currentUser ? esc(currentUser.displayName || currentUser.username) : "";
+
+		return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vincular Andy Code con Andy Agent</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111827;
+      --border: #1f2937;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #06b6d4;
+      --primary-hover: #0891b2;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at top, #1e293b 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 2.25rem;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      border-radius: 9999px;
+      color: var(--primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    p.subtitle { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; }
+    .info-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--text-muted); }
+    .info-val { font-weight: 600; }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.85rem 1.25rem;
+      border-radius: 0.6rem;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px 0 rgba(6, 182, 212, 0.39);
+    }
+    .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text-muted);
+      margin-top: 0.75rem;
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); }
+    .status-pill {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      margin-right: 4px;
+    }
+    .input-field {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: #fff;
+      font-size: 0.95rem;
+      margin-bottom: 0.85rem;
+    }
+    .input-field:focus { outline: none; border-color: var(--primary); }
+    .user-pill {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1.25rem;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .footnote {
+      text-align: center;
+      margin-top: 1.25rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .footnote a { color: var(--primary); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">
+      <span class="status-pill"></span> Andy Agent Servidor
+    </div>
+    <h1>Vincular Andy Code</h1>
+    <p class="subtitle">Conecta la extensión a tu servidor Linux de Andy Agent</p>
+
+    <div class="info-box">
+      <div class="info-row">
+        <span class="info-label">💻 Dispositivo:</span>
+        <span class="info-val">${safeDevice}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">✏️ Editor:</span>
+        <span class="info-val">${safeEditor}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">📦 Extensión:</span>
+        <span class="info-val">v${safeVersion}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">🌐 Servidor:</span>
+        <span class="info-val">ia.v2nethost.cl:3000</span>
+      </div>
+    </div>
+
+    ${
+		currentUser
+			? `
+      <div class="user-pill">
+        <span>👤 Sesión activa: <strong>${safeUserName}</strong></span>
+      </div>
+      <form method="POST" action="/dashboard/connect">
+        <input type="hidden" name="device" value="${safeDevice}">
+        <input type="hidden" name="editor" value="${safeEditor}">
+        <input type="hidden" name="version" value="${safeVersion}">
+        <input type="hidden" name="callback_uri" value="${safeCallbackUri}">
+        <button type="submit" class="btn btn-primary">
+          ✓ Autorizar y Conectar a Andy Code
+        </button>
+      </form>
+    `
+			: `
+      <form method="POST" action="/dashboard/connect">
+        <input type="hidden" name="device" value="${safeDevice}">
+        <input type="hidden" name="editor" value="${safeEditor}">
+        <input type="hidden" name="version" value="${safeVersion}">
+        <input type="hidden" name="callback_uri" value="${safeCallbackUri}">
+        
+        <input type="text" name="username" class="input-field" placeholder="Usuario de Andy Agent" required autocomplete="username">
+        <input type="password" name="password" class="input-field" placeholder="Contraseña" required autocomplete="current-password">
+        
+        <button type="submit" class="btn btn-primary">
+          ✓ Iniciar Sesión y Conectar
+        </button>
+      </form>
+      
+      <form method="POST" action="/dashboard/connect" style="margin-top: 0.75rem;">
+        <input type="hidden" name="device" value="${safeDevice}">
+        <input type="hidden" name="editor" value="${safeEditor}">
+        <input type="hidden" name="version" value="${safeVersion}">
+        <input type="hidden" name="callback_uri" value="${safeCallbackUri}">
+        <button type="submit" class="btn btn-secondary">
+          ⚡ Conectar como Administrador Local (1-Click)
+        </button>
+      </form>
+    `
+	}
+
+    <div class="footnote">
+      Al autorizar, se abrirá tu editor (${safeEditor}) y quedará configurado inmediatamente el proveedor Andy Gateway.
+    </div>
+  </div>
+</body>
+</html>`;
 	}
 }
 

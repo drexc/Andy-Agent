@@ -444,13 +444,13 @@ function getSelectedModel({
 			const info = routerModels[providerIdentifiers.nanogpt]?.[id] ?? nanoGptDefaultModelInfo
 			return { id, info }
 		}
-		case providerIdentifiers.zooGateway: {
+		case providerIdentifiers.andyGateway: {
 			const id = getValidatedModelId(
-				apiConfiguration.zooGatewayModelId,
-				routerModels[providerIdentifiers.zooGateway],
+				apiConfiguration.andyGatewayModelId,
+				routerModels[providerIdentifiers.andyGateway],
 				defaultModelId,
 			)
-			const info = routerModels[providerIdentifiers.zooGateway]?.[id]
+			const info = routerModels[providerIdentifiers.andyGateway]?.[id]
 			return { id, info }
 		}
 		case providerIdentifiers.anthropic:

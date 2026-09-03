@@ -59,7 +59,7 @@ describe("Model Validation Functions", () => {
 		"opencode-go": {},
 		kenari: {},
 		nanogpt: {},
-		"zoo-gateway": {},
+		"andy-gateway": {},
 		"kimi-code": {},
 		moonshot: {},
 	}
@@ -354,18 +354,18 @@ describe("Model Validation Functions", () => {
 		describe("validateApiConfiguration (welcome-view entry point)", () => {
 			it("returns a sign-in error when neither profile token nor Zoo auth is present", () => {
 				const config: ProviderSettings = {
-					apiProvider: providerIdentifiers.zooGateway,
-					zooGatewayModelId: "anthropic/claude-sonnet-4",
+					apiProvider: providerIdentifiers.andyGateway,
+					andyGatewayModelId: "anthropic/claude-sonnet-4",
 				}
 
 				const result = validateApiConfiguration(config, mockRouterModels, allowAllOrganization, false)
-				expect(result).toBe("settings:validation.zooGatewaySignIn")
+				expect(result).toBe("settings:validation.andyGatewaySignIn")
 			})
 
 			it("returns undefined when Andy Code auth is active without a profile token", () => {
 				const config: ProviderSettings = {
-					apiProvider: providerIdentifiers.zooGateway,
-					zooGatewayModelId: "anthropic/claude-sonnet-4",
+					apiProvider: providerIdentifiers.andyGateway,
+					andyGatewayModelId: "anthropic/claude-sonnet-4",
 				}
 
 				const result = validateApiConfiguration(config, mockRouterModels, allowAllOrganization, true)
@@ -374,9 +374,9 @@ describe("Model Validation Functions", () => {
 
 			it("returns undefined when a profile session token is set", () => {
 				const config: ProviderSettings = {
-					apiProvider: providerIdentifiers.zooGateway,
-					zooGatewayModelId: "anthropic/claude-sonnet-4",
-					zooSessionToken: "zoo_ext_test_token",
+					apiProvider: providerIdentifiers.andyGateway,
+					andyGatewayModelId: "anthropic/claude-sonnet-4",
+					andySessionToken: "zoo_ext_test_token",
 				}
 
 				const result = validateApiConfiguration(config, mockRouterModels, allowAllOrganization, false)
@@ -385,13 +385,13 @@ describe("Model Validation Functions", () => {
 		})
 
 		describe("validateApiConfigurationExcludingModelErrors (settings form)", () => {
-			// The settings form short-circuits zoo-gateway and renders the sign-in
-			// error inline in `ZooGateway.tsx`, so this entry point must never
-			// surface a zoo-gateway-specific error regardless of auth state.
-			it("returns undefined for zoo-gateway when unauthenticated and no token", () => {
+			// The settings form short-circuits andy-gateway and renders the sign-in
+			// error inline in `AndyGateway.tsx`, so this entry point must never
+			// surface a andy-gateway-specific error regardless of auth state.
+			it("returns undefined for andy-gateway when unauthenticated and no token", () => {
 				const config: ProviderSettings = {
-					apiProvider: providerIdentifiers.zooGateway,
-					zooGatewayModelId: "anthropic/claude-sonnet-4",
+					apiProvider: providerIdentifiers.andyGateway,
+					andyGatewayModelId: "anthropic/claude-sonnet-4",
 				}
 
 				const result = validateApiConfigurationExcludingModelErrors(
@@ -402,11 +402,11 @@ describe("Model Validation Functions", () => {
 				expect(result).toBeUndefined()
 			})
 
-			it("returns undefined for zoo-gateway when a profile token is set", () => {
+			it("returns undefined for andy-gateway when a profile token is set", () => {
 				const config: ProviderSettings = {
-					apiProvider: providerIdentifiers.zooGateway,
-					zooGatewayModelId: "anthropic/claude-sonnet-4",
-					zooSessionToken: "zoo_ext_test_token",
+					apiProvider: providerIdentifiers.andyGateway,
+					andyGatewayModelId: "anthropic/claude-sonnet-4",
+					andySessionToken: "zoo_ext_test_token",
 				}
 
 				const result = validateApiConfigurationExcludingModelErrors(
@@ -417,8 +417,8 @@ describe("Model Validation Functions", () => {
 				expect(result).toBeUndefined()
 			})
 
-			it("surfaces PROVIDER_NOT_ALLOWED for zoo-gateway when organization disallows it", () => {
-				const orgWithoutZooGateway: OrganizationAllowList = {
+			it("surfaces PROVIDER_NOT_ALLOWED for andy-gateway when organization disallows it", () => {
+				const orgWithoutAndyGateway: OrganizationAllowList = {
 					allowAll: false,
 					providers: {
 						openrouter: { allowAll: true },
@@ -426,14 +426,14 @@ describe("Model Validation Functions", () => {
 				}
 
 				const config: ProviderSettings = {
-					apiProvider: providerIdentifiers.zooGateway,
-					zooGatewayModelId: "anthropic/claude-sonnet-4",
+					apiProvider: providerIdentifiers.andyGateway,
+					andyGatewayModelId: "anthropic/claude-sonnet-4",
 				}
 
 				const result = validateApiConfigurationExcludingModelErrors(
 					config,
 					mockRouterModels,
-					orgWithoutZooGateway,
+					orgWithoutAndyGateway,
 				)
 				expect(result).toContain("settings:validation.providerNotAllowed")
 			})

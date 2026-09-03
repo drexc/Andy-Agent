@@ -26,9 +26,11 @@ const UNSAFE_TASK_ID_RE = /[/\\.]|^_/;
 
 export interface RooHistoryImportPaths {
 	rooExtensionDomain: string;
-	zooExtensionDomain: string;
+	andyExtensionDomain: string;
+	zooExtensionDomain?: string;
 	rooStorageRoots: string[];
-	zooStorageRoot: string;
+	andyStorageRoot: string;
+	zooStorageRoot?: string;
 }
 
 export interface RooHistoryImportResult extends RooHistoryImportPaths {
@@ -214,16 +216,18 @@ const collectImportableTaskPlans = async (sourceRoots: string[]) => {
 };
 
 export const resolveRooHistoryImportPaths = async (globalStoragePath: string): Promise<RooHistoryImportPaths> => {
-	const zooExtensionDomain = `${Package.publisher}.${Package.name}`;
-	const zooStorageRoot = await getStorageBasePath(globalStoragePath);
+	const andyExtensionDomain = `${Package.publisher}.${Package.name}`;
+	const andyStorageRoot = await getStorageBasePath(globalStoragePath);
 	const rooDefaultStorageRoot = path.join(path.dirname(globalStoragePath), ROO_STORAGE_DIRECTORY);
 	const rooCustomStorageRoot = getConfiguredCustomStoragePath(ROO_CONFIGURATION_SECTION);
 
 	return {
 		rooExtensionDomain: ROO_EXTENSION_DOMAIN,
-		zooExtensionDomain,
+		andyExtensionDomain,
+		zooExtensionDomain: andyExtensionDomain,
 		rooStorageRoots: dedupePaths([rooDefaultStorageRoot, ...(rooCustomStorageRoot ? [rooCustomStorageRoot] : [])]),
-		zooStorageRoot,
+		andyStorageRoot,
+		zooStorageRoot: andyStorageRoot,
 	};
 };
 
@@ -232,11 +236,11 @@ export const importRooTaskHistory = async (
 	onProgress?: (progress: RooHistoryImportProgress) => Promise<void> | void,
 ): Promise<RooHistoryImportResult> => {
 	const paths = await resolveRooHistoryImportPaths(globalStoragePath);
-	const destinationComparablePath = toComparablePath(paths.zooStorageRoot);
+	const destinationComparablePath = toComparablePath(paths.andyStorageRoot);
 	const sourceRoots = paths.rooStorageRoots.filter(
 		(sourceRoot) => toComparablePath(sourceRoot) !== destinationComparablePath,
 	);
-	const destinationTasksRoot = path.join(paths.zooStorageRoot, "tasks");
+	const destinationTasksRoot = path.join(paths.andyStorageRoot, "tasks");
 	const { taskPlans, totalTaskCount: foundTaskCount } = await collectImportableTaskPlans(sourceRoots);
 	const importedTaskIds = new Set<string>();
 	let importedFileCount = 0;

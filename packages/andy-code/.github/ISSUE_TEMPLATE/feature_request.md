@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: What do you want to add to zoo?
+about: What do you want to add to andy?
 title: ''
 labels: enhancement
 assignees: ''

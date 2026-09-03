@@ -71,7 +71,7 @@ Menziona l'allineamento con queste aree nelle tue PR.
 
 Tutti i contributi iniziano con un'issue di GitHub utilizzando i nostri modelli snelli.
 
-- **Controlla le issue esistenti**: cerca nelle [issue di GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues).
+- **Controlla le issue esistenti**: cerca nelle [issue di GitHub](https://github.com/Andy-Code-Org/Andy-Code/issues).
 - **Crea un'issue** utilizzando:
     - **Miglioramenti:** modello "Richiesta di miglioramento" (linguaggio semplice incentrato sul vantaggio per l'utente).
     - **Bug:** modello "Segnalazione di bug" (riproduzione minima + previsto vs effettivo + versione).
@@ -80,17 +80,17 @@ Tutti i contributi iniziano con un'issue di GitHub utilizzando i nostri modelli 
 
 ### Decidere su cosa lavorare
 
-- Controlla la [pagina GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues) per trovare le issues.
-- Per la documentazione, visita [Andy Code Docs](https://github.com/Zoo-Code-Org/Zoo-Code-Docs).
+- Controlla la [pagina GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues) per trovare le issues.
+- Per la documentazione, visita [Andy Code Docs](https://github.com/Andy-Code-Org/Andy-Code-Docs).
 
 ### Segnalazione di bug
 
 - Controlla prima le segnalazioni esistenti.
-- Crea un nuovo bug utilizzando il [modello "Segnalazione di bug"](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) con:
+- Crea un nuovo bug utilizzando il [modello "Segnalazione di bug"](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) con:
     - Passaggi di riproduzione chiari e numerati
     - Risultato previsto vs effettivo
     - Versione di Andy Code (obbligatoria); provider/modello di intelligenza artificiale se pertinente
-- **Problemi di sicurezza**: segnala in privato tramite [avvisi di sicurezza](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new).
+- **Problemi di sicurezza**: segnala in privato tramite [avvisi di sicurezza](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new).
 
 ## Processo di sviluppo e invio
 
@@ -99,7 +99,7 @@ Tutti i contributi iniziano con un'issue di GitHub utilizzando i nostri modelli 
 1. **Esegui il fork e clona:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Installa le dipendenze:**

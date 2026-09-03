@@ -127,36 +127,36 @@ describe("checkExistKey", () => {
 		expect(checkExistKey(config)).toBe(false);
 	});
 
-	it("should return false for zoo-gateway without session token or auth", () => {
+	it("should return false for andy-gateway without session token or auth", () => {
 		const config: ProviderSettings = {
-			apiProvider: providerIdentifiers.zooGateway,
-			zooGatewayModelId: "alibaba/qwen-3.6-max-preview",
+			apiProvider: providerIdentifiers.andyGateway,
+			andyGatewayModelId: "alibaba/qwen-3.6-max-preview",
 		};
 		expect(checkExistKey(config)).toBe(false);
 		expect(checkExistKey(config, false)).toBe(false);
 	});
 
 	it("recognizes session authentication through the canonical Andy Gateway identifier", () => {
-		expect(checkExistKey({ apiProvider: providerIdentifiers.zooGateway }, true)).toBe(true);
+		expect(checkExistKey({ apiProvider: providerIdentifiers.andyGateway }, true)).toBe(true);
 	});
 
-	it("should return true for zoo-gateway when profile has zooSessionToken", () => {
+	it("should return true for andy-gateway when profile has andySessionToken", () => {
 		const config: ProviderSettings = {
-			apiProvider: providerIdentifiers.zooGateway,
-			zooSessionToken: "zoo_ext_test_token",
+			apiProvider: providerIdentifiers.andyGateway,
+			andySessionToken: "zoo_ext_test_token",
 		};
 		expect(checkExistKey(config)).toBe(true);
 	});
 
-	it("should return true for zoo-gateway when Andy Code session auth is active", () => {
+	it("should return true for andy-gateway when Andy Code session auth is active", () => {
 		const config: ProviderSettings = {
-			apiProvider: providerIdentifiers.zooGateway,
-			zooGatewayModelId: "alibaba/qwen-3.6-max-preview",
+			apiProvider: providerIdentifiers.andyGateway,
+			andyGatewayModelId: "alibaba/qwen-3.6-max-preview",
 		};
 		expect(checkExistKey(config, true)).toBe(true);
 	});
 
-	it("should ignore zooCodeIsAuthenticated for non-zoo-gateway providers", () => {
+	it("should ignore andyCodeIsAuthenticated for non-andy-gateway providers", () => {
 		const config: ProviderSettings = {
 			apiProvider: providerIdentifiers.openrouter,
 		};

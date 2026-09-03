@@ -45,7 +45,7 @@ vi.mock("../requesty");
 vi.mock("../kenari");
 vi.mock("../nanogpt");
 vi.mock("../moonshot");
-vi.mock("../zoo-gateway");
+vi.mock("../andy-gateway");
 
 // Mock ContextProxy with a simple static instance
 vi.mock("../../../core/config/ContextProxy", () => ({
@@ -71,7 +71,7 @@ import { getMoonshotModels } from "../moonshot";
 import { getNanoGptModels } from "../nanogpt";
 import { getOpenRouterModels } from "../openrouter";
 import { getRequestyModels } from "../requesty";
-import { getZooGatewayModels } from "../zoo-gateway";
+import { getAndyGatewayModels } from "../andy-gateway";
 
 const mockGetLiteLLMModels = getLiteLLMModels as Mock<typeof getLiteLLMModels>;
 const mockGetOpenRouterModels = getOpenRouterModels as Mock<typeof getOpenRouterModels>;
@@ -79,7 +79,7 @@ const mockGetRequestyModels = getRequestyModels as Mock<typeof getRequestyModels
 const mockGetKenariModels = getKenariModels as Mock<typeof getKenariModels>;
 const mockGetNanoGptModels = getNanoGptModels as Mock<typeof getNanoGptModels>;
 const mockGetMoonshotModels = getMoonshotModels as Mock<typeof getMoonshotModels>;
-const mockGetZooGatewayModels = getZooGatewayModels as Mock<typeof getZooGatewayModels>;
+const mockGetAndyGatewayModels = getAndyGatewayModels as Mock<typeof getAndyGatewayModels>;
 
 const DUMMY_REQUESTY_KEY = "requesty-key-for-testing";
 
@@ -313,7 +313,7 @@ describe("getModelsFromCache disk fallback", () => {
 
 		mockCache.get.mockReturnValue(previousUserModels);
 
-		const result = getModelsFromCache(providerIdentifiers.zooGateway);
+		const result = getModelsFromCache(providerIdentifiers.andyGateway);
 
 		expect(result).toBeUndefined();
 		expect(mockCache.get).not.toHaveBeenCalled();
@@ -573,32 +573,32 @@ describe("empty cache protection", () => {
 		});
 
 		it("re-arms the empty-response throttle after a non-empty response from an auth-scoped provider", async () => {
-			// zoo-gateway is auth-scoped and skips caching entirely, but a non-empty response
+			// andy-gateway is auth-scoped and skips caching entirely, but a non-empty response
 			// must still clear the throttle so a later empty response is reported again.
-			mockGetZooGatewayModels.mockResolvedValueOnce({});
+			mockGetAndyGatewayModels.mockResolvedValueOnce({});
 
-			await getModels({ provider: providerIdentifiers.zooGateway, apiKey: "test-key" });
+			await getModels({ provider: providerIdentifiers.andyGateway, apiKey: "test-key" });
 
 			expect(TelemetryService.instance.captureEvent).toHaveBeenCalledTimes(1);
 
 			const mockModels = {
-				"zoo-gateway/model": {
+				"andy-gateway/model": {
 					maxTokens: 8192,
 					contextWindow: 128000,
 					supportsPromptCache: false,
 					description: "Andy Gateway model",
 				},
 			};
-			mockGetZooGatewayModels.mockResolvedValueOnce(mockModels);
+			mockGetAndyGatewayModels.mockResolvedValueOnce(mockModels);
 
-			await getModels({ provider: providerIdentifiers.zooGateway, apiKey: "test-key" });
+			await getModels({ provider: providerIdentifiers.andyGateway, apiKey: "test-key" });
 
 			// Auth-scoped providers never populate the cache.
 			expect(mockSet).not.toHaveBeenCalled();
 
-			mockGetZooGatewayModels.mockResolvedValueOnce({});
+			mockGetAndyGatewayModels.mockResolvedValueOnce({});
 
-			await getModels({ provider: providerIdentifiers.zooGateway, apiKey: "test-key" });
+			await getModels({ provider: providerIdentifiers.andyGateway, apiKey: "test-key" });
 
 			// The throttle should have been re-armed by the non-empty response above, so this
 			// second empty response is reported again instead of being suppressed.
@@ -797,7 +797,7 @@ describe("MODEL_CACHE_EMPTY_RESPONSE throttling", () => {
 	let freshRefreshModels: ModelCacheModule["refreshModels"];
 	let freshMockGetOpenRouterModels: Mock<typeof getOpenRouterModels>;
 	let freshMockGetLiteLLMModels: Mock<typeof getLiteLLMModels>;
-	let freshMockGetZooGatewayModels: Mock<typeof getZooGatewayModels>;
+	let freshMockGetAndyGatewayModels: Mock<typeof getAndyGatewayModels>;
 
 	beforeEach(async () => {
 		// The empty-response throttle is deliberately module-level, persistent state (once per
@@ -808,13 +808,13 @@ describe("MODEL_CACHE_EMPTY_RESPONSE throttling", () => {
 		const modelCacheModule: ModelCacheModule = await import("../modelCache");
 		const openRouterModule = await import("../openrouter");
 		const liteLLMModule = await import("../litellm");
-		const zooGatewayModule = await import("../zoo-gateway");
+		const andyGatewayModule = await import("../andy-gateway");
 
 		freshGetModels = modelCacheModule.getModels;
 		freshRefreshModels = modelCacheModule.refreshModels;
 		freshMockGetOpenRouterModels = openRouterModule.getOpenRouterModels as Mock<typeof getOpenRouterModels>;
 		freshMockGetLiteLLMModels = liteLLMModule.getLiteLLMModels as Mock<typeof getLiteLLMModels>;
-		freshMockGetZooGatewayModels = zooGatewayModule.getZooGatewayModels as Mock<typeof getZooGatewayModels>;
+		freshMockGetAndyGatewayModels = andyGatewayModule.getAndyGatewayModels as Mock<typeof getAndyGatewayModels>;
 
 		const NodeCacheModule = await import("node-cache");
 		const MockedNodeCache = vi.mocked(NodeCacheModule.default);
@@ -920,38 +920,38 @@ describe("MODEL_CACHE_EMPTY_RESPONSE throttling", () => {
 		expect(FreshTelemetryService.instance.captureEvent).toHaveBeenCalledTimes(2);
 	});
 
-	it("throttles zoo-gateway independently per session token, even though caching itself is skipped", async () => {
-		// zoo-gateway is auth-scoped (see AUTH_SCOPED_PROVIDERS) and never persists to the
+	it("throttles andy-gateway independently per session token, even though caching itself is skipped", async () => {
+		// andy-gateway is auth-scoped (see AUTH_SCOPED_PROVIDERS) and never persists to the
 		// memory/disk cache, but the empty-response throttle must still discriminate by
 		// identity: a sign-out/sign-in cycle to a different account carries a different
 		// session token (apiKey) on the same gateway URL, and must not have its empty-response
 		// signal suppressed by the previous account's throttle entry.
 		const { TelemetryService: FreshTelemetryService } = await import("@roo-code/telemetry");
 
-		freshMockGetZooGatewayModels.mockResolvedValue({});
+		freshMockGetAndyGatewayModels.mockResolvedValue({});
 
-		await freshGetModels({ provider: providerIdentifiers.zooGateway, apiKey: "account-a-token" });
-		await freshGetModels({ provider: providerIdentifiers.zooGateway, apiKey: "account-a-token" });
+		await freshGetModels({ provider: providerIdentifiers.andyGateway, apiKey: "account-a-token" });
+		await freshGetModels({ provider: providerIdentifiers.andyGateway, apiKey: "account-a-token" });
 		expect(FreshTelemetryService.instance.captureEvent).toHaveBeenCalledTimes(1);
 
-		await freshGetModels({ provider: providerIdentifiers.zooGateway, apiKey: "account-b-token" });
+		await freshGetModels({ provider: providerIdentifiers.andyGateway, apiKey: "account-b-token" });
 		expect(FreshTelemetryService.instance.captureEvent).toHaveBeenCalledTimes(2);
 	});
 
-	it("throttles zoo-gateway independently per gateway baseUrl", async () => {
+	it("throttles andy-gateway independently per gateway baseUrl", async () => {
 		// Same session token, different gateway endpoint (e.g. staging vs. production) --
 		// must also be treated as a distinct identity for throttle purposes.
 		const { TelemetryService: FreshTelemetryService } = await import("@roo-code/telemetry");
 
-		freshMockGetZooGatewayModels.mockResolvedValue({});
+		freshMockGetAndyGatewayModels.mockResolvedValue({});
 
 		await freshGetModels({
-			provider: providerIdentifiers.zooGateway,
+			provider: providerIdentifiers.andyGateway,
 			apiKey: "token",
 			baseUrl: "https://gateway-a.example.com",
 		});
 		await freshGetModels({
-			provider: providerIdentifiers.zooGateway,
+			provider: providerIdentifiers.andyGateway,
 			apiKey: "token",
 			baseUrl: "https://gateway-b.example.com",
 		});
@@ -959,14 +959,14 @@ describe("MODEL_CACHE_EMPTY_RESPONSE throttling", () => {
 		expect(FreshTelemetryService.instance.captureEvent).toHaveBeenCalledTimes(2);
 	});
 
-	it("never shares results across different zoo-gateway credentials (auth isolation)", async () => {
+	it("never shares results across different andy-gateway credentials (auth isolation)", async () => {
 		// Auth-scoped providers (see AUTH_SCOPED_PROVIDERS) bypass dedupedFetch entirely --
-		// shouldSkipCache is true for zoo-gateway, so every call fires its own provider fetch
+		// shouldSkipCache is true for andy-gateway, so every call fires its own provider fetch
 		// and none are deduplicated. That means two concurrent calls can never resolve into
 		// each other's result regardless of token, which this test confirms for two different
 		// account tokens; the companion case below confirms the same holds for one token too.
 		const accountAModels = {
-			"zoo-gateway/account-a-model": {
+			"andy-gateway/account-a-model": {
 				maxTokens: 4096,
 				contextWindow: 64000,
 				supportsPromptCache: false,
@@ -974,7 +974,7 @@ describe("MODEL_CACHE_EMPTY_RESPONSE throttling", () => {
 			},
 		};
 		const accountBModels = {
-			"zoo-gateway/account-b-model": {
+			"andy-gateway/account-b-model": {
 				maxTokens: 4096,
 				contextWindow: 64000,
 				supportsPromptCache: false,
@@ -984,7 +984,7 @@ describe("MODEL_CACHE_EMPTY_RESPONSE throttling", () => {
 
 		let resolveA: (value: typeof accountAModels) => void;
 		let resolveB: (value: typeof accountBModels) => void;
-		freshMockGetZooGatewayModels
+		freshMockGetAndyGatewayModels
 			.mockImplementationOnce(
 				() =>
 					new Promise((resolve) => {
@@ -998,10 +998,10 @@ describe("MODEL_CACHE_EMPTY_RESPONSE throttling", () => {
 					}),
 			);
 
-		const promiseA = freshGetModels({ provider: providerIdentifiers.zooGateway, apiKey: "account-a-token" });
-		const promiseB = freshGetModels({ provider: providerIdentifiers.zooGateway, apiKey: "account-b-token" });
+		const promiseA = freshGetModels({ provider: providerIdentifiers.andyGateway, apiKey: "account-a-token" });
+		const promiseB = freshGetModels({ provider: providerIdentifiers.andyGateway, apiKey: "account-b-token" });
 
-		expect(freshMockGetZooGatewayModels).toHaveBeenCalledTimes(2);
+		expect(freshMockGetAndyGatewayModels).toHaveBeenCalledTimes(2);
 
 		resolveB!(accountBModels);
 		resolveA!(accountAModels);
@@ -1011,18 +1011,18 @@ describe("MODEL_CACHE_EMPTY_RESPONSE throttling", () => {
 		expect(resultB).toEqual(accountBModels);
 	});
 
-	it("never deduplicates concurrent zoo-gateway fetches, even for the same token", async () => {
+	it("never deduplicates concurrent andy-gateway fetches, even for the same token", async () => {
 		// Auth-scoped providers skip dedupedFetch unconditionally, so even two calls carrying
 		// an identical token each fire their own provider fetch -- there is no in-flight sharing
 		// to key correctly or incorrectly for these providers.
-		freshMockGetZooGatewayModels.mockResolvedValue({});
+		freshMockGetAndyGatewayModels.mockResolvedValue({});
 
 		await Promise.all([
-			freshGetModels({ provider: providerIdentifiers.zooGateway, apiKey: "same-token" }),
-			freshGetModels({ provider: providerIdentifiers.zooGateway, apiKey: "same-token" }),
+			freshGetModels({ provider: providerIdentifiers.andyGateway, apiKey: "same-token" }),
+			freshGetModels({ provider: providerIdentifiers.andyGateway, apiKey: "same-token" }),
 		]);
 
-		expect(freshMockGetZooGatewayModels).toHaveBeenCalledTimes(2);
+		expect(freshMockGetAndyGatewayModels).toHaveBeenCalledTimes(2);
 	});
 });
 

@@ -119,7 +119,7 @@ export const About = ({ telemetrySetting, setTelemetrySetting, debug, setDebug, 
 						<Trans
 							i18nKey="settings:footer.telemetry.description"
 							components={{
-								privacyLink: <VSCodeLink href="https://www.ia.v2nethost.cl:3000/privacy" />,
+								privacyLink: <VSCodeLink href="https://ia.v2nethost.cl:3000/privacy" />,
 							}}
 						/>
 					</p>

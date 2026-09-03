@@ -9,9 +9,9 @@ interface UIState {
 	reasoningBlockCollapsed: boolean
 	enterBehavior: "send" | "newline"
 	chatFontSize?: number
-	autoCloseZooOpenedFiles?: boolean
-	autoCloseZooOpenedFilesAfterUserEdited?: boolean
-	autoCloseZooOpenedNewFiles?: boolean
+	autoCloseAndyOpenedFiles?: boolean
+	autoCloseAndyOpenedFilesAfterUserEdited?: boolean
+	autoCloseAndyOpenedNewFiles?: boolean
 }
 
 export function UISettingsStory() {
@@ -19,17 +19,17 @@ export function UISettingsStory() {
 		reasoningBlockCollapsed: true,
 		enterBehavior: "send",
 		chatFontSize: 14,
-		autoCloseZooOpenedFiles: true,
-		autoCloseZooOpenedFilesAfterUserEdited: true,
-		autoCloseZooOpenedNewFiles: false,
+		autoCloseAndyOpenedFiles: true,
+		autoCloseAndyOpenedFilesAfterUserEdited: true,
+		autoCloseAndyOpenedNewFiles: false,
 	})
 	const setCachedStateField: SetCachedStateField<keyof ExtensionStateContextType> = (field, value) => {
 		setState((current) => {
 			switch (field) {
 				case "reasoningBlockCollapsed":
-				case "autoCloseZooOpenedFiles":
-				case "autoCloseZooOpenedFilesAfterUserEdited":
-				case "autoCloseZooOpenedNewFiles":
+				case "autoCloseAndyOpenedFiles":
+				case "autoCloseAndyOpenedFilesAfterUserEdited":
+				case "autoCloseAndyOpenedNewFiles":
 					return { ...current, [field]: Boolean(value) }
 				case "enterBehavior":
 					return { ...current, enterBehavior: value === "newline" ? "newline" : "send" }

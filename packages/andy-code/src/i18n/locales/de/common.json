@@ -210,7 +210,7 @@
 		"enter_valid_path": "Bitte gib einen gültigen Pfad ein"
 	},
 	"input": {
-		"task_prompt": "Was soll Zoo tun?",
+		"task_prompt": "Was soll Andy tun?",
 		"task_placeholder": "Gib deine Aufgabe hier ein"
 	},
 	"settings": {
@@ -265,7 +265,7 @@
 		"label": "Docs",
 		"url": "https://docs.ia.v2nethost.cl:3000"
 	},
-	"zooAuth": {
+	"andyAuth": {
 		"errors": {
 			"invalid_token_received": "Andy Code: Ungültiger Authentifizierungstoken empfangen.",
 			"token_verification_failed": "Andy Code: Token-Überprüfung fehlgeschlagen.",

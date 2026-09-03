@@ -30,7 +30,7 @@ import {
 	opencodeGoDefaultModelId,
 	kenariDefaultModelId,
 	nanoGptDefaultModelId,
-	zooGatewayDefaultModelId,
+	andyGatewayDefaultModelId,
 	zaiApiLineConfigs,
 	getZAiModels,
 } from "@roo-code/types"
@@ -146,7 +146,7 @@ const PROVIDER_MODEL_CONFIG: Partial<Record<ProviderName, ProviderModelConfig>> 
 	[providerIdentifiers.opencodeGo]: { field: "opencodeGoModelId", default: opencodeGoDefaultModelId },
 	[providerIdentifiers.kenari]: { field: "kenariModelId", default: kenariDefaultModelId },
 	[providerIdentifiers.nanogpt]: { field: "nanoGptModelId", default: nanoGptDefaultModelId },
-	[providerIdentifiers.zooGateway]: { field: "zooGatewayModelId", default: zooGatewayDefaultModelId },
+	[providerIdentifiers.andyGateway]: { field: "andyGatewayModelId", default: andyGatewayDefaultModelId },
 	[providerIdentifiers.openai]: { field: "openAiModelId" },
 	[providerIdentifiers.ollama]: { field: "ollamaModelId" },
 	[providerIdentifiers.lmstudio]: { field: "lmStudioModelId" },

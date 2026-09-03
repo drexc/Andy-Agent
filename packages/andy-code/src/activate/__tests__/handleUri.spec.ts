@@ -129,7 +129,7 @@ describe("handleUri", () => {
 
 	it("propagates the callback token to every ClineProvider instance, not just the visible one", async () => {
 		// Regression: prior to multi-instance fan-out, hidden providers (sidebar collapsed,
-		// secondary panels) never received the zooSessionToken, so their profile settings
+		// secondary panels) never received the andySessionToken, so their profile settings
 		// stayed unauthenticated until reload.
 		mockHandleAndyCodeAuthCallback.mockResolvedValue(true);
 

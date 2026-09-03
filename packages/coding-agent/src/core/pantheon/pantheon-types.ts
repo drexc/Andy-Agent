@@ -152,7 +152,10 @@ export interface PantheonTaskDelegation {
 
 export interface PantheonRoomState {
 	squadId: string;
+	status?: "active" | "waiting_user_input" | "paused";
 	activeAgentId?: string;
+	lastAskingAgentId?: string;
+	pendingUserQuestion?: any;
 	messages: PantheonMessage[];
 	delegations: PantheonTaskDelegation[];
 }

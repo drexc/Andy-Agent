@@ -3,7 +3,7 @@
           <a href="https://x.com/AndyCodeDev"><img src="https://img.shields.io/badge/AndyCode-000000?style=flat&logo=x&logoColor=white" alt="X"></a>
           <a href="https://discord.gg/VxfP4Vx3gX"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Join Discord"></a>
           <a href="https://www.reddit.com/r/AndyCode/"><img src="https://img.shields.io/badge/Join%20r%2FAndyCode-FF4500?style=flat&logo=reddit&logoColor=white" alt="Join r/AndyCode"></a>
-          <a href="https://github.com/Zoo-Code-Org/Zoo-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
+          <a href="https://github.com/Andy-Code-Org/Andy-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
         </p>
         <p align="center">
           <em>빠르게 도움받기 → <a href="https://discord.gg/VxfP4Vx3gX">Discord 참여하기</a> • 비동기가 더 좋아요? → <a href="https://www.reddit.com/r/AndyCode/">r/AndyCode 참여하기</a></em>
@@ -25,13 +25,13 @@
 > 귀 기울일 계획이야. 우리와 함께해
 > [Discord](https://discord.gg/VxfP4Vx3gX),
 > [Reddit](https://www.reddit.com/r/AndyCode), 또는
-> [PR이나 issue 열기](https://github.com/Zoo-Code-Org/Zoo-Code).
+> [PR이나 issue 열기](https://github.com/Andy-Code-Org/Andy-Code).
 >
 > _-Andy Code Team_
 
 ## Roo Code에서 Andy Code로 마이그레이션
 
-Roo Code에서 Andy Code로 옮겨오는 빠른 가이드는 [Roo→Zoo 마이그레이션 가이드](https://docs.ia.v2nethost.cl:3000/roo-to-zoo-migration)에서 확인할 수 있어. 전환하는 동안 사용자들을 최대한 돕고 싶고, 바로 그 지원을 위해 [Reddit](https://www.reddit.com/r/AndyCode)와 [Discord](https://discord.gg/VxfP4Vx3gX)를 운영하고 있어. 문제가 있거나 궁금한 점이 있으면 들어와서 편하게 물어봐.
+Roo Code에서 Andy Code로 옮겨오는 빠른 가이드는 [Roo→Andy 마이그레이션 가이드](https://docs.ia.v2nethost.cl:3000/roo-to-andy-migration)에서 확인할 수 있어. 전환하는 동안 사용자들을 최대한 돕고 싶고, 바로 그 지원을 위해 [Reddit](https://www.reddit.com/r/AndyCode)와 [Discord](https://discord.gg/VxfP4Vx3gX)를 운영하고 있어. 문제가 있거나 궁금한 점이 있으면 들어와서 편하게 물어봐.
 
 ## Roo Code 이후 Andy Code가 추가한 기능
 
@@ -79,8 +79,8 @@ Andy Code는 당신의 작업 방식에 맞춰 적응합니다.
 - **[문서](https://docs.ia.v2nethost.cl:3000):** Andy Code 설치, 구성 및 마스터하기 위한 공식 가이드.
 - **[Discord 서버](https://discord.gg/VxfP4Vx3gX):** 커뮤니티에 가입하여 실시간 도움과 토론에 참여하세요.
 - **[Reddit 커뮤니티](https://www.reddit.com/r/AndyCode):** 경험을 공유하고 다른 사람들이 무엇을 만들고 있는지 확인하세요.
-- **[GitHub 문제](https://github.com/Zoo-Code-Org/Zoo-Code/issues):** 버그를 보고하고 개발을 추적하세요.
-- **[기능 요청](https://github.com/Zoo-Code-Org/Zoo-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** 아이디어가 있으신가요? 개발자들과 공유하세요.
+- **[GitHub 문제](https://github.com/Andy-Code-Org/Andy-Code/issues):** 버그를 보고하고 개발을 추적하세요.
+- **[기능 요청](https://github.com/Andy-Code-Org/Andy-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** 아이디어가 있으신가요? 개발자들과 공유하세요.
 
 ---
 
@@ -89,7 +89,7 @@ Andy Code는 당신의 작업 방식에 맞춰 적응합니다.
 1. **리포지토리 복제**:
 
 ```sh
-git clone https://github.com/Zoo-Code-Org/Zoo-Code.git
+git clone https://github.com/Andy-Code-Org/Andy-Code.git
 ```
 
 2. **의존성 설치**:
@@ -170,4 +170,4 @@ VSIX 패키지를 수동으로 설치하려면:
 
 ---
 
-**Andy Code를 즐겨 보세요!** 짧은 리드줄로 가까이 두든 자율적으로 돌아다니게 하든, 여러분이 무엇을 만들지 기대하고 있습니다. 질문이나 기능 아이디어가 있다면 [issue](https://github.com/Zoo-Code-Org/Zoo-Code/issues)를 열거나 [discussion](https://github.com/Zoo-Code-Org/Zoo-Code/discussions)을 시작해 주세요. 즐거운 코딩 되세요!
+**Andy Code를 즐겨 보세요!** 짧은 리드줄로 가까이 두든 자율적으로 돌아다니게 하든, 여러분이 무엇을 만들지 기대하고 있습니다. 질문이나 기능 아이디어가 있다면 [issue](https://github.com/Andy-Code-Org/Andy-Code/issues)를 열거나 [discussion](https://github.com/Andy-Code-Org/Andy-Code/discussions)을 시작해 주세요. 즐거운 코딩 되세요!

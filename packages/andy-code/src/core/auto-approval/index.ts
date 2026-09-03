@@ -235,7 +235,7 @@ export async function checkAutoApproval({
 			// Execute commands immediately when DCG allows them. ExecuteCommandTool
 			// marks commands blocked by DCG as protected before reaching this check,
 			// which keeps the explicit user approval prompt for those commands. When
-			// enabled, DCG is the authoritative command policy, so Zoo's allow and deny
+			// enabled, DCG is the authoritative command policy, so Andy's allow and deny
 			// lists are intentionally bypassed for commands that DCG allows.
 			if (state.destructiveCommandGuardEnabled === true) {
 				return { decision: "approve" };

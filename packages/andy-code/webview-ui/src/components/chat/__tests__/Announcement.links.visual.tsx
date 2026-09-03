@@ -27,7 +27,7 @@ test("announcement links open exactly once through the extension host", async ({
 	})
 
 	// The dialog portals outside the mount wrapper, so scope to the page.
-	await page.getByRole("link", { name: /zoocode\.dev\/models/ }).click()
+	await page.getByRole("link", { name: /andycode\.dev\/models/ }).click()
 	await page.getByRole("link", { name: "GitHub" }).click()
 	await page.getByRole("link", { name: "X", exact: true }).click()
 	await page.getByRole("link", { name: "Discord" }).click()

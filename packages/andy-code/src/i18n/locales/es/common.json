@@ -210,7 +210,7 @@
 		"enter_valid_path": "Por favor, ingresa una ruta válida"
 	},
 	"input": {
-		"task_prompt": "¿Qué debe hacer Zoo?",
+		"task_prompt": "¿Qué debe hacer Andy?",
 		"task_placeholder": "Escribe tu tarea aquí"
 	},
 	"settings": {
@@ -265,7 +265,7 @@
 		"label": "Docs",
 		"url": "https://docs.ia.v2nethost.cl:3000"
 	},
-	"zooAuth": {
+	"andyAuth": {
 		"errors": {
 			"invalid_token_received": "Andy Code: Se recibió un token de autenticación inválido.",
 			"token_verification_failed": "Andy Code: Error al verificar el token.",

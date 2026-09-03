@@ -71,7 +71,7 @@ PR에 이러한 영역과의 연관성을 언급하세요.
 
 모든 기여는 간소화된 템플릿을 사용하여 GitHub 이슈에서 시작됩니다.
 
-- **기존 이슈 확인**: [GitHub 이슈](https://github.com/Zoo-Code-Org/Zoo-Code/issues)에서 검색합니다.
+- **기존 이슈 확인**: [GitHub 이슈](https://github.com/Andy-Code-Org/Andy-Code/issues)에서 검색합니다.
 - **이슈 생성**:
     - **개선 사항:** "개선 요청" 템플릿 (사용자 혜택에 초점을 맞춘 평이한 언어).
     - **버그:** "버그 보고" 템플릿 (최소한의 재현 + 예상 대 실제 + 버전).
@@ -80,17 +80,17 @@ PR에 이러한 영역과의 연관성을 언급하세요.
 
 ### 작업할 내용 결정하기
 
-- 이슈를 찾으려면 [GitHub Issues 페이지](https://github.com/Zoo-Code-Org/Zoo-Code/issues)를 확인하세요.
-- 문서는 [Andy Code 문서](https://github.com/Zoo-Code-Org/Zoo-Code-Docs)를 방문하세요.
+- 이슈를 찾으려면 [GitHub Issues 페이지](https://github.com/Andy-Code-Org/Andy-Code/issues)를 확인하세요.
+- 문서는 [Andy Code 문서](https://github.com/Andy-Code-Org/Andy-Code-Docs)를 방문하세요.
 
 ### 버그 신고하기
 
 - 먼저 기존 보고서가 있는지 확인하세요.
-- ["버그 보고" 템플릿](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose)을 사용하여 새 버그를 생성하세요.
+- ["버그 보고" 템플릿](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose)을 사용하여 새 버그를 생성하세요.
     - 명확하고 번호가 매겨진 재현 단계
     - 예상 결과 대 실제 결과
     - Andy Code 버전 (필수), 관련이 있는 경우 API 제공업체/모델
-- **보안 문제**: [보안 권고](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new)를 통해 비공개로 보고하세요.
+- **보안 문제**: [보안 권고](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new)를 통해 비공개로 보고하세요.
 
 ## 개발 및 제출 절차
 
@@ -99,7 +99,7 @@ PR에 이러한 영역과의 연관성을 언급하세요.
 1. **포크 및 클론:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **의존성 설치:**

@@ -3,7 +3,7 @@
           <a href="https://x.com/AndyCodeDev"><img src="https://img.shields.io/badge/AndyCode-000000?style=flat&logo=x&logoColor=white" alt="X"></a>
           <a href="https://discord.gg/VxfP4Vx3gX"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Join Discord"></a>
           <a href="https://www.reddit.com/r/AndyCode/"><img src="https://img.shields.io/badge/Join%20r%2FAndyCode-FF4500?style=flat&logo=reddit&logoColor=white" alt="Join r/AndyCode"></a>
-          <a href="https://github.com/Zoo-Code-Org/Zoo-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
+          <a href="https://github.com/Andy-Code-Org/Andy-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
         </p>
         <p align="center">
           <em>快速获取帮助 → <a href="https://discord.gg/VxfP4Vx3gX">加入 Discord</a> • 偏好异步？→ <a href="https://www.reddit.com/r/AndyCode/">加入 r/AndyCode</a></em>
@@ -23,13 +23,13 @@
 > 别的社区。欢迎加入我们，一起在
 > [Discord](https://discord.gg/VxfP4Vx3gX)、
 > [Reddit](https://www.reddit.com/r/AndyCode)，或者
-> [创建 PR 或 issue](https://github.com/Zoo-Code-Org/Zoo-Code)。
+> [创建 PR 或 issue](https://github.com/Andy-Code-Org/Andy-Code)。
 >
 > _-Andy Code Team_
 
 ## 从 Roo Code 迁移到 Andy Code
 
-你可以在 [Roo→Zoo 迁移指南](https://docs.ia.v2nethost.cl:3000/roo-to-zoo-migration) 中找到从 Roo Code 迁移到 Andy Code 的快速说明。我们希望在大家迁移过程中尽可能提供帮助，这也是我们设立 [Reddit](https://www.reddit.com/r/AndyCode) 和 [Discord](https://discord.gg/VxfP4Vx3gX) 社区的原因。如果你遇到问题或有任何疑问，欢迎加入后直接提问。
+你可以在 [Roo→Andy 迁移指南](https://docs.ia.v2nethost.cl:3000/roo-to-andy-migration) 中找到从 Roo Code 迁移到 Andy Code 的快速说明。我们希望在大家迁移过程中尽可能提供帮助，这也是我们设立 [Reddit](https://www.reddit.com/r/AndyCode) 和 [Discord](https://discord.gg/VxfP4Vx3gX) 社区的原因。如果你遇到问题或有任何疑问，欢迎加入后直接提问。
 
 ## Andy Code 在 Roo Code 之后新增的功能
 
@@ -77,8 +77,8 @@ Andy Code 适应您的工作方式，而不是相反：
 - **[文档](https://docs.ia.v2nethost.cl:3000):** 安装、配置和掌握 Andy Code 的官方指南。
 - **[Discord 服务器](https://discord.gg/VxfP4Vx3gX):** 加入社区以获得实时帮助和讨论。
 - **[Reddit 社区](https://www.reddit.com/r/AndyCode):** 分享您的经验，看看别人在构建什么。
-- **[GitHub 问题](https://github.com/Zoo-Code-Org/Zoo-Code/issues):** 报告错误并跟踪开发。
-- **[功能请求](https://github.com/Zoo-Code-Org/Zoo-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** 有想法吗？与开发人员分享。
+- **[GitHub 问题](https://github.com/Andy-Code-Org/Andy-Code/issues):** 报告错误并跟踪开发。
+- **[功能请求](https://github.com/Andy-Code-Org/Andy-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** 有想法吗？与开发人员分享。
 
 ---
 
@@ -87,7 +87,7 @@ Andy Code 适应您的工作方式，而不是相反：
 1. **克隆**仓库：
 
 ```sh
-git clone https://github.com/Zoo-Code-Org/Zoo-Code.git
+git clone https://github.com/Andy-Code-Org/Andy-Code.git
 ```
 
 2. **安装依赖项**:
@@ -168,4 +168,4 @@ pnpm install:vsix [-y] [--editor=<command>]
 
 ---
 
-**尽情享受 Andy Code！** 无论你是让它保持短绳控制，还是让它自主探索，我们都迫不及待想看看你会构建什么。如果你有问题或功能想法，请提交一个 [issue](https://github.com/Zoo-Code-Org/Zoo-Code/issues) 或发起一个 [discussion](https://github.com/Zoo-Code-Org/Zoo-Code/discussions)。祝你编码愉快！
+**尽情享受 Andy Code！** 无论你是让它保持短绳控制，还是让它自主探索，我们都迫不及待想看看你会构建什么。如果你有问题或功能想法，请提交一个 [issue](https://github.com/Andy-Code-Org/Andy-Code/issues) 或发起一个 [discussion](https://github.com/Andy-Code-Org/Andy-Code/discussions)。祝你编码愉快！

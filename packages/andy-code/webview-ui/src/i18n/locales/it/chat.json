@@ -130,7 +130,7 @@
 		"title": "Modalità",
 		"marketplace": "Marketplace delle Modalità",
 		"settings": "Impostazioni Modalità",
-		"description": "Personalità specializzate che adattano il comportamento di Zoo.",
+		"description": "Personalità specializzate che adattano il comportamento di Andy.",
 		"searchPlaceholder": "Cerca modalità...",
 		"noResults": "Nessun risultato trovato"
 	},
@@ -141,13 +141,13 @@
 	"forNextMode": "per la prossima modalità",
 	"forPreviousMode": "per la modalità precedente",
 	"instructions": {
-		"wantsToFetch": "Zoo vuole recuperare istruzioni dettagliate per aiutare con l'attività corrente"
+		"wantsToFetch": "Andy vuole recuperare istruzioni dettagliate per aiutare con l'attività corrente"
 	},
 	"error": "Errore",
 	"diffError": {
 		"title": "Modifica non riuscita"
 	},
-	"troubleMessage": "Zoo sta avendo problemi...",
+	"troubleMessage": "Andy sta avendo problemi...",
 	"apiRequest": {
 		"title": "Richiesta API",
 		"failed": "Richiesta API fallita",
@@ -190,40 +190,40 @@
 		"current": "Corrente"
 	},
 	"fileOperations": {
-		"wantsToRead": "Zoo vuole leggere questo file",
-		"wantsToReadOutsideWorkspace": "Zoo vuole leggere questo file al di fuori dell'area di lavoro",
-		"didRead": "Zoo ha letto questo file",
-		"wantsToEdit": "Zoo vuole modificare questo file",
-		"wantsToEditOutsideWorkspace": "Zoo vuole modificare questo file al di fuori dell'area di lavoro",
-		"wantsToEditProtected": "Zoo vuole modificare un file di configurazione protetto",
-		"wantsToCreate": "Zoo vuole creare un nuovo file",
-		"wantsToSearchReplace": "Zoo vuole eseguire ricerca e sostituzione in questo file",
-		"didSearchReplace": "Zoo ha eseguito ricerca e sostituzione in questo file",
-		"wantsToInsert": "Zoo vuole inserire contenuto in questo file",
-		"wantsToInsertWithLineNumber": "Zoo vuole inserire contenuto in questo file alla riga {{lineNumber}}",
-		"wantsToInsertAtEnd": "Zoo vuole aggiungere contenuto alla fine di questo file",
-		"wantsToReadAndXMore": "Zoo vuole leggere questo file e altri {{count}}",
-		"wantsToReadMultiple": "Zoo vuole leggere più file",
-		"wantsToApplyBatchChanges": "Zoo vuole applicare modifiche a più file",
-		"wantsToGenerateImage": "Zoo vuole generare un'immagine",
-		"wantsToGenerateImageOutsideWorkspace": "Zoo vuole generare un'immagine fuori dall'area di lavoro",
-		"wantsToGenerateImageProtected": "Zoo vuole generare un'immagine in una posizione protetta",
-		"didGenerateImage": "Zoo ha generato un'immagine"
+		"wantsToRead": "Andy vuole leggere questo file",
+		"wantsToReadOutsideWorkspace": "Andy vuole leggere questo file al di fuori dell'area di lavoro",
+		"didRead": "Andy ha letto questo file",
+		"wantsToEdit": "Andy vuole modificare questo file",
+		"wantsToEditOutsideWorkspace": "Andy vuole modificare questo file al di fuori dell'area di lavoro",
+		"wantsToEditProtected": "Andy vuole modificare un file di configurazione protetto",
+		"wantsToCreate": "Andy vuole creare un nuovo file",
+		"wantsToSearchReplace": "Andy vuole eseguire ricerca e sostituzione in questo file",
+		"didSearchReplace": "Andy ha eseguito ricerca e sostituzione in questo file",
+		"wantsToInsert": "Andy vuole inserire contenuto in questo file",
+		"wantsToInsertWithLineNumber": "Andy vuole inserire contenuto in questo file alla riga {{lineNumber}}",
+		"wantsToInsertAtEnd": "Andy vuole aggiungere contenuto alla fine di questo file",
+		"wantsToReadAndXMore": "Andy vuole leggere questo file e altri {{count}}",
+		"wantsToReadMultiple": "Andy vuole leggere più file",
+		"wantsToApplyBatchChanges": "Andy vuole applicare modifiche a più file",
+		"wantsToGenerateImage": "Andy vuole generare un'immagine",
+		"wantsToGenerateImageOutsideWorkspace": "Andy vuole generare un'immagine fuori dall'area di lavoro",
+		"wantsToGenerateImageProtected": "Andy vuole generare un'immagine in una posizione protetta",
+		"didGenerateImage": "Andy ha generato un'immagine"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Zoo vuole visualizzare i file di primo livello in questa directory",
-		"didViewTopLevel": "Zoo ha visualizzato i file di primo livello in questa directory",
-		"wantsToViewRecursive": "Zoo vuole visualizzare ricorsivamente tutti i file in questa directory",
-		"didViewRecursive": "Zoo ha visualizzato ricorsivamente tutti i file in questa directory",
-		"wantsToSearch": "Zoo vuole cercare in questa directory <code>{{regex}}</code>",
-		"didSearch": "Zoo ha cercato in questa directory <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Zoo vuole cercare in questa directory (fuori dall'area di lavoro) <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Zoo ha cercato in questa directory (fuori dall'area di lavoro) <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Zoo vuole visualizzare i file di primo livello in questa directory (fuori dall'area di lavoro)",
-		"didViewTopLevelOutsideWorkspace": "Zoo ha visualizzato i file di primo livello in questa directory (fuori dall'area di lavoro)",
-		"wantsToViewRecursiveOutsideWorkspace": "Zoo vuole visualizzare ricorsivamente tutti i file in questa directory (fuori dall'area di lavoro)",
-		"didViewRecursiveOutsideWorkspace": "Zoo ha visualizzato ricorsivamente tutti i file in questa directory (fuori dall'area di lavoro)",
-		"wantsToViewMultipleDirectories": "Zoo vuole visualizzare più directory"
+		"wantsToViewTopLevel": "Andy vuole visualizzare i file di primo livello in questa directory",
+		"didViewTopLevel": "Andy ha visualizzato i file di primo livello in questa directory",
+		"wantsToViewRecursive": "Andy vuole visualizzare ricorsivamente tutti i file in questa directory",
+		"didViewRecursive": "Andy ha visualizzato ricorsivamente tutti i file in questa directory",
+		"wantsToSearch": "Andy vuole cercare in questa directory <code>{{regex}}</code>",
+		"didSearch": "Andy ha cercato in questa directory <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Andy vuole cercare in questa directory (fuori dall'area di lavoro) <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Andy ha cercato in questa directory (fuori dall'area di lavoro) <code>{{regex}}</code>",
+		"wantsToViewTopLevelOutsideWorkspace": "Andy vuole visualizzare i file di primo livello in questa directory (fuori dall'area di lavoro)",
+		"didViewTopLevelOutsideWorkspace": "Andy ha visualizzato i file di primo livello in questa directory (fuori dall'area di lavoro)",
+		"wantsToViewRecursiveOutsideWorkspace": "Andy vuole visualizzare ricorsivamente tutti i file in questa directory (fuori dall'area di lavoro)",
+		"didViewRecursiveOutsideWorkspace": "Andy ha visualizzato ricorsivamente tutti i file in questa directory (fuori dall'area di lavoro)",
+		"wantsToViewMultipleDirectories": "Andy vuole visualizzare più directory"
 	},
 	"commandOutput": "Output del Comando",
 	"commandExecution": {
@@ -247,24 +247,24 @@
 	"response": "Risposta",
 	"arguments": "Argomenti",
 	"text": {
-		"rooSaid": "Zoo ha detto"
+		"rooSaid": "Andy ha detto"
 	},
 	"feedback": {
 		"youSaid": "Hai detto"
 	},
 	"mcp": {
-		"wantsToUseTool": "Zoo vuole utilizzare uno strumento sul server MCP {{serverName}}",
-		"wantsToAccessResource": "Zoo vuole accedere a una risorsa sul server MCP {{serverName}}"
+		"wantsToUseTool": "Andy vuole utilizzare uno strumento sul server MCP {{serverName}}",
+		"wantsToAccessResource": "Andy vuole accedere a una risorsa sul server MCP {{serverName}}"
 	},
 	"modes": {
-		"wantsToSwitch": "Zoo vuole passare alla modalità <code>{{mode}}</code>",
-		"wantsToSwitchWithReason": "Zoo vuole passare alla modalità <code>{{mode}}</code> perché: {{reason}}",
-		"didSwitch": "Zoo è passato alla modalità <code>{{mode}}</code>",
-		"didSwitchWithReason": "Zoo è passato alla modalità <code>{{mode}}</code> perché: {{reason}}"
+		"wantsToSwitch": "Andy vuole passare alla modalità <code>{{mode}}</code>",
+		"wantsToSwitchWithReason": "Andy vuole passare alla modalità <code>{{mode}}</code> perché: {{reason}}",
+		"didSwitch": "Andy è passato alla modalità <code>{{mode}}</code>",
+		"didSwitchWithReason": "Andy è passato alla modalità <code>{{mode}}</code> perché: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Zoo vuole creare una nuova sottoattività in modalità <code>{{mode}}</code>",
-		"wantsToFinish": "Zoo vuole completare questa sottoattività",
+		"wantsToCreate": "Andy vuole creare una nuova sottoattività in modalità <code>{{mode}}</code>",
+		"wantsToFinish": "Andy vuole completare questa sottoattività",
 		"newTaskContent": "Istruzioni sottoattività",
 		"completionContent": "Sottoattività completata",
 		"resultContent": "Risultati sottoattività",
@@ -273,7 +273,7 @@
 		"goToSubtask": "Visualizza attività"
 	},
 	"questions": {
-		"hasQuestion": "Zoo ha una domanda"
+		"hasQuestion": "Andy ha una domanda"
 	},
 	"taskCompleted": "Attività completata",
 	"modelResponseIncomplete": "Risposta del modello incompleta",
@@ -289,7 +289,7 @@
 		"copyToClipboard": "Copia negli appunti",
 		"copied": "Copiato!",
 		"diagnostics": "Ottieni informazioni errore dettagliate",
-		"proxyProvider": "Sembra che tu stia utilizzando un provider basato su proxy. Assicurati di controllarne i log e di verificare che non stia riscrivendo le richieste di Zoo."
+		"proxyProvider": "Sembra che tu stia utilizzando un provider basato su proxy. Assicurati di controllarne i log e di verificare che non stia riscrivendo le richieste di Andy."
 	},
 	"powershell": {
 		"issues": "Sembra che tu stia avendo problemi con Windows PowerShell, consulta questa"
@@ -332,8 +332,8 @@
 		}
 	},
 	"skill": {
-		"wantsToLoad": "Zoo vuole caricare una competenza",
-		"didLoad": "Zoo ha caricato una competenza"
+		"wantsToLoad": "Andy vuole caricare una competenza",
+		"didLoad": "Andy ha caricato una competenza"
 	},
 	"followUpSuggest": {
 		"copyToInput": "Copia nell'input (o Shift + clic)",
@@ -376,18 +376,18 @@
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Limite di Richieste Auto-approvate Raggiunto",
-			"description": "Zoo ha raggiunto il limite auto-approvato di {{count}} richiesta/e API. Vuoi reimpostare il contatore e procedere con l'attività?",
+			"description": "Andy ha raggiunto il limite auto-approvato di {{count}} richiesta/e API. Vuoi reimpostare il contatore e procedere con l'attività?",
 			"button": "Reimposta e Continua"
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "Limite di costo auto-approvato raggiunto",
 			"button": "Reimposta e Continua",
-			"description": "Zoo ha raggiunto il limite di costo approvato automaticamente di ${{count}}. Vuoi reimpostare il costo e procedere con l'attività?"
+			"description": "Andy ha raggiunto il limite di costo approvato automaticamente di ${{count}}. Vuoi reimpostare il costo e procedere con l'attività?"
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Zoo vuole cercare nella base di codice <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Zoo vuole cercare nella base di codice <code>{{query}}</code> in <code>{{path}}</code>",
+		"wantsToSearch": "Andy vuole cercare nella base di codice <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Andy vuole cercare nella base di codice <code>{{query}}</code> in <code>{{path}}</code>",
 		"didSearch_one": "Trovato 1 risultato",
 		"didSearch_other": "Trovati {{count}} risultati",
 		"resultTooltip": "Punteggio di somiglianza: {{score}} (clicca per aprire il file)"
@@ -469,8 +469,8 @@
 		"clickToEdit": "Clicca per modificare il messaggio"
 	},
 	"slashCommand": {
-		"wantsToRun": "Zoo vuole eseguire un comando slash",
-		"didRun": "Zoo ha eseguito un comando slash"
+		"wantsToRun": "Andy vuole eseguire un comando slash",
+		"didRun": "Andy ha eseguito un comando slash"
 	},
 	"todo": {
 		"partial": "{{completed}} di {{total}} cose da fare completate",
@@ -489,7 +489,7 @@
 		"openMcpSettings": "Apri impostazioni MCP"
 	},
 	"readCommandOutput": {
-		"title": "Zoo read command output"
+		"title": "Andy read command output"
 	},
 	"retiredProvider": {
 		"title": "Provider non più supportato",

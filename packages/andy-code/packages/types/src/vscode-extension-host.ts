@@ -43,7 +43,7 @@ export interface ExtensionMessage {
 		| "commitSearchResults"
 		| "listApiConfig"
 		| typeof RouterModelsMessageType.routerModels
-		| "zooGatewayCredentialsReady"
+		| "andyGatewayCredentialsReady"
 		| typeof OpenAiModelsMessageType.openAiModels
 		| typeof OllamaModelsMessageType.ollamaModels
 		| typeof LmStudioModelsMessageType.lmStudioModels
@@ -304,9 +304,9 @@ export type ExtensionState = Pick<
 	| "terminalProfile"
 	| "execaShellPath"
 	| "diagnosticsEnabled"
-	| "autoCloseZooOpenedFiles"
-	| "autoCloseZooOpenedFilesAfterUserEdited"
-	| "autoCloseZooOpenedNewFiles"
+	| "autoCloseAndyOpenedFiles"
+	| "autoCloseAndyOpenedFilesAfterUserEdited"
+	| "autoCloseAndyOpenedNewFiles"
 	| "language"
 	| "modeApiConfigs"
 	| "customModePrompts"
@@ -411,11 +411,11 @@ export type ExtensionState = Pick<
 		expiresAt?: number
 		error?: string
 	}
-	zooCodeIsAuthenticated?: boolean
-	zooCodeUserName?: string
-	zooCodeUserEmail?: string
-	zooCodeUserImage?: string
-	zooCodeBaseUrl?: string
+	andyCodeIsAuthenticated?: boolean
+	andyCodeUserName?: string
+	andyCodeUserEmail?: string
+	andyCodeUserImage?: string
+	andyCodeBaseUrl?: string
 	deviceName?: string
 	debug?: boolean
 
@@ -562,6 +562,7 @@ export interface WebviewMessage {
 		| "openAiCodexSignOut"
 		| "kimiCodeSignIn"
 		| "kimiCodeSignOut"
+		| "andyCodeSignOut"
 		| "zooCodeSignOut"
 		| "switchOrganization"
 		| "condenseTaskContextRequest"

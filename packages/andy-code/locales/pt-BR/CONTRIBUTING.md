@@ -71,7 +71,7 @@ Mencione o alinhamento com essas áreas em seus PRs.
 
 Todas as contribuições começam com uma Issue do GitHub usando nossos modelos simplificados.
 
-- **Verifique as issues existentes**: Pesquise nas [Issues do GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues).
+- **Verifique as issues existentes**: Pesquise nas [Issues do GitHub](https://github.com/Andy-Code-Org/Andy-Code/issues).
 - **Crie uma issue** usando:
     - **Melhorias:** modelo "Solicitação de melhoria" (linguagem simples focada no benefício do usuário).
     - **Bugs:** modelo "Relatório de bug" (reprodução mínima + esperado vs. real + versão).
@@ -80,17 +80,17 @@ Todas as contribuições começam com uma Issue do GitHub usando nossos modelos 
 
 ### Decidindo no que trabalhar
 
-- Confira a [página de GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues) para ver as issues.
-- Para documentação, visite [Documentação do Andy Code](https://github.com/Zoo-Code-Org/Zoo-Code-Docs).
+- Confira a [página de GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues) para ver as issues.
+- Para documentação, visite [Documentação do Andy Code](https://github.com/Andy-Code-Org/Andy-Code-Docs).
 
 ### Relatando bugs
 
 - Verifique primeiro os relatórios existentes.
-- Crie um novo bug usando o [modelo "Relatório de bug"](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) com:
+- Crie um novo bug usando o [modelo "Relatório de bug"](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) com:
     - Passos de reprodução claros e numerados
     - Resultado esperado vs. real
     - Versão do Andy Code (obrigatório); provedor/modelo de IA, se relevante
-- **Problemas de segurança**: Relate em particular por meio de [avisos de segurança](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new).
+- **Problemas de segurança**: Relate em particular por meio de [avisos de segurança](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new).
 
 ## Processo de desenvolvimento e envio
 
@@ -99,7 +99,7 @@ Todas as contribuições começam com uma Issue do GitHub usando nossos modelos 
 1. **Fork e Clone:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Instale as dependências:**

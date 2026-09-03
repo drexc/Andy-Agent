@@ -25,5 +25,5 @@ test("renders the welcome hero in the VS Code dark theme", async ({ mount }) => 
 
 	await waitForAssetsAndRender(component)
 
-	await expect(component).toHaveScreenshot("zoo-hero-dark.png")
+	await expect(component).toHaveScreenshot("andy-hero-dark.png")
 })

@@ -71,7 +71,7 @@ Erwähne die Ausrichtung auf diese Bereiche in deinen PRs.
 
 Alle Beiträge beginnen mit einem GitHub-Issue unter Verwendung unserer schlanken Vorlagen.
 
-- **Überprüfe bestehende Issues**: Suche in den [GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues).
+- **Überprüfe bestehende Issues**: Suche in den [GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues).
 - **Erstelle ein Issue** mit:
     - **Verbesserungen:** Vorlage „Verbesserungsvorschlag“ (einfache Sprache mit Fokus auf den Nutzen für den Benutzer).
     - **Fehler:** Vorlage „Fehlerbericht“ (minimale Reproduktion + erwartet vs. tatsächlich + Version).
@@ -80,17 +80,17 @@ Alle Beiträge beginnen mit einem GitHub-Issue unter Verwendung unserer schlanke
 
 ### Entscheiden, woran du arbeiten möchtest
 
-- Prüfe die [GitHub-Issues-Seite](https://github.com/Zoo-Code-Org/Zoo-Code/issues) auf Issues.
-- Für Dokumentation besuche [Andy Code Docs](https://github.com/Zoo-Code-Org/Zoo-Code-Docs).
+- Prüfe die [GitHub-Issues-Seite](https://github.com/Andy-Code-Org/Andy-Code/issues) auf Issues.
+- Für Dokumentation besuche [Andy Code Docs](https://github.com/Andy-Code-Org/Andy-Code-Docs).
 
 ### Fehler melden
 
 - Überprüfe zuerst, ob bereits Berichte vorhanden sind.
-- Erstelle einen neuen Fehler mit der [Vorlage „Fehlerbericht“](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) mit:
+- Erstelle einen neuen Fehler mit der [Vorlage „Fehlerbericht“](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) mit:
     - Klaren, nummerierten Reproduktionsschritten
     - Erwartetes vs. tatsächliches Ergebnis
     - Andy Code-Version (erforderlich); API-Anbieter/Modell, falls relevant
-- **Sicherheitsprobleme**: Melde sie privat über [Sicherheitshinweise](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new).
+- **Sicherheitsprobleme**: Melde sie privat über [Sicherheitshinweise](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new).
 
 ## Entwicklungs- und Einreichungsprozess
 
@@ -99,7 +99,7 @@ Alle Beiträge beginnen mit einem GitHub-Issue unter Verwendung unserer schlanke
 1. **Fork & Klonen:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Abhängigkeiten installieren:**

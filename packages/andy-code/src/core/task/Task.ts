@@ -2245,7 +2245,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						// history cannot be misread as a successful completion of the interrupted
 						// tool calls (e.g. attempt_completion). The task list already records the
 						// task as interrupted; the API history must agree.
-						// See: https://github.com/Zoo-Code-Org/Zoo-Code/issues/1283
+						// See: https://github.com/Andy-Code-Org/Andy-Code/issues/1283
 						const toolResponses: Anthropic.ToolResultBlockParam[] = toolUseBlocks.map((block) => ({
 							type: "tool_result",
 							tool_use_id: block.id,
@@ -2282,7 +2282,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							const missingToolResponses: Anthropic.ToolResultBlockParam[] = toolUseBlocks
 								.filter((toolUse) => !existingToolResults.some((result) => result.tool_use_id === toolUse.id))
 								// is_error: true — same rationale as the assistant-last case above.
-								// See: https://github.com/Zoo-Code-Org/Zoo-Code/issues/1283
+								// See: https://github.com/Andy-Code-Org/Andy-Code/issues/1283
 								.map((toolUse) => ({
 									type: "tool_result",
 									tool_use_id: toolUse.id,

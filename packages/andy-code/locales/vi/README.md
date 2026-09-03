@@ -3,7 +3,7 @@
           <a href="https://x.com/AndyCodeDev"><img src="https://img.shields.io/badge/AndyCode-000000?style=flat&logo=x&logoColor=white" alt="X"></a>
           <a href="https://discord.gg/VxfP4Vx3gX"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Join Discord"></a>
           <a href="https://www.reddit.com/r/AndyCode/"><img src="https://img.shields.io/badge/Join%20r%2FAndyCode-FF4500?style=flat&logo=reddit&logoColor=white" alt="Join r/AndyCode"></a>
-          <a href="https://github.com/Zoo-Code-Org/Zoo-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
+          <a href="https://github.com/Andy-Code-Org/Andy-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
         </p>
         <p align="center">
           <em>Cần trợ giúp nhanh → <a href="https://discord.gg/VxfP4Vx3gX">Tham gia Discord</a> • Thích trao đổi không đồng bộ hơn? → <a href="https://www.reddit.com/r/AndyCode/">Tham gia r/AndyCode</a></em>
@@ -26,13 +26,13 @@
 > tôi trên
 > [Discord](https://discord.gg/VxfP4Vx3gX),
 > [Reddit](https://www.reddit.com/r/AndyCode), hoặc
-> [mở PR hay issue](https://github.com/Zoo-Code-Org/Zoo-Code).
+> [mở PR hay issue](https://github.com/Andy-Code-Org/Andy-Code).
 >
 > _-Andy Code Team_
 
 ## Chuyển từ Roo Code sang Andy Code
 
-Bạn có thể xem hướng dẫn nhanh để chuyển từ Roo Code sang Andy Code trong [hướng dẫn chuyển đổi Roo→Zoo](https://docs.ia.v2nethost.cl:3000/roo-to-zoo-migration). Chúng tôi muốn hỗ trợ người dùng nhiều nhất có thể trong quá trình chuyển đổi, và đó chính là lý do chúng tôi có [Reddit](https://www.reddit.com/r/AndyCode) và [Discord](https://discord.gg/VxfP4Vx3gX). Nếu bạn gặp vấn đề hoặc có câu hỏi, cứ vào hỏi nhé.
+Bạn có thể xem hướng dẫn nhanh để chuyển từ Roo Code sang Andy Code trong [hướng dẫn chuyển đổi Roo→Andy](https://docs.ia.v2nethost.cl:3000/roo-to-andy-migration). Chúng tôi muốn hỗ trợ người dùng nhiều nhất có thể trong quá trình chuyển đổi, và đó chính là lý do chúng tôi có [Reddit](https://www.reddit.com/r/AndyCode) và [Discord](https://discord.gg/VxfP4Vx3gX). Nếu bạn gặp vấn đề hoặc có câu hỏi, cứ vào hỏi nhé.
 
 ## Những gì Andy Code đã bổ sung kể từ Roo Code
 
@@ -80,8 +80,8 @@ Xem thêm: [Sử dụng Chế độ](https://docs.ia.v2nethost.cl:3000/basic-usa
 - **[Tài liệu](https://docs.ia.v2nethost.cl:3000):** Hướng dẫn chính thức để cài đặt, cấu hình và sử dụng thành thạo Andy Code.
 - **[Máy chủ Discord](https://discord.gg/VxfP4Vx3gX):** Tham gia cộng đồng để được trợ giúp và thảo luận trong thời gian thực.
 - **[Cộng đồng Reddit](https://www.reddit.com/r/AndyCode):** Chia sẻ kinh nghiệm của bạn và xem những người khác đang xây dựng gì.
-- **[Vấn đề trên GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues):** Báo cáo lỗi và theo dõi quá trình phát triển.
-- **[Yêu cầu tính năng](https://github.com/Zoo-Code-Org/Zoo-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** Có ý tưởng? Hãy chia sẻ với các nhà phát triển.
+- **[Vấn đề trên GitHub](https://github.com/Andy-Code-Org/Andy-Code/issues):** Báo cáo lỗi và theo dõi quá trình phát triển.
+- **[Yêu cầu tính năng](https://github.com/Andy-Code-Org/Andy-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** Có ý tưởng? Hãy chia sẻ với các nhà phát triển.
 
 ---
 
@@ -90,7 +90,7 @@ Xem thêm: [Sử dụng Chế độ](https://docs.ia.v2nethost.cl:3000/basic-usa
 1. **Sao chép** kho lưu trữ:
 
 ```sh
-git clone https://github.com/Zoo-Code-Org/Zoo-Code.git
+git clone https://github.com/Andy-Code-Org/Andy-Code.git
 ```
 
 2. **Cài đặt các dependency**:
@@ -171,4 +171,4 @@ Chúng tôi yêu thích những đóng góp của cộng đồng! Bắt đầu b
 
 ---
 
-**Hãy tận hưởng Andy Code!** Dù bạn giữ nó trong tầm kiểm soát hay để nó tự do hoạt động, chúng tôi rất nóng lòng muốn xem bạn sẽ xây dựng điều gì. Nếu bạn có câu hỏi hoặc ý tưởng tính năng, hãy mở một [issue](https://github.com/Zoo-Code-Org/Zoo-Code/issues) hoặc bắt đầu một [discussion](https://github.com/Zoo-Code-Org/Zoo-Code/discussions). Chúc bạn code vui vẻ!
+**Hãy tận hưởng Andy Code!** Dù bạn giữ nó trong tầm kiểm soát hay để nó tự do hoạt động, chúng tôi rất nóng lòng muốn xem bạn sẽ xây dựng điều gì. Nếu bạn có câu hỏi hoặc ý tưởng tính năng, hãy mở một [issue](https://github.com/Andy-Code-Org/Andy-Code/issues) hoặc bắt đầu một [discussion](https://github.com/Andy-Code-Org/Andy-Code/discussions). Chúc bạn code vui vẻ!

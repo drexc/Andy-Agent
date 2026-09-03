@@ -71,7 +71,7 @@ Andy Code — это проект, управляемый сообществом
 
 Все вклады начинаются с задачи на GitHub с использованием наших простых шаблонов.
 
-- **Проверьте существующие задачи**: выполните поиск в [задачах GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues).
+- **Проверьте существующие задачи**: выполните поиск в [задачах GitHub](https://github.com/Andy-Code-Org/Andy-Code/issues).
 - **Создайте задачу**, используя:
     - **Улучшения:** шаблон «Запрос на улучшение» (простой язык, ориентированный на пользу для пользователя).
     - **Ошибки:** шаблон «Отчет об ошибке» (минимальное воспроизведение + ожидаемый и фактический результат + версия).
@@ -80,17 +80,17 @@ Andy Code — это проект, управляемый сообществом
 
 ### Решение, над чем работать
 
-- Проверь [страницу GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues), чтобы найти issues.
-- Для документации посетите [Документацию Andy Code](https://github.com/Zoo-Code-Org/Zoo-Code-Docs).
+- Проверь [страницу GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues), чтобы найти issues.
+- Для документации посетите [Документацию Andy Code](https://github.com/Andy-Code-Org/Andy-Code-Docs).
 
 ### Сообщение об ошибках
 
 - Сначала проверьте существующие отчеты.
-- Создайте новую ошибку, используя [шаблон «Отчет об ошибке»](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) с:
+- Создайте новую ошибку, используя [шаблон «Отчет об ошибке»](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) с:
     - Четкими, пронумерованными шагами воспроизведения
     - Ожидаемым и фактическим результатом
     - Версией Andy Code (обязательно); поставщиком/моделью ИИ, если применимо
-- **Проблемы с безопасностью**: сообщайте в частном порядке через [рекомендации по безопасности](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new).
+- **Проблемы с безопасностью**: сообщайте в частном порядке через [рекомендации по безопасности](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new).
 
 ## Процесс разработки и подачи
 
@@ -99,7 +99,7 @@ Andy Code — это проект, управляемый сообществом
 1. **Сделайте форк и клонируйте:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Установите зависимости:**

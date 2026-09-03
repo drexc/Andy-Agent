@@ -15,7 +15,7 @@ const expectedModelIdKeys = [
 	"opencodeGoModelId",
 	"kenariModelId",
 	"nanoGptModelId",
-	"zooGatewayModelId",
+	"andyGatewayModelId",
 ] as const
 
 describe("modelIdKeys", () => {

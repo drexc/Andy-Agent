@@ -3,7 +3,7 @@
           <a href="https://x.com/AndyCodeDev"><img src="https://img.shields.io/badge/AndyCode-000000?style=flat&logo=x&logoColor=white" alt="X"></a>
           <a href="https://discord.gg/VxfP4Vx3gX"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Join Discord"></a>
           <a href="https://www.reddit.com/r/AndyCode/"><img src="https://img.shields.io/badge/Join%20r%2FAndyCode-FF4500?style=flat&logo=reddit&logoColor=white" alt="Join r/AndyCode"></a>
-          <a href="https://github.com/Zoo-Code-Org/Zoo-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
+          <a href="https://github.com/Andy-Code-Org/Andy-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
         </p>
         <p align="center">
           <em>Butuh bantuan cepat → <a href="https://discord.gg/VxfP4Vx3gX">Gabung ke Discord</a> • Lebih suka async? → <a href="https://www.reddit.com/r/AndyCode/">Gabung ke r/AndyCode</a></em>
@@ -26,13 +26,13 @@
 > ini begitu istimewa. Gabung bersama kami di
 > [Discord](https://discord.gg/VxfP4Vx3gX),
 > [Reddit](https://www.reddit.com/r/AndyCode), atau
-> [buka PR atau issue](https://github.com/Zoo-Code-Org/Zoo-Code).
+> [buka PR atau issue](https://github.com/Andy-Code-Org/Andy-Code).
 >
 > _-Andy Code Team_
 
 ## Migrasi dari Roo Code ke Andy Code
 
-Kamu bisa menemukan panduan singkat untuk berpindah dari Roo Code ke Andy Code di [panduan migrasi Roo→Zoo](https://docs.ia.v2nethost.cl:3000/roo-to-zoo-migration). Kami ingin membantu pengguna semaksimal mungkin selama masa transisi, dan itulah gunanya [Reddit](https://www.reddit.com/r/AndyCode) dan [Discord](https://discord.gg/VxfP4Vx3gX) kami. Kalau kamu mengalami masalah atau punya pertanyaan, langsung mampir dan tanya.
+Kamu bisa menemukan panduan singkat untuk berpindah dari Roo Code ke Andy Code di [panduan migrasi Roo→Andy](https://docs.ia.v2nethost.cl:3000/roo-to-andy-migration). Kami ingin membantu pengguna semaksimal mungkin selama masa transisi, dan itulah gunanya [Reddit](https://www.reddit.com/r/AndyCode) dan [Discord](https://discord.gg/VxfP4Vx3gX) kami. Kalau kamu mengalami masalah atau punya pertanyaan, langsung mampir dan tanya.
 
 ## Yang Ditambahkan Andy Code Sejak Roo Code
 
@@ -80,8 +80,8 @@ Pelajari lebih lanjut: [Menggunakan Mode](https://docs.ia.v2nethost.cl:3000/basi
 - **[Dokumentasi](https://docs.ia.v2nethost.cl:3000):** Panduan resmi untuk menginstal, mengonfigurasi, dan menguasai Andy Code.
 - **[Server Discord](https://discord.gg/VxfP4Vx3gX):** Bergabunglah dengan komunitas untuk bantuan dan diskusi real-time.
 - **[Komunitas Reddit](https://www.reddit.com/r/AndyCode):** Bagikan pengalaman Anda dan lihat apa yang sedang dibangun orang lain.
-- **[Masalah GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues):** Laporkan bug dan lacak pengembangan.
-- **[Permintaan Fitur](https://github.com/Zoo-Code-Org/Zoo-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** Punya ide? Bagikan dengan para pengembang.
+- **[Masalah GitHub](https://github.com/Andy-Code-Org/Andy-Code/issues):** Laporkan bug dan lacak pengembangan.
+- **[Permintaan Fitur](https://github.com/Andy-Code-Org/Andy-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** Punya ide? Bagikan dengan para pengembang.
 
 ---
 
@@ -90,7 +90,7 @@ Pelajari lebih lanjut: [Menggunakan Mode](https://docs.ia.v2nethost.cl:3000/basi
 1. **Clone** repo:
 
 ```sh
-git clone https://github.com/Zoo-Code-Org/Zoo-Code.git
+git clone https://github.com/Andy-Code-Org/Andy-Code.git
 ```
 
 2. **Instal dependensi**:
@@ -171,4 +171,4 @@ Kami menyukai kontribusi komunitas! Mulailah dengan membaca [CONTRIBUTING.md](CO
 
 ---
 
-**Nikmati Andy Code!** Baik kamu menjaganya tetap dekat atau membiarkannya berkeliaran secara otonom, kami tidak sabar melihat apa yang kamu bangun. Jika kamu punya pertanyaan atau ide fitur, buka sebuah [issue](https://github.com/Zoo-Code-Org/Zoo-Code/issues) atau mulai sebuah [discussion](https://github.com/Zoo-Code-Org/Zoo-Code/discussions). Selamat ngoding!
+**Nikmati Andy Code!** Baik kamu menjaganya tetap dekat atau membiarkannya berkeliaran secara otonom, kami tidak sabar melihat apa yang kamu bangun. Jika kamu punya pertanyaan atau ide fitur, buka sebuah [issue](https://github.com/Andy-Code-Org/Andy-Code/issues) atau mulai sebuah [discussion](https://github.com/Andy-Code-Org/Andy-Code/discussions). Selamat ngoding!

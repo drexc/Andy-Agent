@@ -2,10 +2,10 @@ import * as vscode from "vscode";
 
 import { t } from "../i18n";
 
-const ZOO_CODE_TOKEN_KEY = "andy-code-session-token";
-const ZOO_CODE_USER_NAME_KEY = "andy-code-user-name";
-const ZOO_CODE_USER_EMAIL_KEY = "andy-code-user-email";
-const ZOO_CODE_USER_IMAGE_KEY = "andy-code-user-image";
+const ANDY_CODE_TOKEN_KEY = "andy-code-session-token";
+const ANDY_CODE_USER_NAME_KEY = "andy-code-user-name";
+const ANDY_CODE_USER_EMAIL_KEY = "andy-code-user-email";
+const ANDY_CODE_USER_IMAGE_KEY = "andy-code-user-image";
 
 let secretStorage: vscode.SecretStorage | undefined;
 
@@ -25,11 +25,11 @@ export async function initAndyCodeAuth(context: vscode.ExtensionContext): Promis
 	secretStorage = context.secrets;
 
 	// Pre-load the token and user info into memory on init so AndyCodeHandler can access them synchronously
-	_cachedToken = await secretStorage.get(ZOO_CODE_TOKEN_KEY);
+	_cachedToken = await secretStorage.get(ANDY_CODE_TOKEN_KEY);
 	_sessionCleared = false;
-	_cachedUserName = await secretStorage.get(ZOO_CODE_USER_NAME_KEY);
-	_cachedUserEmail = await secretStorage.get(ZOO_CODE_USER_EMAIL_KEY);
-	_cachedUserImage = await secretStorage.get(ZOO_CODE_USER_IMAGE_KEY);
+	_cachedUserName = await secretStorage.get(ANDY_CODE_USER_NAME_KEY);
+	_cachedUserEmail = await secretStorage.get(ANDY_CODE_USER_EMAIL_KEY);
+	_cachedUserImage = await secretStorage.get(ANDY_CODE_USER_IMAGE_KEY);
 
 	// Validate persisted auth state on init before reporting the user as connected.
 	// Network errors / 5xx ("unreachable") leave the cached session in place so a
@@ -43,28 +43,30 @@ export async function initAndyCodeAuth(context: vscode.ExtensionContext): Promis
 	}
 
 	// Watch for secret changes and update cache
-	context.secrets.onDidChange((e) => {
-		if (e.key === ZOO_CODE_TOKEN_KEY) {
-			secretStorage?.get(ZOO_CODE_TOKEN_KEY).then((token) => {
-				_cachedToken = token;
-			});
-		}
-		if (e.key === ZOO_CODE_USER_NAME_KEY) {
-			secretStorage?.get(ZOO_CODE_USER_NAME_KEY).then((name) => {
-				_cachedUserName = name;
-			});
-		}
-		if (e.key === ZOO_CODE_USER_EMAIL_KEY) {
-			secretStorage?.get(ZOO_CODE_USER_EMAIL_KEY).then((email) => {
-				_cachedUserEmail = email;
-			});
-		}
-		if (e.key === ZOO_CODE_USER_IMAGE_KEY) {
-			secretStorage?.get(ZOO_CODE_USER_IMAGE_KEY).then((image) => {
-				_cachedUserImage = image;
-			});
-		}
-	});
+	context.subscriptions.push(
+		context.secrets.onDidChange((e) => {
+			if (e.key === ANDY_CODE_TOKEN_KEY) {
+				secretStorage?.get(ANDY_CODE_TOKEN_KEY).then((token) => {
+					_cachedToken = token;
+				});
+			}
+			if (e.key === ANDY_CODE_USER_NAME_KEY) {
+				secretStorage?.get(ANDY_CODE_USER_NAME_KEY).then((name) => {
+					_cachedUserName = name;
+				});
+			}
+			if (e.key === ANDY_CODE_USER_EMAIL_KEY) {
+				secretStorage?.get(ANDY_CODE_USER_EMAIL_KEY).then((email) => {
+					_cachedUserEmail = email;
+				});
+			}
+			if (e.key === ANDY_CODE_USER_IMAGE_KEY) {
+				secretStorage?.get(ANDY_CODE_USER_IMAGE_KEY).then((image) => {
+					_cachedUserImage = image;
+				});
+			}
+		}),
+	);
 }
 
 // Synchronous getter for use in AndyCodeHandler (called in hot path during API requests)
@@ -77,7 +79,7 @@ export function getCachedAndyCodeToken(): string {
  * Secret-storage cache wins over profile-persisted tokens; after an explicit sign-out
  * or 401 clear, profile tokens are ignored so stale credentials cannot be reused.
  */
-export function resolveZooGatewaySessionToken(profileToken?: string): string | undefined {
+export function resolveAndyGatewaySessionToken(profileToken?: string): string | undefined {
 	if (_cachedToken) {
 		return _cachedToken;
 	}
@@ -97,12 +99,12 @@ export function getCachedAndyCodeUserInfo(): { name?: string; email?: string; im
 
 export async function getAndyCodeToken(): Promise<string | undefined> {
 	if (!secretStorage) return undefined;
-	return secretStorage.get(ZOO_CODE_TOKEN_KEY);
+	return secretStorage.get(ANDY_CODE_TOKEN_KEY);
 }
 
 export async function setAndyCodeToken(token: string): Promise<void> {
 	if (!secretStorage) return;
-	await secretStorage.store(ZOO_CODE_TOKEN_KEY, token);
+	await secretStorage.store(ANDY_CODE_TOKEN_KEY, token);
 	_cachedToken = token;
 	_sessionCleared = false;
 }
@@ -115,35 +117,35 @@ export async function setAndyCodeUserInfo(info: {
 	if (!secretStorage) return;
 
 	if (info.name) {
-		await secretStorage.store(ZOO_CODE_USER_NAME_KEY, info.name);
+		await secretStorage.store(ANDY_CODE_USER_NAME_KEY, info.name);
 		_cachedUserName = info.name;
 	} else if (info.name === null) {
-		await secretStorage.delete(ZOO_CODE_USER_NAME_KEY);
+		await secretStorage.delete(ANDY_CODE_USER_NAME_KEY);
 		_cachedUserName = undefined;
 	}
 
 	if (info.email) {
-		await secretStorage.store(ZOO_CODE_USER_EMAIL_KEY, info.email);
+		await secretStorage.store(ANDY_CODE_USER_EMAIL_KEY, info.email);
 		_cachedUserEmail = info.email;
 	} else if (info.email === null) {
-		await secretStorage.delete(ZOO_CODE_USER_EMAIL_KEY);
+		await secretStorage.delete(ANDY_CODE_USER_EMAIL_KEY);
 		_cachedUserEmail = undefined;
 	}
 
 	if (info.image) {
-		await secretStorage.store(ZOO_CODE_USER_IMAGE_KEY, info.image);
+		await secretStorage.store(ANDY_CODE_USER_IMAGE_KEY, info.image);
 		_cachedUserImage = info.image;
 	} else if (info.image === null) {
-		await secretStorage.delete(ZOO_CODE_USER_IMAGE_KEY);
+		await secretStorage.delete(ANDY_CODE_USER_IMAGE_KEY);
 		_cachedUserImage = undefined;
 	}
 }
 
 export async function clearAndyCodeUserInfo(): Promise<void> {
 	if (!secretStorage) return;
-	await secretStorage.delete(ZOO_CODE_USER_NAME_KEY);
-	await secretStorage.delete(ZOO_CODE_USER_EMAIL_KEY);
-	await secretStorage.delete(ZOO_CODE_USER_IMAGE_KEY);
+	await secretStorage.delete(ANDY_CODE_USER_NAME_KEY);
+	await secretStorage.delete(ANDY_CODE_USER_EMAIL_KEY);
+	await secretStorage.delete(ANDY_CODE_USER_IMAGE_KEY);
 	_cachedUserName = undefined;
 	_cachedUserEmail = undefined;
 	_cachedUserImage = undefined;
@@ -151,18 +153,18 @@ export async function clearAndyCodeUserInfo(): Promise<void> {
 
 export async function clearAndyCodeToken(): Promise<void> {
 	if (!secretStorage) return;
-	await secretStorage.delete(ZOO_CODE_TOKEN_KEY);
+	await secretStorage.delete(ANDY_CODE_TOKEN_KEY);
 	_cachedToken = undefined;
 	_sessionCleared = true;
 }
 
 export function getAndyCodeBaseUrl(): string {
-	return process.env.ZOO_CODE_BASE_URL || "https://www.ia.v2nethost.cl:3000";
+	return process.env.ANDY_CODE_BASE_URL || "https://ia.v2nethost.cl:3000";
 }
 
 export async function handleAuthCallback(token: string): Promise<boolean> {
-	if (!token || !token.startsWith("zoo_ext_")) {
-		vscode.window.showErrorMessage(t("common:zooAuth.errors.invalid_token_received"));
+	if (!token || (!token.startsWith("andy_ext_") && !token.startsWith("zoo_ext_"))) {
+		vscode.window.showErrorMessage(t("common:andyAuth.errors.invalid_token_received"));
 		return false;
 	}
 
@@ -177,25 +179,25 @@ export async function handleAuthCallback(token: string): Promise<boolean> {
 			// Treat 5xx as a transient backend issue (e.g. DB unreachable) so the
 			// user can retry sign-in instead of being told the token is bad.
 			if (response.status >= 500) {
-				vscode.window.showErrorMessage(t("common:zooAuth.errors.could_not_verify_token"));
+				vscode.window.showErrorMessage(t("common:andyAuth.errors.could_not_verify_token"));
 			} else {
-				vscode.window.showErrorMessage(t("common:zooAuth.errors.token_verification_failed"));
+				vscode.window.showErrorMessage(t("common:andyAuth.errors.token_verification_failed"));
 			}
 			return false;
 		}
 		const data = (await response.json()) as { valid?: boolean };
 		if (!data.valid) {
-			vscode.window.showErrorMessage(t("common:zooAuth.errors.invalid_token"));
+			vscode.window.showErrorMessage(t("common:andyAuth.errors.invalid_token"));
 			return false;
 		}
 	} catch {
-		vscode.window.showErrorMessage(t("common:zooAuth.errors.could_not_verify_token"));
+		vscode.window.showErrorMessage(t("common:andyAuth.errors.could_not_verify_token"));
 		return false;
 	}
 
 	await setAndyCodeToken(token);
 
-	vscode.window.showInformationMessage(t("common:zooAuth.info.connected"));
+	vscode.window.showInformationMessage(t("common:andyAuth.info.connected"));
 	return true;
 }
 
@@ -260,5 +262,5 @@ export async function disconnectAndyCode(): Promise<void> {
 	}
 	await clearAndyCodeToken();
 	await clearAndyCodeUserInfo();
-	vscode.window.showInformationMessage(t("common:zooAuth.info.disconnected"));
+	vscode.window.showInformationMessage(t("common:andyAuth.info.disconnected"));
 }

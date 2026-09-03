@@ -71,7 +71,7 @@ Hãy đề cập đến sự phù hợp với các lĩnh vực này trong PR c�
 
 Tất cả các đóng góp đều bắt đầu bằng một Vấn đề trên GitHub bằng cách sử dụng các mẫu gọn nhẹ của chúng tôi.
 
-- **Kiểm tra các vấn đề hiện có**: Tìm kiếm trong [Vấn đề trên GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues).
+- **Kiểm tra các vấn đề hiện có**: Tìm kiếm trong [Vấn đề trên GitHub](https://github.com/Andy-Code-Org/Andy-Code/issues).
 - **Tạo một vấn đề** bằng cách sử dụng:
     - **Cải tiến:** mẫu "Yêu cầu cải tiến" (ngôn ngữ đơn giản tập trung vào lợi ích của người dùng).
     - **Lỗi:** mẫu "Báo cáo lỗi" (tái tạo tối thiểu + mong đợi so với thực tế + phiên bản).
@@ -80,17 +80,17 @@ Tất cả các đóng góp đều bắt đầu bằng một Vấn đề trên G
 
 ### Quyết định nên làm gì
 
-- Hãy xem [trang GitHub Issues](https://github.com/Zoo-Code-Org/Zoo-Code/issues) để tìm issues.
-- Để biết tài liệu, hãy truy cập [Tài liệu Andy Code](https://github.com/Zoo-Code-Org/Zoo-Code-Docs).
+- Hãy xem [trang GitHub Issues](https://github.com/Andy-Code-Org/Andy-Code/issues) để tìm issues.
+- Để biết tài liệu, hãy truy cập [Tài liệu Andy Code](https://github.com/Andy-Code-Org/Andy-Code-Docs).
 
 ### Báo cáo lỗi
 
 - Trước tiên hãy kiểm tra các báo cáo hiện có.
-- Tạo một lỗi mới bằng cách sử dụng [mẫu "Báo cáo lỗi"](https://github.com/Zoo-Code-Org/Zoo-Code/issues/new/choose) với:
+- Tạo một lỗi mới bằng cách sử dụng [mẫu "Báo cáo lỗi"](https://github.com/Andy-Code-Org/Andy-Code/issues/new/choose) với:
     - Các bước tái tạo rõ ràng, được đánh số
     - Kết quả mong đợi so với thực tế
     - Phiên bản Andy Code (bắt buộc); nhà cung cấp/mô hình API nếu có liên quan
-- **Vấn đề bảo mật**: Báo cáo riêng tư qua [tư vấn bảo mật](https://github.com/Zoo-Code-Org/Zoo-Code/security/advisories/new).
+- **Vấn đề bảo mật**: Báo cáo riêng tư qua [tư vấn bảo mật](https://github.com/Andy-Code-Org/Andy-Code/security/advisories/new).
 
 ## Quy trình phát triển và gửi
 
@@ -99,7 +99,7 @@ Tất cả các đóng góp đều bắt đầu bằng một Vấn đề trên G
 1. **Rẽ nhánh & Sao chép:**
 
 ```
-git clone https://github.com/YOUR_USERNAME/Zoo-Code.git
+git clone https://github.com/YOUR_USERNAME/Andy-Code.git
 ```
 
 2. **Cài đặt các phụ thuộc:**

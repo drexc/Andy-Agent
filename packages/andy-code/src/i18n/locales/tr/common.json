@@ -210,7 +210,7 @@
 		"enter_valid_path": "Lütfen geçerli bir yol girin"
 	},
 	"input": {
-		"task_prompt": "Zoo ne yapsın?",
+		"task_prompt": "Andy ne yapsın?",
 		"task_placeholder": "Görevini buraya yaz"
 	},
 	"settings": {
@@ -270,7 +270,7 @@
 		"label": "Docs",
 		"url": "https://docs.ia.v2nethost.cl:3000"
 	},
-	"zooAuth": {
+	"andyAuth": {
 		"errors": {
 			"invalid_token_received": "Andy Code: Geçersiz kimlik doğrulama token'ı alındı.",
 			"token_verification_failed": "Andy Code: Token doğrulaması başarısız oldu.",

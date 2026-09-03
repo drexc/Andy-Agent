@@ -34,4 +34,4 @@ export { VertexHandler } from "./vertex";
 export { VsCodeLmHandler } from "./vscode-lm";
 export { XAIHandler } from "./xai";
 export { ZAiHandler } from "./zai";
-export { ZooGatewayHandler } from "./zoo-gateway";
+export { AndyGatewayHandler } from "./andy-gateway";
