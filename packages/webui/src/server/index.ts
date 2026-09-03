@@ -3695,6 +3695,7 @@ ${prompt || ""}`;
 
 		const returnedModel = body?.model || (targetAgentId ? `agent:${targetAgentId}` : `squad:${squadId}`);
 		let accumulatedFullText = "";
+		const toolCallsEmitted: any[] = [];
 
 		if (isStream) {
 			res.writeHead(200, {
@@ -3732,7 +3733,63 @@ ${prompt || ""}`;
 						} else if (event.type === "tool_result") {
 							if (event.tool === "write") {
 								const fileContent = (event as any).content || (event as any).input?.content || "";
-								contentToSend = `> ✓ **Archivo actualizado**: \`${event.target || "archivo"}\` (${event.output || "OK"})\n\n<write_to_file>\n<path>${event.target}</path>\n<content>\n${fileContent}\n</content>\n</write_to_file>\n\n`;
+								let cleanRelPath = event.target || "file";
+								if (ideProject?.path && cleanRelPath.startsWith(ideProject.path)) {
+									cleanRelPath = path.relative(ideProject.path, cleanRelPath);
+								}
+								cleanRelPath = cleanRelPath.replace(/^[/\\]+/, "").replace(/\\/g, "/");
+								if (ideProject?.name) {
+									const idx = cleanRelPath.indexOf(`${ideProject.name}/`);
+									if (idx !== -1) {
+										cleanRelPath = cleanRelPath.slice(idx + ideProject.name.length + 1);
+									}
+								}
+
+								const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+								const argsJson = JSON.stringify({
+									path: cleanRelPath,
+									content: fileContent,
+								});
+
+								toolCallsEmitted.push({
+									id: toolCallId,
+									type: "function",
+									function: {
+										name: "write_to_file",
+										arguments: argsJson,
+									},
+								});
+
+								// Emit tool call chunk for KiloCode / Cline / VS Code native tool execution
+								res.write(
+									`data: ${JSON.stringify({
+										id: reqId,
+										object: "chat.completion.chunk",
+										created: Math.floor(Date.now() / 1000),
+										model: returnedModel,
+										choices: [
+											{
+												index: 0,
+												delta: {
+													tool_calls: [
+														{
+															index: toolCallsEmitted.length - 1,
+															id: toolCallId,
+															type: "function",
+															function: {
+																name: "write_to_file",
+																arguments: argsJson,
+															},
+														},
+													],
+												},
+												finish_reason: null,
+											},
+										],
+									})}\n\n`,
+								);
+
+								contentToSend = `> ✓ **Archivo preparado para tu equipo local**: \`${cleanRelPath}\` (${event.output || "OK"})\n\n<write_to_file>\n<path>${cleanRelPath}</path>\n<content>\n${fileContent}\n</content>\n</write_to_file>\n\n`;
 							} else {
 								contentToSend = `\n\`\`\`bash\n# ${event.target || "comando"} (Exit code: ${event.exitCode ?? 0})\n${event.output || ""}\n\`\`\`\n\n`;
 							}
@@ -3777,13 +3834,14 @@ ${prompt || ""}`;
 				};
 
 				if (!res.writableEnded) {
+					const streamFinishReason = toolCallsEmitted.length > 0 ? "tool_calls" : "stop";
 					res.write(
 						`data: ${JSON.stringify({
 							id: reqId,
 							object: "chat.completion.chunk",
 							created: Math.floor(Date.now() / 1000),
 							model: returnedModel,
-							choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+							choices: [{ index: 0, delta: {}, finish_reason: streamFinishReason }],
 							usage: usagePayload,
 						})}\n\n`,
 					);
@@ -3849,9 +3907,29 @@ ${prompt || ""}`;
 						} else if (event.type === "tool_result") {
 							if (event.tool === "write") {
 								const fileContent = (event as any).content || (event as any).input?.content || "";
-								accumulatedFullText += `> ✓ **Archivo actualizado**: \`${event.target}\` (${event.output || "OK"})\n\n<write_to_file>\n<path>${event.target}</path>\n<content>\n${fileContent}\n</content>\n</write_to_file>\n\n`;
+								let cleanRelPath = event.target || "file";
+								if (ideProject?.path && cleanRelPath.startsWith(ideProject.path)) {
+									cleanRelPath = path.relative(ideProject.path, cleanRelPath);
+								}
+								cleanRelPath = cleanRelPath.replace(/^[/\\]+/, "").replace(/\\/g, "/");
+								if (ideProject?.name) {
+									const idx = cleanRelPath.indexOf(`${ideProject.name}/`);
+									if (idx !== -1) {
+										cleanRelPath = cleanRelPath.slice(idx + ideProject.name.length + 1);
+									}
+								}
+								const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+								toolCallsEmitted.push({
+									id: toolCallId,
+									type: "function",
+									function: {
+										name: "write_to_file",
+										arguments: JSON.stringify({ path: cleanRelPath, content: fileContent }),
+									},
+								});
+								accumulatedFullText += `> ✓ **Archivo preparado para tu equipo local**: \`${cleanRelPath}\` (${event.output || "OK"})\n\n<write_to_file>\n<path>${cleanRelPath}</path>\n<content>\n${fileContent}\n</content>\n</write_to_file>\n\n`;
 							} else {
-								accumulatedFullText += `\n\`\`\`bash\n# ${event.target} (Exit code: ${event.exitCode ?? 0})\n${event.output || ""}\n\`\`\`\n\n`;
+								accumulatedFullText += `\n\`\`\`bash\n# ${event.target || "comando"} (Exit code: ${event.exitCode ?? 0})\n${event.output || ""}\n\`\`\`\n\n`;
 							}
 						} else if (event.type === "agent_finish") {
 							accumulatedFullText += "\n";
@@ -3883,6 +3961,15 @@ ${prompt || ""}`;
 				completion_tokens_details: { reasoning_tokens: 0 },
 			};
 
+			const nonStreamFinishReason = toolCallsEmitted.length > 0 ? "tool_calls" : "stop";
+			const choiceMsg: any = {
+				role: "assistant",
+				content: accumulatedFullText.trim(),
+			};
+			if (toolCallsEmitted.length > 0) {
+				choiceMsg.tool_calls = toolCallsEmitted;
+			}
+
 			res.writeHead(200, { "Content-Type": "application/json" });
 			res.end(
 				JSON.stringify(
@@ -3894,11 +3981,8 @@ ${prompt || ""}`;
 						choices: [
 							{
 								index: 0,
-								message: {
-									role: "assistant",
-									content: accumulatedFullText.trim(),
-								},
-								finish_reason: "stop",
+								message: choiceMsg,
+								finish_reason: nonStreamFinishReason,
 							},
 						],
 						usage: usagePayload,
