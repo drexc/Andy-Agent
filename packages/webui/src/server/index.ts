@@ -2813,22 +2813,42 @@ ${prompt || ""}`;
 		}
 	}
 
-	private isRepetitionLoop(text: string): boolean {
-		if (!text || text.length < 100) return false;
-		const tail = text.slice(-600);
-		for (let len = 12; len <= 120; len++) {
-			const chunk = tail.slice(-len);
-			let count = 0;
-			let pos = tail.length - len;
-			while (pos >= 0 && tail.slice(pos, pos + len) === chunk) {
-				count++;
-				pos -= len;
-				if (count >= 4) return true;
+	private detectRepetitionLoop(
+		text: string,
+		maxCheckLength = 400,
+	): { isLooping: boolean; pattern?: string; repetitions?: number } {
+		if (!text || text.length < 20) return { isLooping: false };
+		const tail = text.slice(-maxCheckLength);
+
+		// Check pattern lengths from 2 to 60 characters
+		for (let len = 2; len <= 60; len++) {
+			if (tail.length < len * 4) continue;
+			const pattern = tail.slice(-len);
+			const expectedRepetitions = 4;
+			const fullPattern = pattern.repeat(expectedRepetitions);
+			if (tail.endsWith(fullPattern)) {
+				return { isLooping: true, pattern, repetitions: expectedRepetitions };
 			}
 		}
-		// Also detect repeated <unk> tokens
-		if (/<unk>(?:\s*<unk>){3,}/.test(tail)) return true;
-		return false;
+
+		if (/<unk>(?:\s*<unk>){3,}/.test(tail)) {
+			return { isLooping: true, pattern: "<unk>", repetitions: 3 };
+		}
+
+		return { isLooping: false };
+	}
+
+	private isRepetitionLoop(text: string): boolean {
+		return this.detectRepetitionLoop(text).isLooping;
+	}
+
+	private stripRepetitionLoop(text: string, pattern?: string): string {
+		if (!text || !pattern) return text;
+		let trimmed = text;
+		while (trimmed.endsWith(pattern)) {
+			trimmed = trimmed.slice(0, -pattern.length);
+		}
+		return trimmed.trimEnd();
 	}
 
 	private sanitizeAssistantText(text: string): string {
@@ -3671,6 +3691,18 @@ ${prompt || ""}`;
 						if (event.type === "text_delta" && event.delta) {
 							hasYielded = true;
 							agentResponseText += event.delta;
+
+							// Repetition Circuit Breaker
+							const loopCheck = self.detectRepetitionLoop(agentResponseText);
+							if (loopCheck.isLooping && loopCheck.pattern) {
+								self.addLog(
+									"WARN",
+									"Pantheon Bridge",
+									`[LLM Caller Circuit Breaker] Repetition loop detected ("${loopCheck.pattern}"). Terminating stream.`,
+								);
+								break;
+							}
+
 							yield event.delta;
 						} else if (event.type === "done") {
 							if (event.message?.usage) {
@@ -3759,10 +3791,10 @@ ${prompt || ""}`;
 			);
 
 			try {
-				await pantheonOrchestrator.executeTurn(
+				await (pantheonOrchestrator as any).executeTurn(
 					squadId,
 					prompt,
-					(event) => {
+					(event: any) => {
 						if (isAborted || res.writableEnded) return;
 
 						let contentToSend = "";
@@ -3881,7 +3913,7 @@ ${prompt || ""}`;
 								})}\n\n`,
 							);
 							contentToSend = "";
-						} else if (event.type === "user_question") {
+						} else if ((event as any).type === "user_question") {
 							const uq = event as any;
 							const qText = uq.question || "Acción necesaria por usuario";
 							const optionsArr = (uq.options || []).map((o: any) => ({
@@ -3938,6 +3970,17 @@ ${prompt || ""}`;
 						}
 
 						if (contentToSend) {
+							// Circuit breaker for multi-agent bridge stream
+							const loopCheck = self.detectRepetitionLoop(accumulatedFullText + contentToSend);
+							if (loopCheck.isLooping) {
+								self.addLog(
+									"WARN",
+									"Pantheon Bridge",
+									`Repetition loop detected ("${loopCheck.pattern}"). Suppressing duplicate delta.`,
+								);
+								return;
+							}
+
 							accumulatedFullText += contentToSend;
 							res.write(
 								`data: ${JSON.stringify({
@@ -3960,7 +4003,7 @@ ${prompt || ""}`;
 
 				// Fallback safety check: If no tool call was emitted yet, check if text asked for user action
 				if (toolCallsEmitted.length === 0) {
-					const detectedQ = pantheonOrchestrator.detectUserActionRequired(accumulatedFullText);
+					const detectedQ = (pantheonOrchestrator as any).detectUserActionRequired(accumulatedFullText);
 					if (detectedQ) {
 						const toolCallId = `call_${randomUUID().slice(0, 9)}`;
 						const argsJson = JSON.stringify({

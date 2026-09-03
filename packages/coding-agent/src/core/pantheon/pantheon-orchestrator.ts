@@ -129,6 +129,35 @@ export class PantheonOrchestrator {
 		return patterns.some((p) => p.test(lower));
 	}
 
+	public detectRepetitionLoop(
+		text: string,
+		maxCheckLength = 300,
+	): { isLooping: boolean; pattern?: string; repetitions?: number } {
+		if (!text || text.length < 20) return { isLooping: false };
+		const tail = text.slice(-maxCheckLength);
+
+		// Check pattern lengths from 2 to 30 characters
+		for (let len = 2; len <= 30; len++) {
+			if (tail.length < len * 4) continue;
+			const pattern = tail.slice(-len);
+			const expectedRepetitions = 4;
+			const fullPattern = pattern.repeat(expectedRepetitions);
+			if (tail.endsWith(fullPattern)) {
+				return { isLooping: true, pattern, repetitions: expectedRepetitions };
+			}
+		}
+		return { isLooping: false };
+	}
+
+	public stripRepetitionLoop(text: string, pattern?: string): string {
+		if (!text || !pattern) return text;
+		let trimmed = text;
+		while (trimmed.endsWith(pattern)) {
+			trimmed = trimmed.slice(0, -pattern.length);
+		}
+		return trimmed.trimEnd();
+	}
+
 	public getRoomState(squadId: string): PantheonRoomState {
 		let state = this.roomStates.get(squadId);
 		if (!state) {
@@ -372,6 +401,16 @@ export class PantheonOrchestrator {
 						for await (const chunk of responseStream) {
 							fullResponseText += chunk;
 							streamBuffer += chunk;
+
+							// Circuit breaker: detect degenerate LLM repetition loops (e.g. -🚀-🚀-🚀...)
+							const loopCheck = this.detectRepetitionLoop(fullResponseText);
+							if (loopCheck.isLooping && loopCheck.pattern) {
+								console.warn(
+									`[Pantheon Circuit Breaker] Repetition loop detected for @${currentAgent.name} (pattern: "${loopCheck.pattern}"). Breaking generation.`,
+								);
+								fullResponseText = this.stripRepetitionLoop(fullResponseText, loopCheck.pattern);
+								break;
+							}
 
 							if (!hasProcessedHeader) {
 								const trimmed = streamBuffer.trimStart();
@@ -1437,7 +1476,8 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 1. Audita el código que acaba de escribir @Developer.
 2. Si creas tests unitarios, escríbelos en disco usando \`\`\`csharp // Archivo: Tests/Form1Tests.cs ... \`\`\`
 3. Si deseas compilar o probar, ejecuta comandos de terminal usando \`\`\`bash\ndotnet test\n\`\`\` o \`\`\`bash\ndotnet build\n\`\`\`.
-4. NO repitas el diseño del arquitecto ni el código del desarrollador.`
+4. NO repitas el diseño del arquitecto ni el código del desarrollador.
+5. Si delegas al especialista de despliegue, di simplemente "@DevOps: Por favor sincroniza los cambios con el repositorio Git". PROHIBICIÓN TERMINANTE: NO generes viñetas vacías repetitivas ni bucles de emojis.`
 				: "";
 
 		const devopsMandate = agent.id.includes("devops")
