@@ -1,0 +1,20 @@
+{
+	"landing": {
+		"greeting": "Witaj w Andy Code!",
+		"introduction": "Dzięki szerokiej gamie wbudowanych i rozszerzalnych Trybów, Andy Code pozwala planować, projektować architekturę, kodować, debugować i zwiększać produktywność jak nigdy dotąd.",
+		"getStarted": "Wybierz swojego dostawcę"
+	},
+	"providerSignup": {
+		"heading": "Wybierz swojego dostawcę",
+		"chooseProvider": "Andy Code potrzebuje dostawcy LLM, aby działać. Wybierz jeden, aby zacząć, możesz dodać więcej później.",
+		"goBack": "Wróć",
+		"finish": "Zakończ"
+	},
+	"telemetry": {
+		"helpImprove": "Pomóż ulepszyć Andy Code",
+		"helpImproveMessage": "Andy Code zbiera dane o błędach i użytkowaniu, powiązane z identyfikatorem instalacji, aby pomóc nam naprawiać błędy i ulepszać rozszerzenie. Ta telemetria nie zbiera Twojego kodu ani podpowiedzi. Możesz ją wyłączyć w <settingsLink>ustawieniach</settingsLink>.",
+		"accept": "Akceptuj",
+		"decline": "Odrzuć"
+	},
+	"importSettings": "Importuj ustawienia"
+}

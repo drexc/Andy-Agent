@@ -1,0 +1,20 @@
+{
+	"landing": {
+		"greeting": "Welkom bij Andy Code!",
+		"introduction": "Met een reeks ingebouwde en uitbreidbare Modi laat Andy Code je plannen, ontwerpen, coderen, debuggen en je productiviteit verhogen als nooit tevoren.",
+		"getStarted": "Kies je provider"
+	},
+	"providerSignup": {
+		"heading": "Kies je provider",
+		"chooseProvider": "Andy Code heeft een LLM-provider nodig om te werken. Kies er een om te beginnen, je kunt er later meer toevoegen.",
+		"goBack": "Terug",
+		"finish": "Klaar"
+	},
+	"telemetry": {
+		"helpImprove": "Help Andy Code te verbeteren",
+		"helpImproveMessage": "Andy Code verzamelt fout- en gebruiksgegevens, gekoppeld aan een installatie-identifier, om ons te helpen bugs op te lossen en de extensie te verbeteren. Deze telemetrie verzamelt niet je code of prompts. Je kunt dit in <settingsLink>instellingen</settingsLink> uitschakelen.",
+		"accept": "Accepteren",
+		"decline": "Weigeren"
+	},
+	"importSettings": "Instellingen importeren"
+}

@@ -1,0 +1,1124 @@
+// cd src && npx vitest run core/task/__tests__/Task.persistence.spec.ts
+
+import type { Anthropic } from "@anthropic-ai/sdk";
+import { TelemetryService } from "@roo-code/telemetry";
+import type { ClineMessage, GlobalState, PendingTaskAction, ProviderSettings } from "@roo-code/types";
+import { providerIdentifiers } from "@roo-code/types/provider-identifiers";
+import * as os from "os";
+import * as path from "path";
+import type * as vscode from "vscode";
+import { ContextProxy } from "../../config/ContextProxy";
+import { ClineProvider } from "../../webview/ClineProvider";
+import { Task } from "../Task";
+
+type TaskPersistenceAccess = {
+	addToApiConversationHistory: (message: { role: "user"; content: unknown[] }) => Promise<void>;
+	resumeTaskFromHistory: () => Promise<void>;
+	resumePendingTaskAction: (action: PendingTaskAction) => Promise<void>;
+	saveClineMessages: () => Promise<boolean>;
+	initiateTaskLoop: (userContent: Anthropic.Messages.ContentBlockParam[]) => Promise<void>;
+};
+
+function getTaskPersistenceAccess(task: Task): TaskPersistenceAccess {
+	return task as unknown as TaskPersistenceAccess;
+}
+
+function createDeferred<T>() {
+	let resolve!: (value: T) => void;
+	const promise = new Promise<T>((resolvePromise) => {
+		resolve = resolvePromise;
+	});
+	return { promise, resolve };
+}
+
+// ─── Hoisted mocks ───────────────────────────────────────────────────────────
+
+const {
+	mockSaveApiMessages,
+	mockSaveTaskMessages,
+	mockReadApiMessages,
+	mockReadTaskMessages,
+	mockTaskMetadata,
+	mockPWaitFor,
+} = vi.hoisted(() => ({
+	mockSaveApiMessages: vi.fn().mockResolvedValue(undefined),
+	mockSaveTaskMessages: vi.fn().mockResolvedValue(undefined),
+	mockReadApiMessages: vi.fn().mockResolvedValue([]),
+	mockReadTaskMessages: vi.fn().mockResolvedValue([]),
+	mockTaskMetadata: vi.fn().mockResolvedValue({
+		historyItem: { id: "test-id", ts: Date.now(), task: "test" },
+		tokenUsage: {
+			totalTokensIn: 0,
+			totalTokensOut: 0,
+			totalCacheWrites: 0,
+			totalCacheReads: 0,
+			totalCost: 0,
+			contextTokens: 0,
+		},
+	}),
+	mockPWaitFor: vi.fn().mockResolvedValue(undefined),
+}));
+
+// ─── Module mocks ────────────────────────────────────────────────────────────
+
+vi.mock("delay", () => ({
+	__esModule: true,
+	default: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("execa", () => ({
+	execa: vi.fn(),
+}));
+
+vi.mock("fs/promises", async (importOriginal) => {
+	const actual = (await importOriginal()) as Record<string, any>;
+	return {
+		...actual,
+		mkdir: vi.fn().mockResolvedValue(undefined),
+		writeFile: vi.fn().mockResolvedValue(undefined),
+		readFile: vi.fn().mockResolvedValue("[]"),
+		unlink: vi.fn().mockResolvedValue(undefined),
+		rmdir: vi.fn().mockResolvedValue(undefined),
+		default: {
+			mkdir: vi.fn().mockResolvedValue(undefined),
+			writeFile: vi.fn().mockResolvedValue(undefined),
+			readFile: vi.fn().mockResolvedValue("[]"),
+			unlink: vi.fn().mockResolvedValue(undefined),
+			rmdir: vi.fn().mockResolvedValue(undefined),
+		},
+	};
+});
+
+vi.mock("p-wait-for", () => ({
+	default: mockPWaitFor,
+}));
+
+vi.mock("../../task-persistence", async (importOriginal) => {
+	const mod = await importOriginal<typeof import("../../task-persistence")>();
+	return {
+		...mod,
+		saveApiMessages: mockSaveApiMessages,
+		saveTaskMessages: mockSaveTaskMessages,
+		readApiMessages: mockReadApiMessages,
+		readTaskMessages: mockReadTaskMessages,
+		taskMetadata: mockTaskMetadata,
+		TaskHistoryStore: vi.fn().mockImplementation(() => ({
+			initialize: vi.fn().mockResolvedValue(undefined),
+			dispose: vi.fn(),
+			get: vi.fn(),
+			getAll: vi.fn().mockReturnValue([]),
+			upsert: vi.fn().mockResolvedValue([]),
+			delete: vi.fn().mockResolvedValue(undefined),
+			deleteMany: vi.fn().mockResolvedValue(undefined),
+			reconcile: vi.fn().mockResolvedValue(undefined),
+			initialized: Promise.resolve(),
+		})),
+	};
+});
+
+vi.mock("vscode", () => {
+	const mockDisposable = { dispose: vi.fn() };
+	const mockEventEmitter = { event: vi.fn(), fire: vi.fn() };
+	const mockTextDocument = { uri: { fsPath: "/mock/workspace/path/file.ts" } };
+	const mockTextEditor = { document: mockTextDocument };
+	const mockTab = { input: { uri: { fsPath: "/mock/workspace/path/file.ts" } } };
+	const mockTabGroup = { tabs: [mockTab] };
+
+	return {
+		TabInputTextDiff: vi.fn(),
+		CodeActionKind: {
+			QuickFix: { value: "quickfix" },
+			RefactorRewrite: { value: "refactor.rewrite" },
+		},
+		window: {
+			createTextEditorDecorationType: vi.fn().mockReturnValue({ dispose: vi.fn() }),
+			visibleTextEditors: [mockTextEditor],
+			tabGroups: {
+				all: [mockTabGroup],
+				close: vi.fn(),
+				onDidChangeTabs: vi.fn(() => ({ dispose: vi.fn() })),
+			},
+			showErrorMessage: vi.fn(),
+		},
+		workspace: {
+			workspaceFolders: [
+				{
+					uri: { fsPath: "/mock/workspace/path" },
+					name: "mock-workspace",
+					index: 0,
+				},
+			],
+			createFileSystemWatcher: vi.fn(() => ({
+				onDidCreate: vi.fn(() => mockDisposable),
+				onDidDelete: vi.fn(() => mockDisposable),
+				onDidChange: vi.fn(() => mockDisposable),
+				dispose: vi.fn(),
+			})),
+			fs: {
+				stat: vi.fn().mockResolvedValue({ type: 1 }),
+			},
+			onDidSaveTextDocument: vi.fn(() => mockDisposable),
+			getConfiguration: vi.fn(() => ({ get: (_key: string, defaultValue: unknown) => defaultValue })),
+		},
+		env: {
+			uriScheme: "vscode",
+			language: "en",
+		},
+		EventEmitter: vi.fn().mockImplementation(() => mockEventEmitter),
+		Disposable: {
+			from: vi.fn(),
+		},
+		TabInputText: vi.fn(),
+	};
+});
+
+vi.mock("../../mentions", () => ({
+	parseMentions: vi.fn().mockImplementation((text) => {
+		return Promise.resolve({ text: `processed: ${text}`, mode: undefined, contentBlocks: [] });
+	}),
+	openMention: vi.fn(),
+	getLatestTerminalOutput: vi.fn(),
+}));
+
+vi.mock("../../../integrations/misc/extract-text", () => ({
+	extractTextFromFile: vi.fn().mockResolvedValue("Mock file content"),
+}));
+
+vi.mock("../../environment/getEnvironmentDetails", () => ({
+	getEnvironmentDetails: vi.fn().mockResolvedValue(""),
+}));
+
+vi.mock("../../ignore/RooIgnoreController");
+
+vi.mock("../../condense", async (importOriginal) => {
+	const actual = (await importOriginal()) as Record<string, unknown>;
+	return {
+		...actual,
+		summarizeConversation: vi.fn().mockResolvedValue({
+			messages: [{ role: "user", content: [{ type: "text", text: "continued" }], ts: Date.now() }],
+			summary: "summary",
+			cost: 0,
+			newContextTokens: 1,
+		}),
+	};
+});
+
+vi.mock("../../../utils/storage", () => ({
+	getTaskDirectoryPath: vi
+		.fn()
+		.mockImplementation((globalStoragePath, taskId) => Promise.resolve(`${globalStoragePath}/tasks/${taskId}`)),
+	getSettingsDirectoryPath: vi
+		.fn()
+		.mockImplementation((globalStoragePath) => Promise.resolve(`${globalStoragePath}/settings`)),
+}));
+
+vi.mock("../../../utils/fs", () => ({
+	fileExistsAtPath: vi.fn().mockReturnValue(false),
+}));
+
+// ─── Test suite ──────────────────────────────────────────────────────────────
+
+describe("Task persistence", () => {
+	let mockProvider: ClineProvider & Record<string, any>;
+	let mockApiConfig: ProviderSettings;
+	let mockOutputChannel: vscode.OutputChannel;
+	let mockExtensionContext: vscode.ExtensionContext;
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+
+		if (!TelemetryService.hasInstance()) {
+			TelemetryService.createInstance([]);
+		}
+
+		const storageUri = { fsPath: path.join(os.tmpdir(), "test-storage") };
+
+		mockExtensionContext = {
+			globalState: {
+				get: vi.fn().mockImplementation((_key: keyof GlobalState) => undefined),
+				update: vi.fn().mockImplementation((_key, _value) => Promise.resolve()),
+				keys: vi.fn().mockReturnValue([]),
+			},
+			globalStorageUri: storageUri,
+			workspaceState: {
+				get: vi.fn().mockImplementation((_key) => undefined),
+				update: vi.fn().mockImplementation((_key, _value) => Promise.resolve()),
+				keys: vi.fn().mockReturnValue([]),
+			},
+			secrets: {
+				get: vi.fn().mockImplementation((_key) => Promise.resolve(undefined)),
+				store: vi.fn().mockImplementation((_key, _value) => Promise.resolve()),
+				delete: vi.fn().mockImplementation((_key) => Promise.resolve()),
+			},
+			extensionUri: { fsPath: "/mock/extension/path" },
+			extension: { packageJSON: { version: "1.0.0" } },
+		} as unknown as vscode.ExtensionContext;
+
+		mockOutputChannel = {
+			appendLine: vi.fn(),
+			append: vi.fn(),
+			clear: vi.fn(),
+			show: vi.fn(),
+			hide: vi.fn(),
+			dispose: vi.fn(),
+		} as unknown as vscode.OutputChannel;
+
+		mockProvider = new ClineProvider(
+			mockExtensionContext,
+			mockOutputChannel,
+			"sidebar",
+			new ContextProxy(mockExtensionContext),
+		) as ClineProvider & Record<string, any>;
+
+		mockApiConfig = {
+			apiProvider: providerIdentifiers.anthropic,
+			apiModelId: "claude-3-5-sonnet-20241022",
+			apiKey: "test-api-key",
+		};
+
+		mockProvider.postMessageToWebview = vi.fn().mockResolvedValue(undefined);
+		mockProvider.postStateToWebview = vi.fn().mockResolvedValue(undefined);
+		mockProvider.postStateToWebviewWithoutTaskHistory = vi.fn().mockResolvedValue(undefined);
+		mockProvider.updateTaskHistory = vi.fn().mockResolvedValue(undefined);
+		mockProvider.log = vi.fn();
+	});
+
+	// ── saveApiConversationHistory (via retrySaveApiConversationHistory) ──
+
+	describe("saveApiConversationHistory", () => {
+		it("returns true on success", async () => {
+			mockSaveApiMessages.mockResolvedValueOnce(undefined);
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			});
+
+			task.apiConversationHistory.push({
+				role: "user",
+				content: [{ type: "text", text: "hello" }],
+			});
+
+			const result = await task.retrySaveApiConversationHistory();
+			expect(result).toBe(true);
+		});
+
+		it("returns false on failure", async () => {
+			vi.useFakeTimers();
+
+			// All 3 retry attempts must fail for retrySaveApiConversationHistory to return false
+			mockSaveApiMessages
+				.mockRejectedValueOnce(new Error("fail 1"))
+				.mockRejectedValueOnce(new Error("fail 2"))
+				.mockRejectedValueOnce(new Error("fail 3"));
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			});
+
+			const promise = task.retrySaveApiConversationHistory();
+			await vi.runAllTimersAsync();
+			const result = await promise;
+
+			expect(result).toBe(false);
+			expect(mockSaveApiMessages).toHaveBeenCalledTimes(3);
+
+			vi.useRealTimers();
+		});
+
+		it("succeeds on 2nd retry attempt", async () => {
+			vi.useFakeTimers();
+
+			mockSaveApiMessages.mockRejectedValueOnce(new Error("fail 1")).mockResolvedValueOnce(undefined); // succeeds on 2nd try
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			});
+
+			const promise = task.retrySaveApiConversationHistory();
+			await vi.runAllTimersAsync();
+			const result = await promise;
+
+			expect(result).toBe(true);
+			expect(mockSaveApiMessages).toHaveBeenCalledTimes(2);
+
+			vi.useRealTimers();
+		});
+
+		it("snapshots the array before passing to saveApiMessages", async () => {
+			mockSaveApiMessages.mockResolvedValueOnce(undefined);
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			});
+
+			const originalMsg = {
+				role: "user" as const,
+				content: [{ type: "text" as const, text: "snapshot test" }],
+			};
+			task.apiConversationHistory.push(originalMsg);
+
+			await task.retrySaveApiConversationHistory();
+
+			expect(mockSaveApiMessages).toHaveBeenCalledTimes(1);
+
+			const callArgs = mockSaveApiMessages.mock.calls[0][0];
+			// The messages passed should be a COPY, not the live reference
+			expect(callArgs.messages).not.toBe(task.apiConversationHistory);
+			// But the content should be the same
+			expect(callArgs.messages).toEqual(task.apiConversationHistory);
+		});
+	});
+
+	// ── saveClineMessages ────────────────────────────────────────────────
+
+	describe("saveClineMessages", () => {
+		it("returns true on success", async () => {
+			mockSaveTaskMessages.mockResolvedValueOnce(undefined);
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			});
+
+			const result = await (task as Record<string, any>).saveClineMessages();
+			expect(result).toBe(true);
+		});
+
+		it("returns false on failure", async () => {
+			mockSaveTaskMessages.mockRejectedValueOnce(new Error("write error"));
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			});
+
+			const result = await (task as Record<string, any>).saveClineMessages();
+			expect(result).toBe(false);
+		});
+
+		it("snapshots the array before passing to saveTaskMessages", async () => {
+			mockSaveTaskMessages.mockResolvedValueOnce(undefined);
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			});
+
+			task.clineMessages.push({
+				type: "say",
+				say: "text",
+				text: "snapshot test",
+				ts: Date.now(),
+			});
+
+			await (task as Record<string, any>).saveClineMessages();
+
+			expect(mockSaveTaskMessages).toHaveBeenCalledTimes(1);
+
+			const callArgs = mockSaveTaskMessages.mock.calls[0][0];
+			// The messages passed should be a COPY, not the live reference
+			expect(callArgs.messages).not.toBe(task.clineMessages);
+			// But the content should be the same
+			expect(callArgs.messages).toEqual(task.clineMessages);
+		});
+
+		it("preserves an existing lifecycle status during metadata saves", async () => {
+			mockSaveTaskMessages.mockResolvedValueOnce(undefined);
+			mockTaskMetadata.mockResolvedValueOnce({
+				historyItem: {
+					id: "task-with-advanced-status",
+					ts: Date.now(),
+					task: "test",
+					status: "interrupted",
+					tokensIn: 10,
+				},
+				tokenUsage: {
+					totalTokensIn: 10,
+					totalTokensOut: 0,
+					totalCacheWrites: 0,
+					totalCacheReads: 0,
+					totalCost: 0,
+					contextTokens: 0,
+				},
+			});
+
+			const updateTaskHistory = vi.fn().mockResolvedValue([]);
+			const taskHistoryStore = {
+				get: vi.fn().mockReturnValue({ id: "task-with-advanced-status", status: "completed" }),
+			};
+			const provider = { ...mockProvider, updateTaskHistory, taskHistoryStore };
+			const task = new Task({
+				provider: provider as any,
+				apiConfiguration: mockApiConfig,
+				taskId: "task-with-advanced-status",
+				task: "test task",
+				startTask: false,
+				initialStatus: "interrupted",
+			});
+
+			await (task as Record<string, any>).saveClineMessages();
+
+			expect(updateTaskHistory).toHaveBeenCalledWith(
+				expect.objectContaining({
+					id: "task-with-advanced-status",
+					status: "completed",
+					tokensIn: 10,
+				}),
+			);
+		});
+	});
+
+	// ── abortTask history hydration guard ─────────────────────────────────
+
+	describe("abortTask", () => {
+		it("skips persistence when a history task aborts before messages load", async () => {
+			const messagesDeferred = createDeferred<ClineMessage[]>();
+			mockReadTaskMessages.mockReturnValueOnce(messagesDeferred.promise);
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "history-task",
+					number: 1,
+					ts: Date.now(),
+					task: "Original task title",
+					tokensIn: 10,
+					tokensOut: 5,
+					totalCost: 0.001,
+				},
+				startTask: false,
+			});
+
+			const resumePromise = task.run().catch(() => {});
+
+			await task.abortTask();
+
+			expect(mockSaveTaskMessages).not.toHaveBeenCalled();
+			expect(mockProvider.updateTaskHistory).not.toHaveBeenCalled();
+
+			messagesDeferred.resolve([]);
+			await resumePromise;
+		});
+
+		it("persists a history task when messages load before abort", async () => {
+			const messages = [
+				{
+					ts: Date.now(),
+					type: "say" as const,
+					say: "text" as const,
+					text: "Loaded task message",
+				},
+			] satisfies ClineMessage[];
+			const messagesDeferred = createDeferred<typeof messages>();
+			mockReadTaskMessages.mockReturnValueOnce(messagesDeferred.promise).mockResolvedValue(messages);
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "history-task",
+					number: 1,
+					ts: Date.now(),
+					task: "Original task title",
+					tokensIn: 10,
+					tokensOut: 5,
+					totalCost: 0.001,
+				},
+				startTask: false,
+			});
+			vi.spyOn(task, "ask").mockResolvedValue({ response: "noButtonClicked" });
+
+			mockReadApiMessages.mockResolvedValue([
+				{
+					role: "user",
+					content: [{ type: "text", text: "Original task" }],
+				},
+			]);
+
+			const resumePromise = getTaskPersistenceAccess(task).resumeTaskFromHistory();
+			messagesDeferred.resolve(messages);
+			await resumePromise;
+
+			const saveCallsBeforeAbort = mockSaveTaskMessages.mock.calls.length;
+			expect(saveCallsBeforeAbort).toBeGreaterThan(0);
+			expect(mockProvider.updateTaskHistory).toHaveBeenCalled();
+
+			await task.abortTask();
+			expect(mockSaveTaskMessages.mock.calls.length).toBeGreaterThan(saveCallsBeforeAbort);
+		});
+
+		it("persists an empty non-history task when aborted", async () => {
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "New task",
+				startTask: false,
+			});
+			const saveClineMessagesSpy = vi.spyOn(getTaskPersistenceAccess(task), "saveClineMessages");
+
+			await task.abortTask();
+
+			expect(saveClineMessagesSpy).toHaveBeenCalledTimes(1);
+			expect(mockSaveTaskMessages).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	// ── resumeTaskFromHistory — interrupted tool calls must be recorded as errors ──
+
+	describe("resumeTaskFromHistory interrupted tool calls", () => {
+		const interruptedToolResultContent = "Task was interrupted before this tool call could be completed.";
+
+		it("marks synthetic tool_results from an interrupted assistant turn as errors", async () => {
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "interrupted-subtask",
+					number: 1,
+					ts: Date.now(),
+					task: "Interrupted subtask",
+					tokensIn: 10,
+					tokensOut: 5,
+					totalCost: 0.001,
+				},
+				startTask: false,
+				initialStatus: "interrupted",
+			});
+			// Stop the resume flow right before the agentic loop so the test only
+			// exercises history reconstruction; the loop would make a real API call.
+			const initiateTaskLoopSpy = vi
+				.spyOn(getTaskPersistenceAccess(task), "initiateTaskLoop")
+				.mockResolvedValue(undefined);
+			vi.spyOn(task, "ask").mockResolvedValue({ response: "noButtonClicked" });
+
+			// The persisted history ends with an assistant turn whose tool calls
+			// (attempt_completion) were never answered because the task was
+			// interrupted. See: https://github.com/Zoo-Code-Org/Zoo-Code/issues/1283
+			mockReadApiMessages.mockResolvedValue([
+				{
+					role: "assistant",
+					content: [
+						{ type: "text", text: "Wrapping up" },
+						{
+							type: "tool_use",
+							id: "toolu_interrupted_1",
+							name: "attempt_completion",
+							input: { result: "done" },
+						},
+					],
+				},
+			]);
+
+			await getTaskPersistenceAccess(task).resumeTaskFromHistory();
+
+			expect(initiateTaskLoopSpy).toHaveBeenCalledTimes(1);
+			const newUserContent = initiateTaskLoopSpy.mock.calls[0][0];
+			const toolResults = newUserContent.filter((block) => block.type === "tool_result");
+			// The synthetic tool_result must be recorded as an error so the history
+			// cannot be misread as a successful completion of the interrupted call.
+			expect(toolResults).toEqual([
+				{
+					type: "tool_result",
+					tool_use_id: "toolu_interrupted_1",
+					content: interruptedToolResultContent,
+					is_error: true,
+				},
+			]);
+		});
+
+		it("marks missing tool_results for an interrupted trailing user turn as errors", async () => {
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "interrupted-subtask-2",
+					number: 2,
+					ts: Date.now(),
+					task: "Interrupted subtask 2",
+					tokensIn: 10,
+					tokensOut: 5,
+					totalCost: 0.001,
+				},
+				startTask: false,
+				initialStatus: "interrupted",
+			});
+			const initiateTaskLoopSpy = vi
+				.spyOn(getTaskPersistenceAccess(task), "initiateTaskLoop")
+				.mockResolvedValue(undefined);
+			vi.spyOn(task, "ask").mockResolvedValue({ response: "noButtonClicked" });
+
+			// The persisted history ends with a user turn that only answered the
+			// first of two parallel tool calls.
+			mockReadApiMessages.mockResolvedValue([
+				{
+					role: "assistant",
+					content: [
+						{
+							type: "tool_use",
+							id: "toolu_int_a",
+							name: "execute_command",
+							input: { command: "ls" },
+						},
+						{ type: "tool_use", id: "toolu_int_b", name: "read_file", input: { path: "a.txt" } },
+					],
+				},
+				{
+					role: "user",
+					content: [
+						{
+							type: "tool_result",
+							tool_use_id: "toolu_int_a",
+							content: "partial result",
+						},
+					],
+				},
+			]);
+
+			await getTaskPersistenceAccess(task).resumeTaskFromHistory();
+
+			expect(initiateTaskLoopSpy).toHaveBeenCalledTimes(1);
+			const newUserContent = initiateTaskLoopSpy.mock.calls[0][0];
+			const toolResults = newUserContent.filter((block) => block.type === "tool_result");
+			// The pre-existing result is preserved untouched; the synthesized one
+			// for the unanswered tool call is marked as an error.
+			expect(toolResults).toEqual([
+				{
+					type: "tool_result",
+					tool_use_id: "toolu_int_a",
+					content: "partial result",
+				},
+				{
+					type: "tool_result",
+					tool_use_id: "toolu_int_b",
+					content: interruptedToolResultContent,
+					is_error: true,
+				},
+			]);
+		});
+	});
+
+	describe("pending action resume", () => {
+		const pendingAction: PendingTaskAction = {
+			kind: "finish_subtask",
+			actionId: "finish-action",
+			approvalText: JSON.stringify({ tool: "finishTask" }),
+			parentTaskId: "parent-1",
+			result: "Done",
+		};
+
+		it("replays an unresolved pending action instead of a generic resume ask", async () => {
+			const messages: ClineMessage[] = [
+				{ ts: 1, type: "say", say: "text", text: "Child" },
+				{ ts: 2, type: "ask", ask: "tool", text: pendingAction.approvalText },
+			];
+			mockReadTaskMessages.mockResolvedValue(messages);
+			mockReadApiMessages.mockResolvedValue([
+				{
+					role: "assistant",
+					content: [{ type: "tool_use", id: "finish-action", name: "attempt_completion", input: {} }],
+				},
+			]);
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "child-1",
+					number: 1,
+					ts: 1,
+					task: "Child",
+					tokensIn: 0,
+					tokensOut: 0,
+					totalCost: 0,
+					pendingAction,
+				},
+				startTask: false,
+			});
+			const replay = vi
+				.spyOn(getTaskPersistenceAccess(task), "resumePendingTaskAction")
+				.mockResolvedValue(undefined);
+			const ask = vi.spyOn(task, "ask");
+
+			await getTaskPersistenceAccess(task).resumeTaskFromHistory();
+
+			expect(replay).toHaveBeenCalledWith(pendingAction);
+			expect(ask).not.toHaveBeenCalled();
+			expect(mockSaveTaskMessages).toHaveBeenCalledWith(
+				expect.objectContaining({
+					messages: expect.not.arrayContaining([expect.objectContaining({ text: pendingAction.approvalText })]),
+				}),
+			);
+		});
+
+		it("reconciles an already-persisted tool result before generic resume", async () => {
+			mockReadTaskMessages.mockResolvedValue([{ ts: 1, type: "say", say: "text", text: "Child" }]);
+			mockReadApiMessages.mockResolvedValue([
+				{ role: "user", content: [{ type: "tool_result", tool_use_id: "finish-action", content: "Denied" }] },
+			]);
+			mockProvider.clearPendingTaskAction = vi.fn().mockResolvedValue(true);
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "child-1",
+					number: 1,
+					ts: 1,
+					task: "Child",
+					tokensIn: 0,
+					tokensOut: 0,
+					totalCost: 0,
+					pendingAction,
+				},
+				startTask: false,
+			});
+			vi.spyOn(task, "ask").mockResolvedValue({ response: "noButtonClicked" });
+			vi.spyOn(getTaskPersistenceAccess(task), "initiateTaskLoop").mockResolvedValue(undefined);
+			const replay = vi.spyOn(getTaskPersistenceAccess(task), "resumePendingTaskAction");
+
+			await getTaskPersistenceAccess(task).resumeTaskFromHistory();
+
+			expect(mockProvider.clearPendingTaskAction).toHaveBeenCalledWith("child-1", "finish-action");
+			expect(replay).not.toHaveBeenCalled();
+			expect(task.ask).toHaveBeenCalledWith("resume_task");
+		});
+
+		it("clears pending metadata after the matching tool result is saved", async () => {
+			mockProvider.clearPendingTaskAction = vi.fn().mockResolvedValue(true);
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "child-1",
+					number: 1,
+					ts: 1,
+					task: "Child",
+					tokensIn: 0,
+					tokensOut: 0,
+					totalCost: 0,
+					pendingAction,
+				},
+				startTask: false,
+			});
+
+			await getTaskPersistenceAccess(task).addToApiConversationHistory({
+				role: "user",
+				content: [{ type: "tool_result", tool_use_id: "finish-action", content: "Denied" }],
+			});
+
+			expect(mockProvider.clearPendingTaskAction).toHaveBeenCalledWith("child-1", "finish-action");
+		});
+
+		it("retries a rejected tool-result save before clearing pending metadata", async () => {
+			vi.useFakeTimers();
+			try {
+				mockSaveApiMessages.mockRejectedValueOnce(new Error("temporary failure")).mockResolvedValueOnce(undefined);
+				mockProvider.clearPendingTaskAction = vi.fn().mockResolvedValue(true);
+				const task = new Task({
+					provider: mockProvider,
+					apiConfiguration: mockApiConfig,
+					historyItem: {
+						id: "child-1",
+						number: 1,
+						ts: 1,
+						task: "Child",
+						tokensIn: 0,
+						tokensOut: 0,
+						totalCost: 0,
+						pendingAction,
+					},
+					startTask: false,
+				});
+
+				const saving = getTaskPersistenceAccess(task).addToApiConversationHistory({
+					role: "user",
+					content: [{ type: "tool_result", tool_use_id: "finish-action", content: "Denied" }],
+				});
+				await vi.advanceTimersByTimeAsync(0);
+				expect(mockProvider.clearPendingTaskAction).not.toHaveBeenCalled();
+
+				await vi.advanceTimersByTimeAsync(100);
+				await saving;
+				expect(mockSaveApiMessages).toHaveBeenCalledTimes(2);
+				expect(mockProvider.clearPendingTaskAction).toHaveBeenCalledWith("child-1", "finish-action");
+			} finally {
+				vi.useRealTimers();
+			}
+		});
+
+		it("reconciles stale in-memory metadata after an idempotent clear without clearing a newer action", async () => {
+			mockProvider.clearPendingTaskAction = vi.fn().mockResolvedValue(false);
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "child-1",
+					number: 1,
+					ts: 1,
+					task: "Child",
+					tokensIn: 0,
+					tokensOut: 0,
+					totalCost: 0,
+					pendingAction,
+				},
+				startTask: false,
+			});
+			const storeGet = vi.mocked(mockProvider.taskHistoryStore.get);
+			storeGet.mockReturnValueOnce(undefined);
+
+			await getTaskPersistenceAccess(task).addToApiConversationHistory({
+				role: "user",
+				content: [{ type: "tool_result", tool_use_id: "finish-action", content: "Denied" }],
+			});
+
+			const taskState = task as unknown as { pendingAction?: PendingTaskAction };
+			expect(taskState.pendingAction).toBeUndefined();
+
+			const newerAction: PendingTaskAction = { ...pendingAction, actionId: "newer-action" };
+			task.setPendingTaskAction(pendingAction);
+			storeGet.mockReturnValueOnce({
+				id: "child-1",
+				number: 1,
+				ts: 1,
+				task: "Child",
+				tokensIn: 0,
+				tokensOut: 0,
+				totalCost: 0,
+				pendingAction: newerAction,
+			});
+			await getTaskPersistenceAccess(task).addToApiConversationHistory({
+				role: "user",
+				content: [{ type: "tool_result", tool_use_id: "finish-action", content: "Denied again" }],
+			});
+
+			expect(taskState.pendingAction).toEqual(newerAction);
+		});
+
+		it("does not clear a newer in-memory action after the matching clear finishes", async () => {
+			let finishClear!: (cleared: boolean) => void;
+			const clearing = new Promise<boolean>((resolve) => {
+				finishClear = resolve;
+			});
+			mockProvider.clearPendingTaskAction = vi.fn(() => clearing);
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "child-1",
+					number: 1,
+					ts: 1,
+					task: "Child",
+					tokensIn: 0,
+					tokensOut: 0,
+					totalCost: 0,
+					pendingAction,
+				},
+				startTask: false,
+			});
+			const newerAction: PendingTaskAction = { ...pendingAction, actionId: "newer-action" };
+
+			const saving = getTaskPersistenceAccess(task).addToApiConversationHistory({
+				role: "user",
+				content: [{ type: "tool_result", tool_use_id: "finish-action", content: "Denied" }],
+			});
+			await vi.waitFor(() => expect(mockProvider.clearPendingTaskAction).toHaveBeenCalledTimes(1));
+			task.setPendingTaskAction(newerAction);
+			finishClear(true);
+			await saving;
+
+			expect((task as unknown as { pendingAction?: PendingTaskAction }).pendingAction).toEqual(newerAction);
+		});
+
+		it("leaves a newer action untouched when an obsolete durable result arrives", async () => {
+			mockProvider.clearPendingTaskAction = vi.fn().mockResolvedValue(true);
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "child-1",
+					number: 1,
+					ts: 1,
+					task: "Child",
+					tokensIn: 0,
+					tokensOut: 0,
+					totalCost: 0,
+					pendingAction,
+				},
+				startTask: false,
+			});
+			const newerAction: PendingTaskAction = { ...pendingAction, actionId: "newer-action" };
+			task.setPendingTaskAction(newerAction);
+
+			await getTaskPersistenceAccess(task).addToApiConversationHistory({
+				role: "user",
+				content: [{ type: "tool_result", tool_use_id: "finish-action", content: "Late denial" }],
+			});
+
+			expect(mockProvider.clearPendingTaskAction).not.toHaveBeenCalled();
+			expect((task as unknown as { pendingAction?: PendingTaskAction }).pendingAction).toEqual(newerAction);
+		});
+
+		it("retains the pending action when clearing metadata throws after a durable save", async () => {
+			const clearError = new Error("metadata store unavailable");
+			mockProvider.clearPendingTaskAction = vi.fn().mockRejectedValue(clearError);
+			const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "child-1",
+					number: 1,
+					ts: 1,
+					task: "Child",
+					tokensIn: 0,
+					tokensOut: 0,
+					totalCost: 0,
+					pendingAction,
+				},
+				startTask: false,
+			});
+
+			await expect(
+				getTaskPersistenceAccess(task).addToApiConversationHistory({
+					role: "user",
+					content: [{ type: "tool_result", tool_use_id: "finish-action", content: "Denied" }],
+				}),
+			).resolves.toBeUndefined();
+
+			expect((task as unknown as { pendingAction?: PendingTaskAction }).pendingAction).toEqual(pendingAction);
+			expect(consoleError).toHaveBeenCalledWith(
+				expect.stringContaining("Failed to clear pending action for child-1"),
+				clearError,
+			);
+			consoleError.mockRestore();
+		});
+
+		it("completes the deny-with-feedback lifecycle using the sanitized action id", async () => {
+			const rawToolUseId = "finish.action/with spaces";
+			const sanitizedActionId = "finish_action_with_spaces";
+			const lifecycleAction: PendingTaskAction = {
+				...pendingAction,
+				actionId: sanitizedActionId,
+			};
+			mockProvider.clearPendingTaskAction = vi.fn().mockResolvedValue(true);
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				historyItem: {
+					id: "child-1",
+					number: 1,
+					ts: 1,
+					task: "Child",
+					tokensIn: 0,
+					tokensOut: 0,
+					totalCost: 0,
+					pendingAction: lifecycleAction,
+				},
+				startTask: false,
+			});
+			vi.spyOn(task, "ask").mockResolvedValue({
+				response: "messageResponse",
+				text: "Please revise",
+				queuedMessageId: "queued-lifecycle",
+			});
+			const persist = vi.spyOn(task, "persistQueuedFeedbackAndAcknowledge").mockResolvedValue(true);
+			const initiate = vi
+				.spyOn(getTaskPersistenceAccess(task), "initiateTaskLoop")
+				.mockImplementation(async (content) => {
+					await getTaskPersistenceAccess(task).addToApiConversationHistory({ role: "user", content });
+				});
+
+			await getTaskPersistenceAccess(task).resumePendingTaskAction(lifecycleAction);
+
+			expect(rawToolUseId).not.toBe(sanitizedActionId);
+			expect(persist).toHaveBeenCalledWith("queued-lifecycle", "Please revise", undefined);
+			expect(initiate).toHaveBeenCalledWith([
+				expect.objectContaining({ type: "tool_result", tool_use_id: sanitizedActionId }),
+			]);
+			expect(mockSaveApiMessages).toHaveBeenCalled();
+			expect(mockProvider.clearPendingTaskAction).toHaveBeenCalledWith("child-1", sanitizedActionId);
+			expect(persist.mock.invocationCallOrder[0]).toBeLessThan(initiate.mock.invocationCallOrder[0]);
+		});
+	});
+
+	// ── flushPendingToolResultsToHistory — save failure/success ───────────
+
+	describe("flushPendingToolResultsToHistory persistence", () => {
+		it("retains userMessageContent on save failure", async () => {
+			mockSaveApiMessages.mockRejectedValueOnce(new Error("disk full"));
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			});
+
+			// Skip waiting for assistant message
+			task.assistantMessageSavedToHistory = true;
+
+			task.userMessageContent = [
+				{
+					type: "tool_result",
+					tool_use_id: "tool-fail",
+					content: "Result that should be retained",
+				},
+			];
+
+			const saved = await task.flushPendingToolResultsToHistory();
+
+			expect(saved).toBe(false);
+			// userMessageContent should NOT be cleared on failure
+			expect(task.userMessageContent.length).toBeGreaterThan(0);
+			expect(task.userMessageContent[0]).toMatchObject({
+				type: "tool_result",
+				tool_use_id: "tool-fail",
+			});
+		});
+
+		it("clears userMessageContent on save success", async () => {
+			mockSaveApiMessages.mockResolvedValueOnce(undefined);
+
+			const task = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			});
+
+			// Skip waiting for assistant message
+			task.assistantMessageSavedToHistory = true;
+
+			task.userMessageContent = [
+				{
+					type: "tool_result",
+					tool_use_id: "tool-ok",
+					content: "Result that should be cleared",
+				},
+			];
+
+			const saved = await task.flushPendingToolResultsToHistory();
+
+			expect(saved).toBe(true);
+			// userMessageContent should be cleared on success
+			expect(task.userMessageContent).toEqual([]);
+		});
+	});
+});

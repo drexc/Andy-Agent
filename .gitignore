@@ -36,8 +36,8 @@ out.html
 packages/coding-agent/binaries/
 todo.md
 plans/
-.prime/agent/
-.andy/agent/
+.prime/
+.andy/
 collect.sh
 .kernel-venv/
 .worktrees/

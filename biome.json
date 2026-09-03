@@ -38,6 +38,7 @@
 			"!**/test-sessions.ts",
 			"!**/models.generated.ts",
 			"!packages/mom/data/**/*",
+			"!packages/andy-code/**/*",
 			"!!**/node_modules",
 			"!.worktrees",
 			"!.claude/worktrees"

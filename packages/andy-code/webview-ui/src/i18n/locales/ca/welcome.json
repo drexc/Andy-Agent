@@ -1,0 +1,20 @@
+{
+	"landing": {
+		"greeting": "Benvingut a Andy Code!",
+		"introduction": "Amb una gamma de Modes integrats i ampliables, Andy Code et permet planificar, arquitectar, codificar, depurar i augmentar la teva productivitat com mai abans.",
+		"getStarted": "Tria el teu proveïdor"
+	},
+	"providerSignup": {
+		"heading": "Tria el teu proveïdor",
+		"chooseProvider": "Andy Code necessita un proveïdor de LLM per funcionar. Tria-ne un per començar, pots afegir-ne més tard.",
+		"goBack": "Enrere",
+		"finish": "Finalitza"
+	},
+	"telemetry": {
+		"helpImprove": "Ajuda a millorar Andy Code",
+		"helpImproveMessage": "Andy Code recopila dades d'errors i ús, vinculades a un identificador d'instal·lació, per ajudar-nos a corregir errors i millorar l'extensió. Aquesta telemetria no recopila el teu codi ni les teves indicacions. Pots desactivar-la a <settingsLink>configuració</settingsLink>.",
+		"accept": "Accepta",
+		"decline": "Rebutja"
+	},
+	"importSettings": "Importa la configuració"
+}

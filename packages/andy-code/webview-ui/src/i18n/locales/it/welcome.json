@@ -1,0 +1,20 @@
+{
+	"landing": {
+		"greeting": "Benvenuto in Andy Code!",
+		"introduction": "Con una gamma di Modalità integrate ed estensibili, Andy Code ti permette di pianificare, architettare, codificare, debuggare e aumentare la tua produttività come mai prima d'ora.",
+		"getStarted": "Scegli il tuo provider"
+	},
+	"providerSignup": {
+		"heading": "Scegli il tuo provider",
+		"chooseProvider": "Andy Code ha bisogno di un provider LLM per funzionare. Scegline uno per iniziare, puoi aggiungerne altri in seguito.",
+		"goBack": "Indietro",
+		"finish": "Fine"
+	},
+	"telemetry": {
+		"helpImprove": "Aiuta a migliorare Andy Code",
+		"helpImproveMessage": "Andy Code raccoglie dati di errore e utilizzo, collegati a un identificatore di installazione, per aiutarci a correggere i bug e migliorare l'estensione. Questa telemetria non raccoglie il tuo codice o i tuoi prompt. Puoi disabilitare questa funzione in <settingsLink>impostazioni</settingsLink>.",
+		"accept": "Accetta",
+		"decline": "Rifiuta"
+	},
+	"importSettings": "Importa impostazioni"
+}

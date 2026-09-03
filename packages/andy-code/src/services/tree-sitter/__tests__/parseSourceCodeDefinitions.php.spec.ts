@@ -1,0 +1,21 @@
+import { phpQuery } from "../queries";
+import samplePhpContent from "./fixtures/sample-php";
+import { inspectTreeStructure, testParseSourceCodeDefinitions } from "./helpers";
+
+describe("parseSourceCodeDefinitionsForFile with PHP", () => {
+	// PHP test options
+	const phpOptions = {
+		language: "php",
+		wasmFile: "tree-sitter-php.wasm",
+		queryString: phpQuery,
+		extKey: "php",
+	};
+
+	it("should inspect PHP tree structure", async () => {
+		await inspectTreeStructure(samplePhpContent, "php");
+	});
+
+	it("should parse PHP definitions", async () => {
+		await testParseSourceCodeDefinitions("test.php", samplePhpContent, phpOptions);
+	});
+});

@@ -1,0 +1,20 @@
+{
+	"landing": {
+		"greeting": "Andy Code'a Hoş Geldin!",
+		"introduction": "Yerleşik ve genişletilebilir Modlar yelpazesiyle Andy Code, daha önce hiç olmadığı gibi planlama, mimari tasarım, kodlama, hata ayıklama ve üretkenliğini artırmanı sağlar.",
+		"getStarted": "Sağlayıcınızı seçin"
+	},
+	"providerSignup": {
+		"heading": "Sağlayıcınızı seçin",
+		"chooseProvider": "Andy Code'un çalışması için bir LLM sağlayıcısına ihtiyacı var. Başlamak için bir tane seç, sonra daha fazlasını ekleyebilirsin.",
+		"goBack": "Geri",
+		"finish": "Bitir"
+	},
+	"telemetry": {
+		"helpImprove": "Andy Code'u iyileştirmeye yardımcı ol",
+		"helpImproveMessage": "Andy Code, hataları düzeltmemize ve uzantıyı iyileştirmemize yardımcı olmak için, kuruluma bağlı bir tanımlayıcıyla ilişkilendirilmiş hata ve kullanım verilerini toplar. Bu telemetri kodunu veya istemlerini toplamaz. Bunu <settingsLink>ayarlardan</settingsLink> devre dışı bırakabilirsin.",
+		"accept": "Kabul et",
+		"decline": "Reddet"
+	},
+	"importSettings": "Ayarları İçe Aktar"
+}

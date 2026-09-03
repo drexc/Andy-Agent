@@ -1,0 +1,20 @@
+{
+	"landing": {
+		"greeting": "¡Bienvenido a Andy Code!",
+		"introduction": "Con una variedad de Modos integrados y extensibles, Andy Code te permite planificar, arquitectar, codificar, depurar y aumentar tu productividad como nunca antes.",
+		"getStarted": "Elige tu proveedor"
+	},
+	"providerSignup": {
+		"heading": "Elige tu proveedor",
+		"chooseProvider": "Andy Code necesita un proveedor de LLM para funcionar. Elige uno para comenzar, puedes añadir más después.",
+		"goBack": "Atrás",
+		"finish": "Finalizar"
+	},
+	"telemetry": {
+		"helpImprove": "Ayuda a mejorar Andy Code",
+		"helpImproveMessage": "Andy Code recopila datos de errores y uso, vinculados a un identificador de instalación, para ayudarnos a corregir errores y mejorar la extensión. Esta telemetría no recopila tu código ni tus prompts. Puedes desactivar esto en la <settingsLink>configuración</settingsLink>.",
+		"accept": "Aceptar",
+		"decline": "Rechazar"
+	},
+	"importSettings": "Importar configuración"
+}

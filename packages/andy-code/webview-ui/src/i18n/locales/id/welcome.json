@@ -1,0 +1,20 @@
+{
+	"landing": {
+		"greeting": "Selamat datang di Andy Code!",
+		"introduction": "Dengan berbagai Mode bawaan dan dapat diperluas, Andy Code memungkinkan Anda merencanakan, merancang, coding, debug, dan meningkatkan produktivitas seperti yang belum pernah terjadi sebelumnya.",
+		"getStarted": "Pilih penyedia Anda"
+	},
+	"providerSignup": {
+		"heading": "Pilih penyedia Anda",
+		"chooseProvider": "Andy Code memerlukan penyedia LLM untuk bekerja. Pilih satu untuk memulai, Anda dapat menambahkan lebih banyak nanti.",
+		"goBack": "Kembali",
+		"finish": "Selesai"
+	},
+	"telemetry": {
+		"helpImprove": "Bantu Tingkatkan Andy Code",
+		"helpImproveMessage": "Andy Code mengumpulkan data kesalahan dan penggunaan, yang terkait dengan pengenal instalasi, untuk membantu kami memperbaiki bug dan meningkatkan ekstensi. Telemetri ini tidak mengumpulkan kode atau prompt Anda. Anda dapat menonaktifkannya di <settingsLink>pengaturan</settingsLink>.",
+		"accept": "Terima",
+		"decline": "Tolak"
+	},
+	"importSettings": "Impor Pengaturan"
+}

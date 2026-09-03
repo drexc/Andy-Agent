@@ -1,0 +1,20 @@
+{
+	"landing": {
+		"greeting": "Willkommen bei Andy Code!",
+		"introduction": "Mit einer Reihe von integrierten und erweiterbaren Modi ermöglicht dir Andy Code, zu planen, zu architektieren, zu coden, zu debuggen und deine Produktivität wie nie zuvor zu steigern.",
+		"getStarted": "Wähle deinen Anbieter"
+	},
+	"providerSignup": {
+		"heading": "Wähle deinen Anbieter",
+		"chooseProvider": "Andy Code braucht einen LLM-Anbieter, um zu funktionieren. Wähle einen aus, um loszulegen. Du kannst später mehr hinzufügen.",
+		"goBack": "Zurück",
+		"finish": "Beenden"
+	},
+	"telemetry": {
+		"helpImprove": "Hilf, Andy Code zu verbessern",
+		"helpImproveMessage": "Andy Code sammelt Fehler- und Nutzungsdaten, verknüpft mit einer installationsbezogenen Kennung, um uns dabei zu helfen, Fehler zu beheben und die Erweiterung zu verbessern. Diese Telemetrie sammelt nicht deinen Code oder deine Prompts. Du kannst dies in den <settingsLink>Einstellungen</settingsLink> deaktivieren.",
+		"accept": "Akzeptieren",
+		"decline": "Ablehnen"
+	},
+	"importSettings": "Einstellungen importieren"
+}

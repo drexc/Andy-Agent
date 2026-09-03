@@ -1,0 +1,20 @@
+{
+	"landing": {
+		"greeting": "Andy Codeへようこそ！",
+		"introduction": "組み込みおよび拡張可能なモードを備えたAndy Codeは、計画、アーキテクチャ設計、コーディング、デバッグ、そして今までにない生産性向上を可能にします。",
+		"getStarted": "プロバイダーを選択"
+	},
+	"providerSignup": {
+		"heading": "プロバイダーを選択",
+		"chooseProvider": "Andy Codeが機能するにはLLMプロバイダーが必要です。始めるために1つを選択してください。後から追加することもできます。",
+		"goBack": "戻る",
+		"finish": "完了"
+	},
+	"telemetry": {
+		"helpImprove": "Andy Codeの改善にご協力ください",
+		"helpImproveMessage": "Andy Codeは、バグを修正し、拡張機能を改善するために、インストールに紐づく識別子と関連付けたエラーおよび使用データを収集します。このテレメトリはあなたのコードやプロンプトを収集しません。これは<settingsLink>設定</settingsLink>で無効にできます。",
+		"accept": "同意する",
+		"decline": "拒否する"
+	},
+	"importSettings": "設定のインポート"
+}

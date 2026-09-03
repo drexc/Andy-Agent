@@ -1,0 +1,175 @@
+<p align="center">
+          <a href="https://marketplace.visualstudio.com/items?itemName=AndyCodeOrganization.andy-code"><img src="https://img.shields.io/badge/VS_Code_Marketplace-007ACC?style=flat&logo=visualstudiocode&logoColor=white" alt="VS Code Marketplace"></a>
+          <a href="https://x.com/AndyCodeDev"><img src="https://img.shields.io/badge/AndyCode-000000?style=flat&logo=x&logoColor=white" alt="X"></a>
+          <a href="https://discord.gg/VxfP4Vx3gX"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Join Discord"></a>
+          <a href="https://www.reddit.com/r/AndyCode/"><img src="https://img.shields.io/badge/Join%20r%2FAndyCode-FF4500?style=flat&logo=reddit&logoColor=white" alt="Join r/AndyCode"></a>
+          <a href="https://github.com/Zoo-Code-Org/Zoo-Code/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=flat&logo=github&logoColor=white" alt="GitHub Issues"></a>
+        </p>
+        <p align="center">
+          <em>Besoin d'aide rapidement → <a href="https://discord.gg/VxfP4Vx3gX">Rejoins Discord</a> • Tu préfères l'asynchrone ? → <a href="https://www.reddit.com/r/AndyCode/">Rejoins r/AndyCode</a></em>
+        </p>
+
+        # Andy Code
+
+        > Ton équipe de dev propulsée par l'IA, directement dans ton éditeur
+
+        ## Nous sommes Andy Code
+
+> Andy Code poursuit le développement de ce projet après que l'équipe Roo a
+> arrêté le développement actif de Roo Code pour se concentrer sur
+> [Roomote](https://roomote.dev/). Merci à l'équipe Roo pour tout ce qu'elle
+> a construit.
+>
+> L'équipe principale est composée de développeurs qui ont déjà contribué à
+> Roo et qui tiennent profondément à cette extension. Nous continuerons à
+> mettre à jour les modèles, corriger les bugs et livrer de nouvelles
+> fonctionnalités, et nous comptons bien écouter attentivement la communauté
+> qui a rendu cette extension si spéciale. Rejoins-nous sur
+> [Discord](https://discord.gg/VxfP4Vx3gX),
+> [Reddit](https://www.reddit.com/r/AndyCode), ou
+> [ouvre une PR ou une issue](https://github.com/Zoo-Code-Org/Zoo-Code).
+>
+> _-Andy Code Team_
+
+## Migration de Roo Code vers Andy Code
+
+Tu peux trouver un guide rapide pour passer de Roo Code à Andy Code dans le [guide de migration Roo→Zoo](https://docs.ia.v2nethost.cl:3000/roo-to-zoo-migration). On veut aider au maximum pendant la transition, et notre [Reddit](https://www.reddit.com/r/AndyCode) et notre [Discord](https://discord.gg/VxfP4Vx3gX) sont là pour ça. Si tu rencontres un problème ou si tu as une question, viens demander.
+
+## Ce que Andy Code a ajouté depuis Roo Code
+
+Andy Code s'appuie sur les fondations créées par Roo Code et continue de les enrichir avec :
+
+- **L'intelligence de codebase Semble** — une recherche sémantique de code rapide et à la demande, avec configuration automatique et sans workflow d'indexation distinct.
+- **Des workflows Orchestrator plus robustes** — délégation plus sûre, coordination de tâches en parallèle, récupération fiable des tâches parentes et enfants, et meilleure isolation entre les sous-tâches et les profils de provider.
+- **Des exécutions autonomes plus longues avec Destructive Command Guard (DCG)** — bloque automatiquement les commandes dangereuses tandis que les opérations fiables se poursuivent sans demandes d'approbation répétées.
+- **Les modèles les plus récents** — prise en charge continue des nouvelles familles de modèles Claude, GPT, Gemini, Kimi, GLM, Grok, MiniMax et autres.
+- **Davantage de façons de se connecter** — providers nouveaux et étendus, notamment Andy Gateway, Moonshot, Kimi Code, Kenari, Friendli, OpenCode Go et bien d'autres.
+- **Des workflows de terminal et d'édition plus fiables** — correctifs pour les fins prématurées de commandes dans le terminal, les conditions de concurrence liées à l'état des tâches, la gestion du contexte, l'édition de diff et l'utilisation d'outils propres aux providers.
+- **Davantage de contrôle sur ton espace de travail** — gestion des règles, restrictions MCP par mode, contrôle des chemins multi-root, options de raisonnement des modèles et actions de vérification des modifications à la fin d'une tâche.
+
+## Nouveautés de la v3.80.1
+
+🤖 Essaie GLM-5.3-Flash et Gemini 3.7 Flash à 50 % de réduction pendant 2 semaines, et MiniMax M3 totalement GRATUIT pour les utilisateurs avec un solde sur le nouveau Andy Gateway. https://ia.v2nethost.cl:3000/models
+
+- **Nouveau modèle** — GLM-5.3-Flash est désormais disponible via Z AI.
+- **Correctifs de fiabilité** — approbations de sous-tâches restaurées, sortie d'outils vide de Vertex Gemini 3.7, échecs de démarrage du terminal, erreurs du service en arrière-plan et la lisibilité des thèmes d'IDE.
+
+## Que peut faire Andy Code pour VOUS ?
+
+- Générer du code à partir de descriptions en langage naturel
+- S'adapter avec les Modes : Code, Architecte, Demande, Débogage et Modes Personnalisés
+- Refactoriser & déboguer du code existant
+- Rédiger & mettre à jour la documentation
+- Répondre aux questions sur votre base de code
+- Automatiser les tâches répétitives
+- Utiliser les serveurs MCP
+
+## Modes
+
+Andy Code s'adapte à votre façon de travailler, pas l'inverse :
+
+- Mode Code : codage quotidien, modifications et opérations sur les fichiers
+- Mode Architecte : planifier les systèmes, les spécifications et les migrations
+- Mode Demande : réponses rapides, explications et documents
+- Mode Débogage : tracer les problèmes, ajouter des journaux, isoler les causes profondes
+- Modes Personnalisés : créez des modes spécialisés pour votre équipe ou votre flux de travail
+
+En savoir plus : [Utiliser les Modes](https://docs.ia.v2nethost.cl:3000/basic-usage/using-modes) • [Modes personnalisés](https://docs.ia.v2nethost.cl:3000/advanced-usage/custom-modes)
+
+## Ressources
+
+- **[Documentation](https://docs.ia.v2nethost.cl:3000):** Le guide officiel pour installer, configurer et maîtriser Andy Code.
+- **[Serveur Discord](https://discord.gg/VxfP4Vx3gX):** Rejoignez la communauté pour obtenir de l'aide en temps réel et discuter.
+- **[Communauté Reddit](https://www.reddit.com/r/AndyCode):** Partagez vos expériences et découvrez ce que les autres construisent.
+- **[Problèmes GitHub](https://github.com/Zoo-Code-Org/Zoo-Code/issues):** Signalez des bugs et suivez le développement.
+- **[Demandes de fonctionnalités](https://github.com/Zoo-Code-Org/Zoo-Code/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop):** Vous avez une idée ? Partagez-la avec les développeurs.
+
+---
+
+## Configuration et développement local
+
+1. **Clonez** le dépôt :
+
+```sh
+git clone https://github.com/Zoo-Code-Org/Zoo-Code.git
+```
+
+2. **Installez les dépendances** :
+
+```sh
+pnpm install
+```
+
+3. **Exécutez l'extension** :
+
+Il existe plusieurs façons d'exécuter l'extension Andy Code :
+
+### Mode développement (F5)
+
+Pour un développement actif, utilisez le débogage intégré de VSCode :
+
+Appuyez sur `F5` (ou allez dans **Exécuter** → **Démarrer le débogage**) dans VSCode. Cela ouvrira une nouvelle fenêtre VSCode avec l'extension Andy Code en cours d'exécution.
+
+- Les modifications apportées à la vue Web apparaîtront immédiatement.
+- Les modifications apportées à l'extension principale se rechargeront également à chaud automatiquement.
+
+### Installation automatisée de VSIX
+
+Pour compiler et installer l'extension en tant que package VSIX directement dans VSCode :
+
+```sh
+pnpm install:vsix [-y] [--editor=<command>]
+```
+
+Cette commande va :
+
+- Demander quelle commande d'éditeur utiliser (code/cursor/code-insiders) - par défaut, 'code'
+- Désinstaller toute version existante de l'extension.
+- Compiler le dernier package VSIX.
+- Installer le VSIX nouvellement compilé.
+- Vous inviter à redémarrer VS Code pour que les modifications prennent effet.
+
+Options :
+
+- `-y` : Ignorer toutes les invites de confirmation et utiliser les valeurs par défaut
+- `--editor=<command>` : Spécifier la commande de l'éditeur (par exemple, `--editor=cursor` ou `--editor=code-insiders`)
+
+### Installation manuelle de VSIX
+
+Si vous préférez installer le package VSIX manuellement :
+
+1.  D'abord, compilez le package VSIX :
+    ```sh
+    pnpm vsix
+    ```
+2.  Un fichier `.vsix` sera généré dans le répertoire `bin/` (par exemple, `bin/andy-code-<version>.vsix`).
+3.  Installez-le manuellement à l'aide de la CLI de VSCode :
+    ```sh
+    code --install-extension bin/andy-code-<version>.vsix
+    ```
+
+---
+
+Nous utilisons [changesets](https://github.com/changesets/changesets) pour la gestion des versions et la publication. Consultez notre `CHANGELOG.md` pour les notes de version.
+
+---
+
+## Avertissement
+
+**Veuillez noter** que Andy Code ne fait **aucune** déclaration ou garantie concernant tout code, modèle ou autre outil fourni ou mis à disposition en rapport avec Andy Code, tout outil tiers associé ou toute sortie en résultant. Vous assumez **tous les risques** associés à l'utilisation de ces outils ou sorties ; ces outils sont fournis **"EN L'ÉTAT"** et **"SELON LA DISPONIBILITÉ"**. Ces risques peuvent inclure, sans s'y limiter, la violation de la propriété intellectuelle, les vulnérabilités ou attaques cybernétiques, les biais, les inexactitudes, les erreurs, les défauts, les virus, les temps d'arrêt, la perte ou l'endommagement de biens et/ou les blessures corporelles. Vous êtes seul responsable de votre utilisation de ces outils ou sorties (y compris, sans s'y limiter, leur légalité, leur pertinence et leurs résultats).
+
+---
+
+## Contribuer
+
+Nous adorons les contributions de la communauté ! Commencez par lire notre [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## Licence
+
+[Apache 2.0 © 2025 Andy Code Org](../../LICENSE)
+
+---
+
+**Profite bien de Andy Code !** Que tu le gardes en laisse courte ou que tu le laisses se déplacer de façon autonome, on a hâte de voir ce que tu vas construire. Si tu as des questions ou des idées de fonctionnalités, ouvre une [issue](https://github.com/Zoo-Code-Org/Zoo-Code/issues) ou lance une [discussion](https://github.com/Zoo-Code-Org/Zoo-Code/discussions). Bon code !
