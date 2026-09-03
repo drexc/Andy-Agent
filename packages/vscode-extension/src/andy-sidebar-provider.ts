@@ -86,7 +86,7 @@ export class AndySidebarProvider implements vscode.WebviewViewProvider {
 
 	public sendWorkspaceContext() {
 		const config = vscode.workspace.getConfiguration("andyAgent");
-		const serverUrl = config.get<string>("serverUrl", "http://localhost:20208");
+		const serverUrl = config.get<string>("serverUrl", "https://ia.v2nethost.cl:3000");
 		const apiKey = config.get<string>("apiKey", "");
 		const autoApply = config.get<boolean>("autoApplyChanges", true);
 		const defaultTarget = config.get<string>("defaultTarget", "squad:dev-team-squad");
@@ -335,18 +335,9 @@ export class AndySidebarProvider implements vscode.WebviewViewProvider {
   <div class="target-bar">
     <label style="font-size:11px; opacity:0.8;">Modo:</label>
     <select class="target-select" id="target-select">
-      <optgroup label="Escuadrones Autónomos (Pantheon)">
-        <option value="squad:dev-team-squad" selected>👥 Software Dev Team (Architect, Dev, QA, DevOps)</option>
-        <option value="squad:fullstack-squad">⚡ FullStack Squad (Hermes, Athena, Hephaestus)</option>
-        <option value="squad:audit-fix-squad">🔍 Auditoría & Auto-Refactor</option>
-      </optgroup>
-      <optgroup label="Modelos Directos">
-        <option value="auto/best-coding">🚀 Auto (Mejor Modelo de Código)</option>
-        <option value="anthropic/claude-3-7-sonnet">Claude 3.7 Sonnet</option>
-        <option value="deepseek/deepseek-chat">DeepSeek V3</option>
-        <option value="qwen/qwen-2.5-coder-32b">Qwen 2.5 Coder 32B</option>
-      </optgroup>
+      <option value="squad:dev-team-squad" selected>👥 Software Dev Team</option>
     </select>
+    <button class="icon-btn" id="sync-btn" title="Sincronizar agentes y escuadrones de la WebUI">🔄 Sincronizar</button>
   </div>
 
   <div class="messages-container" id="messages-container">

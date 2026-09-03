@@ -59,8 +59,8 @@
       "properties": {
         "andyAgent.serverUrl": {
           "type": "string",
-          "default": "http://localhost:20208",
-          "description": "URL base del servidor Andy Agent (ej: http://localhost:20208 o http://192.168.1.50:20208)"
+          "default": "https://ia.v2nethost.cl:3000",
+          "description": "URL base del servidor Andy Agent (ej: https://ia.v2nethost.cl:3000 o http://localhost:20208)"
         },
         "andyAgent.apiKey": {
           "type": "string",

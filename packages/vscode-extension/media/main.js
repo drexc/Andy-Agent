@@ -5,6 +5,7 @@ const container = document.getElementById("messages-container");
 const input = document.getElementById("prompt-input");
 const sendBtn = document.getElementById("send-btn");
 const targetSelect = document.getElementById("target-select");
+const syncBtn = document.getElementById("sync-btn");
 const newChatBtn = document.getElementById("new-chat-btn");
 const settingsBtn = document.getElementById("settings-btn");
 
@@ -23,7 +24,7 @@ const statusDot = document.getElementById("status-dot");
 let history = [];
 let isStreaming = false;
 let currentAssistantMsgDiv = null;
-let currentServerUrl = "http://localhost:20208";
+let currentServerUrl = "https://ia.v2nethost.cl:3000";
 let currentApiKey = "";
 
 // Notify extension host that webview is loaded
@@ -69,6 +70,100 @@ saveSettingsBtn.addEventListener("click", () => {
 	testConnection();
 });
 
+// Sincronización dinámica de escuadrones y agentes desde la WebUI
+async function syncModelsAndAgents() {
+	const sUrl = (settingServerUrl.value.trim() || currentServerUrl).replace(/\/+$/, "");
+	const sKey = settingApiKey.value.trim() || currentApiKey;
+	if (syncBtn) syncBtn.textContent = "⏳ Sincronizando...";
+
+	try {
+		const resp = await fetch(sUrl + "/v1/models", {
+			headers: sKey ? { Authorization: "Bearer " + sKey } : {},
+		});
+		if (!resp.ok) throw new Error("HTTP " + resp.status + " " + resp.statusText);
+		const data = await resp.json();
+		const items = data.data || [];
+
+		// Separar escuadrones, agentes y modelos
+		const squadItems = items.filter((m) => m.id.startsWith("squad:"));
+		const agentItems = items.filter((m) => m.id.startsWith("agent:"));
+		const modelItems = items.filter(
+			(m) =>
+				!m.id.startsWith("squad:") &&
+				!m.id.startsWith("agent:") &&
+				!items.some((s) => s.id === "squad:" + m.id),
+		);
+
+		const prevSelected = targetSelect.value;
+		targetSelect.innerHTML = "";
+
+		// 1. Escuadrones Autónomos (Pantheon)
+		if (squadItems.length > 0) {
+			const grp = document.createElement("optgroup");
+			grp.label = "👥 Escuadrones Autónomos (WebUI)";
+			for (const s of squadItems) {
+				const opt = document.createElement("option");
+				opt.value = s.id;
+				opt.textContent = s.description || s.id.replace("squad:", "");
+				grp.appendChild(opt);
+			}
+			targetSelect.appendChild(grp);
+		}
+
+		// 2. Agentes Individuales de la WebUI
+		if (agentItems.length > 0) {
+			const grp = document.createElement("optgroup");
+			grp.label = "🤖 Agentes Creados en la WebUI";
+			for (const a of agentItems) {
+				const opt = document.createElement("option");
+				opt.value = a.id;
+				opt.textContent = a.description || a.id.replace("agent:", "");
+				grp.appendChild(opt);
+			}
+			targetSelect.appendChild(grp);
+		}
+
+		// 3. Modelos de Lenguaje Directos
+		if (modelItems.length > 0) {
+			const grp = document.createElement("optgroup");
+			grp.label = "⚡ Modelos de IA Directos";
+			for (const m of modelItems.slice(0, 30)) {
+				const opt = document.createElement("option");
+				opt.value = m.id;
+				opt.textContent = m.description || m.id;
+				grp.appendChild(opt);
+			}
+			targetSelect.appendChild(grp);
+		}
+
+		// Si no hay modelos cargados, añadir fallback
+		if (targetSelect.options.length === 0) {
+			const opt = document.createElement("option");
+			opt.value = "squad:dev-team-squad";
+			opt.textContent = "👥 Software Dev Team";
+			targetSelect.appendChild(opt);
+		}
+
+		// Restaurar selección previa si existe
+		if (prevSelected && Array.from(targetSelect.options).some((o) => o.value === prevSelected)) {
+			targetSelect.value = prevSelected;
+		}
+
+		if (syncBtn) syncBtn.textContent = "🔄 Sincronizar";
+		statusDot.style.background = "#22c55e";
+		statusDot.style.boxShadow = "0 0 6px #22c55e";
+	} catch (err) {
+		console.warn("No se pudieron sincronizar modelos de " + sUrl + ":", err);
+		if (syncBtn) syncBtn.textContent = "⚠️ Reintentar";
+	}
+}
+
+if (syncBtn) {
+	syncBtn.addEventListener("click", () => {
+		syncModelsAndAgents();
+	});
+}
+
 async function testConnection() {
 	const sUrl = (settingServerUrl.value.trim() || currentServerUrl).replace(/\/+$/, "");
 	const sKey = settingApiKey.value.trim() || currentApiKey;
@@ -87,9 +182,12 @@ async function testConnection() {
 			connectionStatus.style.background = "rgba(34, 197, 94, 0.2)";
 			connectionStatus.style.color = "#4ade80";
 			connectionStatus.textContent =
-				"✓ ¡Conexión exitosa! Servidor Andy Agent responde (" + count + " modelos disponibles).";
+				"✓ ¡Conexión exitosa! Servidor Andy responde (" + count + " modelos y agentes sincronizados).";
 			statusDot.style.background = "#22c55e";
 			statusDot.style.boxShadow = "0 0 6px #22c55e";
+
+			// Sincronizar agentes de inmediato
+			await syncModelsAndAgents();
 		} else {
 			throw new Error("HTTP " + resp.status + " " + resp.statusText);
 		}
