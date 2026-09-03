@@ -323,11 +323,18 @@ export class PantheonOrchestrator {
 				currentStep > 1,
 			);
 
-			// Format conversation history
-			const historyContext = roomState.messages.slice(-10).map((m) => ({
-				role: m.senderId === "user" || m.senderId === "system" ? "user" : "assistant",
-				content: `[${m.senderName} (${m.senderRole})]: ${m.content}`,
-			}));
+			// Format conversation history (clean speaker prefixes and raw JSON tool calls so peer agents don't imitate them)
+			const historyContext = roomState.messages.slice(-10).map((m) => {
+				const isUserOrSystem = m.senderId === "user" || m.senderId === "system";
+				const cleanContent = m.content
+					.replace(/^\s*\[?[A-Z][a-zA-Z0-9_\s-]+\s*\([^)]+\)\]?\s*:\s*/g, "")
+					.replace(/\{\s*"(?:tool|name)"\s*:\s*"update_?todo_?list"[\s\S]*?\}\s*$/gi, "")
+					.trim();
+				return {
+					role: isUserOrSystem ? "user" : "assistant",
+					content: isUserOrSystem ? m.content : `@${m.senderName}: ${cleanContent}`,
+				};
+			});
 
 			await onEvent({
 				type: "agent_start",
@@ -351,11 +358,55 @@ export class PantheonOrchestrator {
 
 					if (typeof responseStream === "string") {
 						fullResponseText = responseStream;
-						await onEvent({ type: "delta", agentId: currentAgent.id, delta: fullResponseText });
+						const sanitized = this.sanitizeAgentOutput(fullResponseText);
+						if (sanitized) {
+							await onEvent({ type: "delta", agentId: currentAgent.id, delta: sanitized });
+						}
 					} else if (responseStream && Symbol.asyncIterator in responseStream) {
+						let streamBuffer = "";
+						let isLeadingJsonTool = false;
+						let hasProcessedHeader = false;
+
 						for await (const chunk of responseStream) {
 							fullResponseText += chunk;
-							await onEvent({ type: "delta", agentId: currentAgent.id, delta: chunk });
+							streamBuffer += chunk;
+
+							if (!hasProcessedHeader) {
+								const trimmed = streamBuffer.trimStart();
+								// Wait until we have enough tokens to detect if it starts with [Name]: or {"tool":
+								if (trimmed.startsWith("{") && (trimmed.includes('"tool"') || trimmed.includes('"name"') || trimmed.length > 50)) {
+									isLeadingJsonTool = trimmed.includes('"tool"') || trimmed.includes('"name"');
+									hasProcessedHeader = true;
+									if (!isLeadingJsonTool) {
+										await onEvent({ type: "delta", agentId: currentAgent.id, delta: streamBuffer });
+										streamBuffer = "";
+									}
+								} else if (trimmed.startsWith("[") && trimmed.includes("]:")) {
+									// Strip leading speaker prefix like [Architect (...)]:
+									const afterPrefix = trimmed.replace(/^\[[^\]]+\]:\s*/, "");
+									if (afterPrefix.startsWith("{") && (afterPrefix.includes('"tool"') || afterPrefix.includes('"name"'))) {
+										isLeadingJsonTool = true;
+									} else {
+										await onEvent({ type: "delta", agentId: currentAgent.id, delta: afterPrefix });
+										streamBuffer = "";
+									}
+									hasProcessedHeader = true;
+								} else if (streamBuffer.length > 60) {
+									hasProcessedHeader = true;
+									await onEvent({ type: "delta", agentId: currentAgent.id, delta: streamBuffer });
+									streamBuffer = "";
+								}
+							} else if (!isLeadingJsonTool) {
+								await onEvent({ type: "delta", agentId: currentAgent.id, delta: chunk });
+							}
+						}
+
+						// If it was a leading JSON tool (like update_todo_list), format it now as Markdown and emit!
+						if (isLeadingJsonTool) {
+							const sanitized = this.sanitizeAgentOutput(fullResponseText);
+							if (sanitized) {
+								await onEvent({ type: "delta", agentId: currentAgent.id, delta: sanitized });
+							}
 						}
 					}
 				} catch (err: any) {
@@ -720,6 +771,23 @@ export class PantheonOrchestrator {
 		onEvent: PantheonEventCallback,
 	): Promise<string> {
 		let extraResultsText = "";
+
+		// 0. Todo List Update (if the agent emitted update_todo_list JSON)
+		const todoJsonRegex =
+			/\{\s*"(?:tool|name)"\s*:\s*"update_?todo_?list"\s*,\s*"todos"\s*:\s*(\[[\s\S]*?\])\s*\}/i;
+		const todoMatch = text.match(todoJsonRegex);
+		if (todoMatch) {
+			try {
+				const todosData = JSON.parse(todoMatch[1]);
+				if (Array.isArray(todosData)) {
+					await onEvent({
+						type: "todo_update" as any,
+						agentId: agent.id,
+						todos: todosData,
+					});
+				}
+			} catch {}
+		}
 
 		// 1. File Writing / Editing (for agents with write capability, e.g. Developer, Hephaestus, Refactorer)
 		if (agent.capabilities.write) {
@@ -1319,11 +1387,12 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 		const operationalRules = `\n\n# REGLAS CRÍTICAS DE EJECUCIÓN DEL PANTHEON
 1. **Identidad del Agente**: Eres exclusivamente **@${agent.name}** (${agent.role}), un agente autónomo del escuadrón "${squad.name}" en el ecosistema Andy Agent. Tu única identidad es @${agent.name}. NUNCA te identifiques como Antigravity, Google DeepMind, OpenAI ni un asistente genérico.
 2. **Idioma y Formato Humano**: Responde siempre en **Español** con formato Markdown estructurado, limpio y profesional (encabezados, listas, tablas y bloques de código).
-3. **PROHIBICIÓN ABSOLUTA DE GENERAR PSEUDO-TAGS O TOKENS DE HERRAMIENTAS**: NUNCA generes tokens o etiquetas especiales de llamada a herramientas como \`<|tool_call_start|>\`, \`<|tool_call_end|>\`, \`<tool_call>\`, \`<arg_key>\`, \`<arg_value>\`, \`<action>\`. Toda la información del proyecto, manifiestos y código fuente ya ha sido leída y provista arriba. Redacta siempre en texto Markdown en Español para el usuario y para tus compañeros de escuadrón.
-4. **Acceso Directo y Total al Proyecto Activo**: Ya te encuentras ejecutando dentro del espacio de trabajo del proyecto activo ("${projectContext?.name || path.basename(this.cwd)}" en "${projectContext?.path || this.cwd}"). Toda la estructura de archivos, clases, interfaces públicas, manifiestos (.csproj / .sln), modelos C# y documentación técnica de protocolos (incluyendo hojas Excel .xlsx decodificadas) ya están completamente leídos e incluidos arriba en tu contexto.
-5. **PROHIBICIÓN ESTRICTA DE DECIR "NO PUEDO ACCEDER", "NECESITO LOS ARCHIVOS" O PEDIR QUE EL USUARIO COMPARTA CÓDIGO**: NUNCA digas "NO PUEDO Acceder a tu Filesystem", "Necesito los Archivos Fuente para Proceder", "no tengo acceso al código" ni pidas que el usuario comparta archivos o ejecute "Get-ChildItem", "tree /F", "dir". Tienes el código fuente C# completo arriba en "Interfaces y Estructuras Públicas del Código Fuente", las tablas en "Especificación de Protocolo desde Archivo Excel" y la estructura en "Árbol de Archivos del Proyecto". Realiza el análisis comparativo, auditoría, diseño o implementación de inmediato con los datos provistos.
-6. **Programación Inmediata Sin Preguntas Retóricas**: No pidas confirmación para empezar ni preguntes "¿deseas que proceda?". Entrega de inmediato el diseño arquitectónico y el CÓDIGO FUENTE COMPLETO implementado.
-7. **Especialización Inmediata en tu Escuadrón**:\n${specializationBullets}`;
+3. **PROHIBICIÓN ABSOLUTA DE GENERAR JSON O PSEUDO-TAGS DE HERRAMIENTAS COMO TEXTO**: NUNCA escribas JSON en el chat como {"tool":"update_todo_list"...}, {"name":"..."}, ni etiquetas especiales como `<|tool_call_start|>`, `<|tool_call_end|>`, `<tool_call>`, `<arg_key>`, `<arg_value>`, `<action>`. Toda planificación de tareas o fases debe redactarse en viñetas Markdown elegantes y legibles en Español (ej: "- 🔄 **Fase 1**: ...", "- ⏳ **Fase 2**: ...").
+4. **PROHIBICIÓN DE PREFIJOS DE HABLANTE**: NUNCA comiences tu respuesta escribiendo "[Architect (...)]:" ni tu propio nombre o rol al inicio de tu mensaje. Empieza directamente con el contenido técnico en Español.
+5. **Acceso Directo y Total al Proyecto Activo**: Ya te encuentras ejecutando dentro del espacio de trabajo del proyecto activo ("${projectContext?.name || path.basename(this.cwd)}" en "${projectContext?.path || this.cwd}"). Toda la estructura de archivos, clases, interfaces públicas, manifiestos (.csproj / .sln), modelos C# y documentación técnica de protocolos (incluyendo hojas Excel .xlsx decodificadas) ya están completamente leídos e incluidos arriba en tu contexto.
+6. **PROHIBICIÓN ESTRICTA DE DECIR "NO PUEDO ACCEDER", "NECESITO LOS ARCHIVOS" O PEDIR QUE EL USUARIO COMPARTA CÓDIGO**: NUNCA digas "NO PUEDO Acceder a tu Filesystem", "Necesito los Archivos Fuente para Proceder", "no tengo acceso al código" ni pidas que el usuario comparta archivos o ejecute "Get-ChildItem", "tree /F", "dir". Tienes el código fuente C# completo arriba en "Interfaces y Estructuras Públicas del Código Fuente", las tablas en "Especificación de Protocolo desde Archivo Excel" y la estructura en "Árbol de Archivos del Proyecto". Realiza el análisis comparativo, auditoría, diseño o implementación de inmediato con los datos provistos.
+7. **Programación Inmediata Sin Preguntas Retóricas**: No pidas confirmación para empezar ni preguntes "¿deseas que proceda?". Entrega de inmediato el diseño arquitectónico y el CÓDIGO FUENTE COMPLETO implementado.
+8. **Especialización Inmediata en tu Escuadrón**:\n${specializationBullets}`;
 
 		const writerAgents =
 			squadAgents
@@ -1436,11 +1505,39 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 
 	private sanitizeAgentOutput(text: string): string {
 		if (!text) return "";
-		return text
+		let cleaned = text
+			// Strip leading speaker prefix like [Architect (Software Architect & System Designer)]:
+			.replace(/^\s*\[?[A-Z][a-zA-Z0-9_\s-]+\s*\([^)]+\)\]?\s*:\s*/g, "")
 			.replace(/<\|tool_call_start\|>[\s\S]*?<\|tool_call_end\|>/gi, "")
 			.replace(/<\|tool_call_start\|>[\s\S]*$/gi, "")
 			.replace(/<\|im_start\|>[\s\S]*?<\|im_end\|>/gi, "")
-			.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, "")
+			.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, "");
+
+		// Convert update_todo_list JSON to clean Markdown list
+		const todoJsonRegex =
+			/\{\s*"(?:tool|name)"\s*:\s*"update_?todo_?list"\s*,\s*"todos"\s*:\s*(\[[\s\S]*?\])\s*\}/i;
+		const todoMatch = cleaned.match(todoJsonRegex);
+		if (todoMatch) {
+			try {
+				const todosData = JSON.parse(todoMatch[1]);
+				if (Array.isArray(todosData)) {
+					const formattedList = todosData
+						.map((item: any) => {
+							const icon =
+								item.status === "completed"
+									? "✅"
+									: item.status === "in_progress"
+										? "🔄"
+										: "⏳";
+							return `- ${icon} **${item.content || item.active_form || item.text || ""}**`;
+						})
+						.join("\n");
+					cleaned = cleaned.replace(todoMatch[0], `📋 **Plan de Trabajo del Escuadrón**:\n\n${formattedList}\n\n`);
+				}
+			} catch {}
+		}
+
+		return cleaned
 			.replace(
 				/\{\s*"name"\s*:\s*"(?:read_file|execute_command|write_to_file|run_command|terminal|read|write)"\s*,\s*"arguments"\s*:\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\s*\}/gi,
 				"",

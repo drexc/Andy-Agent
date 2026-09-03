@@ -3837,6 +3837,50 @@ ${prompt || ""}`;
 							}
 						} else if (event.type === "agent_finish") {
 							contentToSend = "\n";
+						} else if ((event as any).type === "todo_update") {
+							const tu = event as any;
+							const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+							const argsJson = JSON.stringify({
+								todos: tu.todos,
+							});
+
+							toolCallsEmitted.push({
+								id: toolCallId,
+								type: "function",
+								function: {
+									name: "update_todo_list",
+									arguments: argsJson,
+								},
+							});
+
+							res.write(
+								`data: ${JSON.stringify({
+									id: reqId,
+									object: "chat.completion.chunk",
+									created: Math.floor(Date.now() / 1000),
+									model: returnedModel,
+									choices: [
+										{
+											index: 0,
+											delta: {
+												tool_calls: [
+													{
+														index: toolCallsEmitted.length - 1,
+														id: toolCallId,
+														type: "function",
+														function: {
+															name: "update_todo_list",
+															arguments: argsJson,
+														},
+													},
+												],
+											},
+											finish_reason: null,
+										},
+									],
+								})}\n\n`,
+							);
+							contentToSend = "";
 						} else if (event.type === "user_question") {
 							const uq = event as any;
 							const qText = uq.question || "Acción necesaria por usuario";
