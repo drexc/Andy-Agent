@@ -1592,117 +1592,141 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 	public detectUserActionRequired(text: string): UserActionRequired | null {
 		if (!text) return null;
 
+		const options: Array<{ text: string }> = [];
+		let question = "";
+		let rawMatch = "";
+
 		// 1. Direct XML tag check
 		const xmlMatch = text.match(
 			/<ask_followup_question>[\s\S]*?<question>([\s\S]*?)<\/question>[\s\S]*?(?:<follow_up>([\s\S]*?)<\/follow_up>)?[\s\S]*?<\/ask_followup_question>/i,
 		);
 		if (xmlMatch) {
-			const q = xmlMatch[1].trim();
-			let options: Array<{ text: string }> = [];
+			rawMatch = "XML_ask_followup";
+			question = xmlMatch[1].trim();
 			if (xmlMatch[2]) {
 				try {
 					const parsed = JSON.parse(xmlMatch[2].trim());
 					if (Array.isArray(parsed)) {
-						options = parsed.map((item: any) => ({
-							text: typeof item === "string" ? item : item.text || item.answer || JSON.stringify(item),
-						}));
+						for (const item of parsed) {
+							const optText =
+								typeof item === "string" ? item : item.text || item.answer || JSON.stringify(item);
+							if (optText) options.push({ text: optText });
+						}
 					}
 				} catch {}
 			}
-			if (options.length === 0) {
-				options = [{ text: "Confirmar y Continuar" }, { text: "Modificar Requerimiento" }];
-			}
-			return { question: q, options };
 		}
 
-		// 2. Header pattern check (Acción Necesaria, Próximos Pasos, etc.)
-		const headerRegex =
-			/(?:🚨|🎯|📌|❓|⚠️)?\s*(?:\*{1,3})?(?:Acci[oó]n\s+(?:Necesaria|Requerida)|Pr[oó]ximos\s+Pasos|Pregunta|Confirmaci[oó]n\s+Requerida|Decisi[oó]n\s+Requerida)(?:\s+(?:del|para\s+el|por\s+el|de)\s+Usuario)?(?:\*{1,3})?:?([^\n\r]*)/i;
-		const match = text.match(headerRegex);
+		// 2. If no options extracted from XML yet, parse options from Header pattern or text
+		if (options.length === 0) {
+			const headerRegex =
+				/(?:🚨|🎯|📌|❓|⚠️)?\s*(?:\*{1,3})?(?:Acci[oó]n\s+(?:Necesaria|Requerida)|Pr[oó]ximos\s+Pasos|Pregunta|Confirmaci[oó]n\s+Requerida|Decisi[oó]n\s+Requerida)(?:\s+(?:del|para\s+el|por\s+el|de)\s+Usuario)?(?:\*{1,3})?:?([^\n\r]*)/i;
+			const match = text.match(headerRegex);
 
-		let sectionText = "";
-		let rawMatch = "";
+			let sectionText = "";
 
-		if (match) {
-			rawMatch = match[0];
-			const startIndex = match.index! + match[0].length;
-			const remaining = text.slice(startIndex);
-			const stopMatch = remaining.match(
-				/(?:\n\s*---|\n\s*#{1,4}\s+|\n\s*📌\s*|\n\s*(?:\*{1,2})?(?:Decisi[oó]n|Procedo)\b)/i,
-			);
-			sectionText = (stopMatch ? remaining.slice(0, stopMatch.index) : remaining).trim();
-		} else {
-			// 3. Fallback: check if the text ends with an interactive user question (¿Quieres..., ¿Deseas..., etc.)
-			const closingQuestionMatch = text.match(
-				/(?:^|\n)\s*(?:(?:Por\s+favor|Recuerda|Nota)[^\n]*\n\s*)?(¿(?:Quieres|Deseas|Prefieres|Confirmas|Indicas|Puedes|Te\s+gustar[ií]a)[^?\n]+\?[\s\S]*)$/i,
-			);
-			if (closingQuestionMatch) {
-				rawMatch = "ClosingQuestion";
-				sectionText = closingQuestionMatch[1].trim();
+			if (match) {
+				rawMatch = match[0];
+				const startIndex = match.index! + match[0].length;
+				const remaining = text.slice(startIndex);
+				const stopMatch = remaining.match(
+					/(?:\n\s*---|\n\s*#{1,4}\s+|\n\s*📌\s*|\n\s*(?:\*{1,2})?(?:Decisi[oó]n|Procedo)\b)/i,
+				);
+				sectionText = (stopMatch ? remaining.slice(0, stopMatch.index) : remaining).trim();
+			} else {
+				// 3. Fallback: check if the text ends with an interactive user question (¿Quieres..., ¿Deseas..., etc.)
+				const closingQuestionMatch = text.match(
+					/(?:^|\n)\s*(?:(?:Por\s+favor|Recuerda|Nota)[^\n]*\n\s*)?(¿(?:Quieres|Deseas|Prefieres|Confirmas|Indicas|Puedes|Te\s+gustar[ií]a|Cu[aá]l)[^?\n]+\?[\s\S]*)$/i,
+				);
+				if (closingQuestionMatch) {
+					rawMatch = "ClosingQuestion";
+					sectionText = closingQuestionMatch[1].trim();
+				}
+			}
+
+			if (sectionText) {
+				const optionLines = sectionText.split(/\r?\n/);
+				const introLines: string[] = [];
+				let closingQuestion = "";
+
+				const optionPattern =
+					/^(?:[-*+]\s+|\d+[.)]\s+)?(?:\*{1,2})?Opci[oó]n\s+([A-Za-z0-9]+)(?:\*{1,2})?[\s:—–-]+\s*(.+)$/i;
+
+				for (const line of optionLines) {
+					const trimmed = line.trim();
+					if (!trimmed) continue;
+					const optMatch = trimmed.match(optionPattern);
+					if (optMatch) {
+						const cleanText = optMatch[2]
+							.replace(/^[\s—–:-]+/, "")
+							.replace(/^\*+|\*+$/g, "")
+							.trim();
+						options.push({ text: `Opción ${optMatch[1]}: ${cleanText}` });
+						continue;
+					}
+
+					// If we haven't found any options yet, lines before options form the intro
+					if (options.length === 0) {
+						if (
+							!/^(?:\*{1,2})?(?:⏳|🕒|⌛|\(esperando|esperando|nota:|aviso:|status:)/i.test(trimmed) &&
+							!/esperando\s+su\s+respuesta/i.test(trimmed)
+						) {
+							introLines.push(trimmed);
+						}
+					} else {
+						// Once options started, check for a closing question line like "¿Cuál opción prefieres?"
+						const qm = trimmed.match(/(¿[^?]+\?)/);
+						if (qm) {
+							closingQuestion = qm[1].trim();
+						}
+					}
+				}
+
+				// Check "o prefieres" if still no options
+				if (options.length === 0) {
+					const eitherOrMatch = sectionText.match(
+						/¿(?:Quieres\s+que|Deseas\s+que)?\s*([^,?]+?)(?:,\s*o\s+(?:prefieres|deseas)?\s*([^?]+))\?/i,
+					);
+					if (eitherOrMatch) {
+						let opt1 = eitherOrMatch[1]
+							.trim()
+							.replace(/^(?:proceda\s+con\s+la\s+|instale\s+)/i, "")
+							.trim();
+						let opt2 = eitherOrMatch[2]
+							.trim()
+							.replace(/^(?:compartir\s+primero\s+el\s+|proporcionar\s+)/i, "")
+							.trim();
+						opt1 = opt1.charAt(0).toUpperCase() + opt1.slice(1);
+						opt2 = opt2.charAt(0).toUpperCase() + opt2.slice(1);
+						options.push({ text: `Opción 1: ${opt1}` });
+						options.push({ text: `Opción 2: ${opt2}` });
+					}
+				}
+
+				if (!question) {
+					if (introLines.length > 0 && closingQuestion) {
+						question = `${introLines[0]} ${closingQuestion}`;
+					} else if (closingQuestion) {
+						question = closingQuestion;
+					} else if (introLines.length > 0) {
+						question = introLines.join(" ").trim();
+					} else {
+						question = sectionText.slice(0, 150).trim();
+					}
+				}
 			}
 		}
 
-		if (!sectionText) {
+		if (!question && options.length === 0) {
 			return null;
 		}
-
-		// Parse options (Opción A, Opción B, 1. Opción A, - Opción 1, * Opción A, etc.)
-		const options: Array<{ text: string }> = [];
-		const optionLines = sectionText.split(/\r?\n/);
-		const questionLines: string[] = [];
-
-		const optionPattern =
-			/^(?:[-*+]\s+|\d+[.)]\s+)?(?:\*{1,2})?Opci[oó]n\s+([A-Za-z0-9]+)(?:\*{1,2})?:?\s*(.+)$/i;
-
-		for (const line of optionLines) {
-			const trimmed = line.trim();
-			if (!trimmed) continue;
-			const optMatch = trimmed.match(optionPattern);
-			if (optMatch) {
-				const cleanText = optMatch[2].replace(/^\*+|\*+$/g, "").trim();
-				options.push({ text: `Opción ${optMatch[1]}: ${cleanText}` });
-				continue;
-			}
-			// Ignore status notes / waiting remarks from question lines
-			if (
-				/^(?:\*{1,2})?(?:⏳|🕒|⌛|\(esperando|esperando|nota:|aviso:|status:)/i.test(trimmed) ||
-				/esperando\s+su\s+respuesta/i.test(trimmed) ||
-				/delegaci[oó]n\s+a\s+@/i.test(trimmed)
-			) {
-				continue;
-			}
-			questionLines.push(trimmed);
-		}
-
-		// Check if there is an "o prefieres" choice inside the question
-		if (options.length === 0) {
-			const eitherOrMatch = sectionText.match(
-				/¿(?:Quieres\s+que|Deseas\s+que)?\s*([^,?]+?)(?:,\s*o\s+(?:prefieres|deseas)?\s*([^?]+))\?/i,
-			);
-			if (eitherOrMatch) {
-				let opt1 = eitherOrMatch[1]
-					.trim()
-					.replace(/^(?:proceda\s+con\s+la\s+|instale\s+)/i, "")
-					.trim();
-				let opt2 = eitherOrMatch[2]
-					.trim()
-					.replace(/^(?:compartir\s+primero\s+el\s+|proporcionar\s+)/i, "")
-					.trim();
-				opt1 = opt1.charAt(0).toUpperCase() + opt1.slice(1);
-				opt2 = opt2.charAt(0).toUpperCase() + opt2.slice(1);
-				options.push({ text: `Opción 1: ${opt1}` });
-				options.push({ text: `Opción 2: ${opt2}` });
-			}
-		}
-
-		const question = questionLines.join("\n").trim() || sectionText;
 
 		if (options.length === 0) {
 			options.push({ text: "Confirmar y Continuar" }, { text: "Modificar Requerimiento" });
 		}
 
 		return {
-			question,
+			question: question || "Por favor, seleccione una de las opciones:",
 			options: options.slice(0, 5),
 			rawMatch,
 		};
