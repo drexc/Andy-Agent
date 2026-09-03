@@ -655,7 +655,7 @@ export class PantheonOrchestrator {
 						agentId: agent.id,
 						tool: "write",
 						target: rawPath,
-						input: { path: rawPath, lines: lineCount, bytes: byteCount },
+						input: { path: rawPath, lines: lineCount, bytes: byteCount, content },
 					});
 
 					const resultMsg = `✓ Archivo "${rawPath}" creado/modificado exitosamente (${lineCount} líneas, ${byteCount} bytes en disco).`;
@@ -665,7 +665,8 @@ export class PantheonOrchestrator {
 						tool: "write",
 						target: rawPath,
 						output: resultMsg,
-					});
+						content,
+					} as any);
 
 					extraResultsText += `\n\n> 🛠️ **Acción ejecutada**: Se escribió el archivo \`${rawPath}\` (${lineCount} líneas en disco).`;
 				} catch (err: any) {

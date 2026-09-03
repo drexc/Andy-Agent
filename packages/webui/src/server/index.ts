@@ -3685,7 +3685,8 @@ ${prompt || ""}`;
 							contentToSend = `\n\n> ⚙️ **Ejecutando ${event.tool === "write" ? "Modificación de Archivo" : "Comando en Terminal"}**: \`${event.target || event.tool}\`...\n\n`;
 						} else if (event.type === "tool_result") {
 							if (event.tool === "write") {
-								contentToSend = `> ✓ **Archivo actualizado**: \`${event.target || "archivo"}\` (${event.output || "OK"})\n\n`;
+								const fileContent = (event as any).content || (event as any).input?.content || "";
+								contentToSend = `> ✓ **Archivo actualizado**: \`${event.target || "archivo"}\` (${event.output || "OK"})\n\n<write_to_file>\n<path>${event.target}</path>\n<content>\n${fileContent}\n</content>\n</write_to_file>\n\n`;
 							} else {
 								contentToSend = `\n\`\`\`bash\n# ${event.target || "comando"} (Exit code: ${event.exitCode ?? 0})\n${event.output || ""}\n\`\`\`\n\n`;
 							}
@@ -3762,7 +3763,8 @@ ${prompt || ""}`;
 							accumulatedFullText += `\n\n> ⚙️ **Ejecutando ${event.tool === "write" ? "Modificación de Archivo" : "Comando en Terminal"}**: \`${event.target}\`...\n\n`;
 						} else if (event.type === "tool_result") {
 							if (event.tool === "write") {
-								accumulatedFullText += `> ✓ **Archivo actualizado**: \`${event.target}\` (${event.output || "OK"})\n\n`;
+								const fileContent = (event as any).content || (event as any).input?.content || "";
+								accumulatedFullText += `> ✓ **Archivo actualizado**: \`${event.target}\` (${event.output || "OK"})\n\n<write_to_file>\n<path>${event.target}</path>\n<content>\n${fileContent}\n</content>\n</write_to_file>\n\n`;
 							} else {
 								accumulatedFullText += `\n\`\`\`bash\n# ${event.target} (Exit code: ${event.exitCode ?? 0})\n${event.output || ""}\n\`\`\`\n\n`;
 							}
