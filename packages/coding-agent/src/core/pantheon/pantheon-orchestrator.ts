@@ -518,14 +518,35 @@ export class PantheonOrchestrator {
 		cmd: string,
 		cwd: string,
 	): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+		let effectiveCwd = cwd;
+		let effectiveCmd = cmd;
+
+		// Si el comando empieza con cd "..." && <cmd>, resolver directorio de forma inteligente
+		const cdMatch = cmd.match(/^cd\s+["']?([^"']+)["']?\s*(?:&&|;)\s*(.*)$/i);
+		if (cdMatch) {
+			const targetDir = path.isAbsolute(cdMatch[1]) ? path.resolve(cdMatch[1]) : path.resolve(cwd, cdMatch[1]);
+			const remainingCmd = cdMatch[2].trim();
+			if (existsSync(targetDir)) {
+				effectiveCwd = targetDir;
+				effectiveCmd = remainingCmd;
+			} else {
+				// El subdirectorio indicado por el LLM no existe físicamente; ejecutar el comando en la raíz del proyecto
+				effectiveCmd = remainingCmd;
+			}
+		}
+
 		return new Promise((resolve) => {
-			exec(cmd, { cwd, timeout: 45000, maxBuffer: 1024 * 1024 * 5 }, (error, stdout, stderr) => {
-				resolve({
-					stdout: (stdout || "").toString(),
-					stderr: (stderr || "").toString(),
-					exitCode: error ? (error.code ?? 1) : 0,
-				});
-			});
+			exec(
+				effectiveCmd,
+				{ cwd: effectiveCwd, timeout: 45000, maxBuffer: 1024 * 1024 * 5 },
+				(error, stdout, stderr) => {
+					resolve({
+						stdout: (stdout || "").toString(),
+						stderr: (stderr || "").toString(),
+						exitCode: error ? (error.code ?? 1) : 0,
+					});
+				},
+			);
 		});
 	}
 
@@ -611,6 +632,33 @@ export class PantheonOrchestrator {
 				register(inferredName, body, "inferred-class");
 			}
 			m6 = p6.exec(text);
+		}
+
+		// Pattern 7: JSON tool calls: {"name": "write_to_file", "arguments": {"filePath": "...", "content": "..."}}
+		const p7 = /\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*\}/g;
+		let m7 = p7.exec(text);
+		while (m7 !== null) {
+			try {
+				const toolName = m7[1].toLowerCase();
+				if (toolName === "write_to_file" || toolName === "write" || toolName === "file_write") {
+					const args = JSON.parse(m7[2]);
+					const filePath = args.filePath || args.path || args.file || args.target;
+					const content = args.content || args.code || "";
+					if (filePath && content) {
+						register(filePath, content, "json-tool-write");
+					}
+				}
+			} catch {}
+			m7 = p7.exec(text);
+		}
+
+		// Pattern 8: XML tool calls: <write_to_file><path>...</path><content>...</content></write_to_file>
+		const p8 =
+			/<write_to_file>\s*<(?:filePath|path)>([^<]+)<\/(?:filePath|path)>\s*<content>([\s\S]*?)<\/content>\s*<\/write_to_file>/gi;
+		let m8 = p8.exec(text);
+		while (m8 !== null) {
+			register(m8[1].trim(), m8[2], "xml-tool-write");
+			m8 = p8.exec(text);
 		}
 
 		return files;
@@ -711,11 +759,47 @@ export class PantheonOrchestrator {
 						fullCmd.startsWith("mvn") ||
 						fullCmd.startsWith("python") ||
 						fullCmd.startsWith("node") ||
-						fullCmd.startsWith("git"))
+						fullCmd.startsWith("git") ||
+						fullCmd.startsWith("cd "))
 				) {
 					commandsToRun.push(fullCmd);
 				}
 				m2 = bashPlainRegex.exec(text);
+			}
+
+			// Pattern 3: JSON tool calls: {"name": "execute_command" | "run_command" | "terminal", "arguments": {"command": "..."}}
+			const jsonCmdRegex =
+				/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*\}/g;
+			let m3 = jsonCmdRegex.exec(text);
+			while (m3 !== null) {
+				try {
+					const toolName = m3[1].toLowerCase();
+					if (
+						toolName === "execute_command" ||
+						toolName === "run_command" ||
+						toolName === "terminal" ||
+						toolName === "bash" ||
+						toolName === "cmd"
+					) {
+						const args = JSON.parse(m3[2]);
+						const cmd = (args.command || args.cmd || "").trim();
+						if (cmd && !commandsToRun.includes(cmd)) {
+							commandsToRun.push(cmd);
+						}
+					}
+				} catch {}
+				m3 = jsonCmdRegex.exec(text);
+			}
+
+			// Pattern 4: XML tool calls: <execute_command><command>...</command></execute_command>
+			const xmlCmdRegex = /<execute_command>\s*<command>([\s\S]*?)<\/command>\s*<\/execute_command>/gi;
+			let m4 = xmlCmdRegex.exec(text);
+			while (m4 !== null) {
+				const cmd = m4[1].trim();
+				if (cmd && !commandsToRun.includes(cmd)) {
+					commandsToRun.push(cmd);
+				}
+				m4 = xmlCmdRegex.exec(text);
 			}
 
 			for (const cmd of commandsToRun) {
@@ -755,47 +839,88 @@ export class PantheonOrchestrator {
 			}
 		}
 
-		// 3. File Read Request Execution (e.g. ```read: path/file.cs``` or [read(file_path='...')] )
+		// 3. File Read Request Execution (markdown blocks, JSON tools, XML tools)
+		const filesToRead: string[] = [];
+
 		const readBlockRegex = /(?:```(?:read|file_read):\s*([^\r\n]+)```|\[read\(file_path=['"]?([^'"]+)['"]?\)\])/gi;
 		let readMatch = readBlockRegex.exec(text);
 		while (readMatch !== null) {
-			const targetFile = (readMatch[1] || readMatch[2] || "").trim();
-			if (targetFile) {
-				try {
-					const fullPath = path.isAbsolute(targetFile)
-						? path.resolve(targetFile)
-						: path.resolve(targetCwd, targetFile);
-					if (!this.isPathSafe(fullPath, targetCwd)) {
-						const safetyMsg = `🛡️ [Guardrail de Seguridad]: Lectura de archivo fuera del directorio del proyecto bloqueada: "${targetFile}".`;
-						await onEvent({
-							type: "error",
-							agentId: agent.id,
-							error: safetyMsg,
-						});
-						extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió leer \`${targetFile}\` porque excede los límites del proyecto.`;
-						readMatch = readBlockRegex.exec(text);
-						continue;
-					}
-					if (existsSync(fullPath)) {
-						const content = readFileSync(fullPath, "utf-8");
-						const ext = (path.extname(targetFile).slice(1) || "text").toLowerCase();
-						await onEvent({
-							type: "tool_start",
-							agentId: agent.id,
-							tool: "read",
-							input: { path: targetFile },
-						});
-						await onEvent({
-							type: "tool_result",
-							agentId: agent.id,
-							tool: "read",
-							output: `✓ Lectura de ${targetFile} (${content.split(/\r?\n/).length} líneas)`,
-						});
-						extraResultsText += `\n\n### 📖 Contenido de \`${targetFile}\`:\n\`\`\`${ext}\n${content.slice(0, 4000)}\n\`\`\``;
-					}
-				} catch {}
-			}
+			const tf = (readMatch[1] || readMatch[2] || "").trim();
+			if (tf && !filesToRead.includes(tf)) filesToRead.push(tf);
 			readMatch = readBlockRegex.exec(text);
+		}
+
+		// JSON tool calls for read_file: {"name": "read_file", "arguments": {"filePath": "..."}}
+		const jsonReadRegex =
+			/\{\s*"name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})\s*\}/g;
+		let jrm = jsonReadRegex.exec(text);
+		while (jrm !== null) {
+			try {
+				const name = jrm[1].toLowerCase();
+				if (name === "read_file" || name === "read" || name === "file_read") {
+					const args = JSON.parse(jrm[2]);
+					const tf = (args.filePath || args.path || args.file || "").trim();
+					if (tf && !filesToRead.includes(tf)) filesToRead.push(tf);
+				}
+			} catch {}
+			jrm = jsonReadRegex.exec(text);
+		}
+
+		// XML tool calls: <read_file><path>...</path></read_file>
+		const xmlReadRegex = /<read_file>\s*<(?:filePath|path)>([\s\S]*?)<\/(?:filePath|path)>\s*<\/read_file>/gi;
+		let xrm = xmlReadRegex.exec(text);
+		while (xrm !== null) {
+			const tf = xrm[1].trim();
+			if (tf && !filesToRead.includes(tf)) filesToRead.push(tf);
+			xrm = xmlReadRegex.exec(text);
+		}
+
+		for (const targetFile of filesToRead) {
+			try {
+				let fullPath = path.isAbsolute(targetFile) ? path.resolve(targetFile) : path.resolve(targetCwd, targetFile);
+
+				// Fallback: If targetFile has prefix matching parts of targetCwd, try resolving relative basename
+				if (!existsSync(fullPath)) {
+					const baseOnly = path.basename(targetFile);
+					const altPath = path.resolve(targetCwd, baseOnly);
+					if (existsSync(altPath)) {
+						fullPath = altPath;
+					}
+				}
+
+				if (!this.isPathSafe(fullPath, targetCwd)) {
+					const safetyMsg = `🛡️ [Guardrail de Seguridad]: Lectura de archivo fuera del directorio del proyecto bloqueada: "${targetFile}".`;
+					await onEvent({
+						type: "error",
+						agentId: agent.id,
+						error: safetyMsg,
+					});
+					extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió leer \`${targetFile}\` porque excede los límites del proyecto.`;
+					continue;
+				}
+
+				if (existsSync(fullPath)) {
+					const content = readFileSync(fullPath, "utf-8");
+					const ext = (path.extname(fullPath).slice(1) || "text").toLowerCase();
+					await onEvent({
+						type: "tool_start",
+						agentId: agent.id,
+						tool: "read",
+						target: targetFile,
+						input: { path: targetFile },
+					});
+					await onEvent({
+						type: "tool_result",
+						agentId: agent.id,
+						tool: "read",
+						target: targetFile,
+						output: `✓ Lectura de ${targetFile} (${content.split(/\r?\n/).length} líneas)`,
+					});
+					extraResultsText += `\n\n### 📖 Contenido de \`${path.basename(fullPath)}\`:\n\`\`\`${ext}\n${content.slice(0, 4000)}\n\`\`\``;
+				} else {
+					extraResultsText += `\n\n> ℹ️ Archivo \`${targetFile}\` no encontrado en el proyecto activo.`;
+				}
+			} catch {}
 		}
 
 		return extraResultsText;
@@ -1207,6 +1332,17 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 4. Informa con precisión al usuario qué archivos quedaron commiteados y recuérdale ejecutar \`git pull origin main\` en su PC local para tener los archivos al instante.`
 			: "";
 
+		const debuggerMandate = agent.id.includes("debugger")
+			? `\n\n# 🐞 DIRECTIVA DE DIAGNÓSTICO Y COMPILACIÓN PARA @${agent.name.toUpperCase()}
+1. Si el usuario te pide compilar o diagnosticar el proyecto, ejecuta el comando en la terminal real usando:
+   \`\`\`bash
+   dotnet build
+   \`\`\`
+   (o \`\`\`bash\ndotnet test\n\`\`\` para pruebas).
+2. El sistema ejecutará el comando directamente en el proyecto y te devolverá el reporte exacto de compilación.
+3. Si la compilación tiene errores, analiza cada archivo y número de línea, explica la causa raíz y escribe el fix o dile a @Developer cómo solucionarlo.`
+			: "";
+
 		const actionProtocol = `\n\n# PROTOCOLO OBLIGATORIO DE CREACIÓN Y ESCRITURA DE ARCHIVOS EN DISCO (${writerAgents})
 1. **Para Escribir o Modificar Archivos (${writerAgents})**:
    Escribe bloques de código indicando claramente el nombre del archivo en cualquiera de las siguientes formas:
@@ -1245,7 +1381,7 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 Eres parte del escuadrón multi-agente "${squad.name}" (Modo: ${squad.workflowMode}).
 Otros agentes en tu escuadrón:
 ${members}
-${projectSection}${graftSection}${delegationSection}${writerMandate}${architectMandate}${testerMandate}${devopsMandate}${squadCollaborationProtocol}${actionProtocol}${operationalRules}`;
+${projectSection}${graftSection}${delegationSection}${writerMandate}${architectMandate}${testerMandate}${devopsMandate}${debuggerMandate}${squadCollaborationProtocol}${actionProtocol}${operationalRules}`;
 	}
 
 	private sanitizeAgentOutput(text: string): string {
@@ -1255,9 +1391,16 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 			.replace(/<\|tool_call_start\|>[\s\S]*$/gi, "")
 			.replace(/<\|im_start\|>[\s\S]*?<\|im_end\|>/gi, "")
 			.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, "")
+			.replace(
+				/\{\s*"name"\s*:\s*"(?:read_file|execute_command|write_to_file|run_command|terminal|read|write)"\s*,\s*"arguments"\s*:\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\s*\}/gi,
+				"",
+			)
 			.replace(/\[read\(file_path=[^\]]*\)\]/gi, "")
 			.replace(/\[write\(file_path=[^\]]*\)\]/gi, "")
 			.replace(/\[execute\(command=[^\]]*\)\]/gi, "")
+			.replace(/<execute_command>[\s\S]*?<\/execute_command>/gi, "")
+			.replace(/<read_file>[\s\S]*?<\/read_file>/gi, "")
+			.replace(/\n{3,}/g, "\n\n")
 			.trim();
 	}
 
