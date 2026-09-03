@@ -3330,37 +3330,49 @@ ${prompt || ""}`;
 				}
 
 				if (!res.writableEnded) {
+					const promptTokens =
+						finalUsage?.input ??
+						Math.max(
+							1,
+							Math.ceil(
+								(rawSystemPrompt.length +
+									messages
+										.map((m: any) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
+										.join("").length) /
+									3.8,
+							),
+						);
+					const completionTokens = finalUsage?.output ?? Math.max(1, Math.ceil(accumulatedText.length / 3.8));
+					const totalTokens = finalUsage?.totalTokens ?? promptTokens + completionTokens;
+
+					const usageObj = {
+						prompt_tokens: promptTokens,
+						completion_tokens: completionTokens,
+						total_tokens: totalTokens,
+						prompt_tokens_details: { cached_tokens: finalUsage?.cacheRead || 0 },
+						completion_tokens_details: { reasoning_tokens: 0 },
+					};
+
 					const stopChunk: any = {
 						id: reqId,
 						object: "chat.completion.chunk",
 						created: Math.floor(Date.now() / 1000),
 						model: modelId,
 						choices: [{ index: 0, delta: {}, finish_reason: finishReason || "stop" }],
+						usage: usageObj,
 					};
-					if (finalUsage) {
-						stopChunk.usage = {
-							prompt_tokens: finalUsage.input || 0,
-							completion_tokens: finalUsage.output || 0,
-							total_tokens: finalUsage.totalTokens || 0,
-						};
-					}
 					res.write(`data: ${JSON.stringify(stopChunk)}\n\n`);
 
-					if (body.stream_options?.include_usage && finalUsage) {
-						const usageChunk = {
-							id: reqId,
-							object: "chat.completion.chunk",
-							created: Math.floor(Date.now() / 1000),
-							model: modelId,
-							choices: [],
-							usage: {
-								prompt_tokens: finalUsage.input || 0,
-								completion_tokens: finalUsage.output || 0,
-								total_tokens: finalUsage.totalTokens || 0,
-							},
-						};
-						res.write(`data: ${JSON.stringify(usageChunk)}\n\n`);
-					}
+					// Emit dedicated usage chunk for KiloCode / Cline / OpenAI compatibility
+					const usageChunk = {
+						id: reqId,
+						object: "chat.completion.chunk",
+						created: Math.floor(Date.now() / 1000),
+						model: modelId,
+						choices: [],
+						usage: usageObj,
+					};
+					res.write(`data: ${JSON.stringify(usageChunk)}\n\n`);
 
 					res.write("data: [DONE]\n\n");
 					res.end();
@@ -3546,12 +3558,26 @@ ${prompt || ""}`;
 			`IDE Chat completion executing Pantheon Squad "${squadId}" on project "${ideProject.name}" (${ideProject.path}): "${prompt.slice(0, 80)}..."`,
 		);
 
+		let totalPromptTokens = 0;
+		let totalCompletionTokens = 0;
+		let totalCacheReadTokens = 0;
+
 		const llmCaller = async (
 			pMessages: any[],
 			pModelId: string,
 			temp: number,
 			pSystemPrompt?: string,
 		): Promise<AsyncIterable<string>> => {
+			const promptEst =
+				(pSystemPrompt || "") +
+				pMessages
+					.map((h: any) => (typeof h.content === "string" ? h.content : JSON.stringify(h.content || "")))
+					.join("\n");
+			let callPromptTokens = Math.max(1, Math.ceil(promptEst.length / 3.8));
+			let callCompletionTokens = 0;
+			let callCacheRead = 0;
+			let agentResponseText = "";
+
 			const generator = async function* () {
 				const defaultModel = settingsMgr.getDefaultModel() || "auto/best-coding";
 				const resolvedModel =
@@ -3602,7 +3628,14 @@ ${prompt || ""}`;
 					for await (const event of streamResult) {
 						if (event.type === "text_delta" && event.delta) {
 							hasYielded = true;
+							agentResponseText += event.delta;
 							yield event.delta;
+						} else if (event.type === "done") {
+							if (event.message?.usage) {
+								if (event.message.usage.input) callPromptTokens = event.message.usage.input;
+								if (event.message.usage.output) callCompletionTokens = event.message.usage.output;
+								if (event.message.usage.cacheRead) callCacheRead = event.message.usage.cacheRead;
+							}
 						} else if (event.type === "error") {
 							streamError = event.error?.errorMessage || "Error en stream del proveedor de IA";
 						}
@@ -3617,12 +3650,18 @@ ${prompt || ""}`;
 							apiKey,
 							temperature: temp,
 						});
+						if (response.usage) {
+							if (response.usage.input) callPromptTokens = response.usage.input;
+							if (response.usage.output) callCompletionTokens = response.usage.output;
+							if (response.usage.cacheRead) callCacheRead = response.usage.cacheRead;
+						}
 						if (response.stopReason === "error") {
 							yield `\n\n[Error del proveedor de IA: ${response.errorMessage || streamError || "Inferencia fallida"}]`;
 						} else {
 							for (const part of response.content) {
 								if (part.type === "text" && part.text) {
 									hasYielded = true;
+									agentResponseText += part.text;
 									yield part.text;
 								}
 							}
@@ -3634,6 +3673,13 @@ ${prompt || ""}`;
 						yield `\n\n[Error al invocar modelo: ${fallbackErr.message || streamError || String(fallbackErr)}]`;
 					}
 				}
+
+				if (!callCompletionTokens && agentResponseText) {
+					callCompletionTokens = Math.max(1, Math.ceil(agentResponseText.length / 3.8));
+				}
+				totalPromptTokens += callPromptTokens;
+				totalCompletionTokens += callCompletionTokens;
+				totalCacheReadTokens += callCacheRead;
 			};
 
 			return generator();
@@ -3714,6 +3760,22 @@ ${prompt || ""}`;
 					},
 				);
 
+				const finalPromptTokens =
+					totalPromptTokens > 0 ? totalPromptTokens : Math.max(1, Math.ceil((prompt.length + 800) / 3.8));
+				const finalCompletionTokens =
+					totalCompletionTokens > 0
+						? totalCompletionTokens
+						: Math.max(1, Math.ceil(accumulatedFullText.length / 3.8));
+				const finalTotalTokens = finalPromptTokens + finalCompletionTokens;
+
+				const usagePayload = {
+					prompt_tokens: finalPromptTokens,
+					completion_tokens: finalCompletionTokens,
+					total_tokens: finalTotalTokens,
+					prompt_tokens_details: { cached_tokens: totalCacheReadTokens },
+					completion_tokens_details: { reasoning_tokens: 0 },
+				};
+
 				if (!res.writableEnded) {
 					res.write(
 						`data: ${JSON.stringify({
@@ -3722,12 +3784,34 @@ ${prompt || ""}`;
 							created: Math.floor(Date.now() / 1000),
 							model: returnedModel,
 							choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+							usage: usagePayload,
 						})}\n\n`,
 					);
+
+					// Dedicated usage chunk for KiloCode / Cline / OpenAI compatibility
+					res.write(
+						`data: ${JSON.stringify({
+							id: reqId,
+							object: "chat.completion.chunk",
+							created: Math.floor(Date.now() / 1000),
+							model: returnedModel,
+							choices: [],
+							usage: usagePayload,
+						})}\n\n`,
+					);
+
 					res.write("data: [DONE]\n\n");
 					res.end();
 				}
 			} catch (err: any) {
+				const fallbackUsage = {
+					prompt_tokens: Math.max(1, Math.ceil((prompt.length + 500) / 3.8)),
+					completion_tokens: Math.max(1, Math.ceil((accumulatedFullText.length || 100) / 3.8)),
+					total_tokens: Math.max(1, Math.ceil((prompt.length + 600) / 3.8)),
+					prompt_tokens_details: { cached_tokens: 0 },
+					completion_tokens_details: { reasoning_tokens: 0 },
+				};
+
 				if (!res.writableEnded) {
 					res.write(
 						`data: ${JSON.stringify({
@@ -3742,6 +3826,7 @@ ${prompt || ""}`;
 									finish_reason: "stop",
 								},
 							],
+							usage: fallbackUsage,
 						})}\n\n`,
 					);
 					res.write("data: [DONE]\n\n");
@@ -3782,6 +3867,22 @@ ${prompt || ""}`;
 				accumulatedFullText += `\n\n[Error en escuadrón: ${err.message}]`;
 			}
 
+			const finalPromptTokens =
+				totalPromptTokens > 0 ? totalPromptTokens : Math.max(1, Math.ceil((prompt.length + 800) / 3.8));
+			const finalCompletionTokens =
+				totalCompletionTokens > 0
+					? totalCompletionTokens
+					: Math.max(1, Math.ceil(accumulatedFullText.length / 3.8));
+			const finalTotalTokens = finalPromptTokens + finalCompletionTokens;
+
+			const usagePayload = {
+				prompt_tokens: finalPromptTokens,
+				completion_tokens: finalCompletionTokens,
+				total_tokens: finalTotalTokens,
+				prompt_tokens_details: { cached_tokens: totalCacheReadTokens },
+				completion_tokens_details: { reasoning_tokens: 0 },
+			};
+
 			res.writeHead(200, { "Content-Type": "application/json" });
 			res.end(
 				JSON.stringify(
@@ -3800,11 +3901,7 @@ ${prompt || ""}`;
 								finish_reason: "stop",
 							},
 						],
-						usage: {
-							prompt_tokens: Math.ceil(prompt.length / 4),
-							completion_tokens: Math.ceil(accumulatedFullText.length / 4),
-							total_tokens: Math.ceil((prompt.length + accumulatedFullText.length) / 4),
-						},
+						usage: usagePayload,
 					},
 					null,
 					2,
