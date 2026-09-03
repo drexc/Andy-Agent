@@ -60,7 +60,23 @@ export class AndySidebarProvider implements vscode.WebviewViewProvider {
 					this.bridge.executeTerminalCommand(data.command);
 					break;
 				}
-				case "open_settings": {
+				case "save_settings": {
+					const config = vscode.workspace.getConfiguration("andyAgent");
+					if (data.serverUrl) {
+						await config.update("serverUrl", data.serverUrl, vscode.ConfigurationTarget.Global);
+					}
+					if (data.apiKey !== undefined) {
+						await config.update("apiKey", data.apiKey, vscode.ConfigurationTarget.Global);
+					}
+					if (data.autoApply !== undefined) {
+						await config.update("autoApplyChanges", data.autoApply, vscode.ConfigurationTarget.Global);
+					}
+					vscode.window.showInformationMessage("✓ Configuración de Andy Agent guardada correctamente.");
+					this.sendWorkspaceContext();
+					break;
+				}
+				case "open_settings":
+				case "open_vscode_settings": {
 					vscode.commands.executeCommand("workbench.action.openSettings", "andyAgent");
 					break;
 				}
@@ -71,6 +87,8 @@ export class AndySidebarProvider implements vscode.WebviewViewProvider {
 	public sendWorkspaceContext() {
 		const config = vscode.workspace.getConfiguration("andyAgent");
 		const serverUrl = config.get<string>("serverUrl", "http://localhost:20208");
+		const apiKey = config.get<string>("apiKey", "");
+		const autoApply = config.get<boolean>("autoApplyChanges", true);
 		const defaultTarget = config.get<string>("defaultTarget", "squad:dev-team-squad");
 		const workspaceName = this.bridge.getWorkspaceName();
 		const workspacePath = this.bridge.getWorkspacePath();
@@ -78,6 +96,8 @@ export class AndySidebarProvider implements vscode.WebviewViewProvider {
 		this._view?.webview.postMessage({
 			type: "init_context",
 			serverUrl,
+			apiKey,
+			autoApply,
 			defaultTarget,
 			workspaceName,
 			workspacePath,
@@ -308,6 +328,16 @@ export class AndySidebarProvider implements vscode.WebviewViewProvider {
     .chip:hover { background: rgba(99, 102, 241, 0.2); }
     .send-btn { background: var(--btn-bg); color: var(--btn-fg); border: none; padding: 6px 14px; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 12px; }
     .send-btn:hover { background: var(--btn-hover); }
+
+    /* Settings Modal */
+    .settings-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(3px); z-index: 999; display: none; flex-direction: column; justify-content: center; padding: 14px; }
+    .settings-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); max-height: 90vh; overflow-y: auto; }
+    .settings-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .setting-group { display: flex; flex-direction: column; gap: 4px; }
+    .setting-label { font-size: 11.5px; font-weight: 600; color: #a5b4fc; }
+    .setting-input { background: var(--input-bg); color: var(--input-fg); border: 1px solid var(--input-border); border-radius: 4px; padding: 6px 8px; font-size: 12px; outline: none; width: 100%; }
+    .setting-input:focus { border-color: #6366f1; }
+    .setting-help { font-size: 10.5px; opacity: 0.7; line-height: 1.35; }
   </style>
 </head>
 <body>
@@ -319,6 +349,49 @@ export class AndySidebarProvider implements vscode.WebviewViewProvider {
     <div class="actions">
       <button class="icon-btn" id="new-chat-btn" title="Nueva Conversación">➕ Nuevo</button>
       <button class="icon-btn" id="settings-btn" title="Configuración">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal Panel -->
+  <div class="settings-modal" id="settings-modal">
+    <div class="settings-card">
+      <div class="settings-header">
+        <span style="font-weight:600; font-size:13px; display:flex; align-items:center; gap:6px;">⚙️ Configuración Andy Agent</span>
+        <button class="icon-btn" id="close-settings-btn" title="Cerrar">✖</button>
+      </div>
+      
+      <div class="setting-group">
+        <label class="setting-label">URL del Servidor Andy Agent:</label>
+        <input type="text" id="setting-server-url" class="setting-input" placeholder="http://localhost:20208 o http://IP:20208">
+        <span class="setting-help">Si Andy Agent corre en otra máquina o servidor remoto, ingresa su dirección IP y puerto (ej: <code>http://192.168.1.50:20208</code>).</span>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">API Key de Andy Agent:</label>
+        <input type="password" id="setting-api-key" class="setting-input" placeholder="andy_sk_...">
+        <span class="setting-help">Clave de autenticación para conectar a tu servidor.</span>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">Espacio de Trabajo Local:</label>
+        <div id="setting-workspace" style="font-size:11px; opacity:0.85; word-break:break-all; font-family:monospace; background:var(--code-bg); padding:6px; border-radius:4px; border:1px solid var(--border);">-</div>
+      </div>
+
+      <div class="setting-group" style="display:flex; flex-direction:row; align-items:center; gap:8px;">
+        <input type="checkbox" id="setting-auto-apply" checked style="cursor:pointer;">
+        <label for="setting-auto-apply" style="cursor:pointer; font-size:11.5px;">Guardar cambios en disco local automáticamente</label>
+      </div>
+
+      <div id="connection-status" style="display:none; font-size:11.5px; padding:6px 8px; border-radius:4px;"></div>
+
+      <div style="display:flex; gap:8px; margin-top:6px;">
+        <button class="send-btn" id="save-settings-btn" style="flex:1;">💾 Guardar Cambios</button>
+        <button class="icon-btn" id="test-connection-btn" style="padding:6px 10px;">🔌 Probar Conexión</button>
+      </div>
+
+      <div style="margin-top:4px; text-align:center;">
+        <a href="#" id="open-vscode-settings-link" style="color:#818cf8; font-size:11px; text-decoration:underline;">Abrir en configuración de VS Code</a>
+      </div>
     </div>
   </div>
 
@@ -392,8 +465,82 @@ export class AndySidebarProvider implements vscode.WebviewViewProvider {
       \`;
     });
 
+    const settingsModal = document.getElementById("settings-modal");
+    const closeSettingsBtn = document.getElementById("close-settings-btn");
+    const saveSettingsBtn = document.getElementById("save-settings-btn");
+    const testConnectionBtn = document.getElementById("test-connection-btn");
+    const openVsCodeSettingsLink = document.getElementById("open-vscode-settings-link");
+    const settingServerUrl = document.getElementById("setting-server-url");
+    const settingApiKey = document.getElementById("setting-api-key");
+    const settingAutoApply = document.getElementById("setting-auto-apply");
+    const settingWorkspace = document.getElementById("setting-workspace");
+    const connectionStatus = document.getElementById("connection-status");
+    const statusDot = document.getElementById("status-dot");
+
+    let currentServerUrl = "http://localhost:20208";
+    let currentApiKey = "";
+
     settingsBtn.addEventListener("click", () => {
-      vscode.postMessage({ type: "open_settings" });
+      settingsModal.style.display = "flex";
+    });
+
+    closeSettingsBtn.addEventListener("click", () => {
+      settingsModal.style.display = "none";
+    });
+
+    saveSettingsBtn.addEventListener("click", () => {
+      const sUrl = settingServerUrl.value.trim().replace(//+$/, "");
+      const sKey = settingApiKey.value.trim();
+      const sAuto = settingAutoApply.checked;
+      currentServerUrl = sUrl;
+      currentApiKey = sKey;
+      vscode.postMessage({
+        type: "save_settings",
+        serverUrl: sUrl,
+        apiKey: sKey,
+        autoApply: sAuto,
+      });
+      settingsModal.style.display = "none";
+      testConnection();
+    });
+
+    async function testConnection() {
+      const sUrl = (settingServerUrl.value.trim() || currentServerUrl).replace(//+$/, "");
+      const sKey = settingApiKey.value.trim() || currentApiKey;
+      connectionStatus.style.display = "block";
+      connectionStatus.style.background = "rgba(99, 102, 241, 0.2)";
+      connectionStatus.style.color = "#a5b4fc";
+      connectionStatus.textContent = "Conectando con " + sUrl + "...";
+
+      try {
+        const resp = await fetch(sUrl + "/v1/models", {
+          headers: sKey ? { "Authorization": "Bearer " + sKey } : {}
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const count = data.data ? data.data.length : 0;
+          connectionStatus.style.background = "rgba(34, 197, 94, 0.2)";
+          connectionStatus.style.color = "#4ade80";
+          connectionStatus.textContent = "✓ ¡Conexión exitosa! Servidor Andy Agent responde (" + count + " modelos disponibles).";
+          statusDot.style.background = "#22c55e";
+          statusDot.style.boxShadow = "0 0 6px #22c55e";
+        } else {
+          throw new Error("HTTP " + resp.status + " " + resp.statusText);
+        }
+      } catch (err) {
+        connectionStatus.style.background = "rgba(239, 68, 68, 0.2)";
+        connectionStatus.style.color = "#f87171";
+        connectionStatus.textContent = "✗ No se pudo conectar a " + sUrl + " (" + err.message + "). Verifica que el servidor esté encendido.";
+        statusDot.style.background = "#ef4444";
+        statusDot.style.boxShadow = "0 0 6px #ef4444";
+      }
+    }
+
+    testConnectionBtn.addEventListener("click", testConnection);
+
+    openVsCodeSettingsLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      vscode.postMessage({ type: "open_vscode_settings" });
     });
 
     function escapeHtml(text) {
@@ -470,9 +617,24 @@ export class AndySidebarProvider implements vscode.WebviewViewProvider {
 
       switch (msg.type) {
         case "init_context": {
+          if (msg.serverUrl) {
+            currentServerUrl = msg.serverUrl;
+            settingServerUrl.value = msg.serverUrl;
+          }
+          if (msg.apiKey !== undefined) {
+            currentApiKey = msg.apiKey;
+            settingApiKey.value = msg.apiKey;
+          }
+          if (msg.autoApply !== undefined) {
+            settingAutoApply.checked = msg.autoApply;
+          }
+          if (msg.workspacePath) {
+            settingWorkspace.textContent = msg.workspacePath;
+          }
           if (msg.defaultTarget) {
             targetSelect.value = msg.defaultTarget;
           }
+          testConnection();
           break;
         }
         case "stream_start": {
