@@ -261,8 +261,6 @@ export class PantheonOrchestrator {
 		const maxTotalSteps = 5;
 		let currentStep = 0;
 
-		const isExplicitDirectTarget = Boolean(targetAgentId);
-
 		while (agentsQueue.length > 0 && currentStep < maxTotalSteps) {
 			if (taskControl.status === "aborted" || abortController.signal.aborted) {
 				await onEvent({ type: "error", error: "Tarea cancelada por el usuario (Live Steering: Aborted)." });
@@ -385,11 +383,6 @@ export class PantheonOrchestrator {
 				message: agentMsg,
 			});
 
-			// If user specifically targeted this one agent, we finish without delegating
-			if (isExplicitDirectTarget) {
-				break;
-			}
-
 			// Check if current agent explicitly delegated to peer agents in the same squad
 			const peerDelegations = this.detectPeerDelegations(fullResponseText, currentAgent.id, squad);
 			for (const del of peerDelegations) {
@@ -404,7 +397,7 @@ export class PantheonOrchestrator {
 				if (nextAgent) {
 					const count = executionCounts[nextAgent.id] || 0;
 					const alreadyInQueue = agentsQueue.some((a) => a.id === nextAgent.id);
-					if (count < 2 && !alreadyInQueue) {
+					if (count < 1 && !alreadyInQueue) {
 						agentsQueue.push(nextAgent);
 					}
 				}
@@ -1412,6 +1405,18 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 
 		for (const a of allowedAgents) {
 			if (a.id === fromAgentId) continue;
+			// Ignore pure acknowledgements like "Entendido @Architect" if no task is being delegated
+			const isAckOnly = new RegExp(
+				`(?:entendido|gracias|de acuerdo|recibido|ok|saludos|perfecto)\\s*,?\\s*@(?:${a.name}|${a.id})\\b`,
+				"i",
+			).test(text);
+			if (isAckOnly) {
+				const hasActionableInstruction = new RegExp(
+					`@(?:${a.name}|${a.id})\\b[^.]*(?:implementa|crea|haz|corrige|revisa|compila|valida|ejecuta|procede|delega)`,
+					"i",
+				).test(text);
+				if (!hasActionableInstruction) continue;
+			}
 			const regex = new RegExp(`@${a.name}\\b|@${a.id}\\b`, "i");
 			if (regex.test(text)) {
 				delegations.push({
