@@ -519,6 +519,86 @@ export class PantheonOrchestrator {
 		return !rel.startsWith("..") && !path.isAbsolute(rel);
 	}
 
+	private extractFilesFromAgentText(text: string): Array<{ path: string; content: string; pattern: string }> {
+		const files: Array<{ path: string; content: string; pattern: string }> = [];
+		const handledPaths = new Set<string>();
+		const handledBodies = new Set<string>();
+
+		const register = (p: string, c: string, pat: string) => {
+			let cleanPath = p
+				.trim()
+				.replace(/^['"`]|['"`]$/g, "")
+				.trim();
+			cleanPath = cleanPath.replace(/^[*_`]+|[*_`]+$/g, "").trim();
+			const cleanBody = c.trim();
+			if (!cleanPath || !cleanBody) return;
+			if (cleanPath.length < 2 || cleanPath.includes("\n") || cleanPath.includes("\r")) return;
+
+			if (handledPaths.has(cleanPath.toLowerCase()) || handledBodies.has(cleanBody)) return;
+			handledPaths.add(cleanPath.toLowerCase());
+			handledBodies.add(cleanBody);
+			files.push({ path: cleanPath, content: c, pattern: pat });
+		};
+
+		// Pattern 1: ```file:path or ```write:path or ```filepath:path
+		const p1 = /```(?:file|write|filepath):\s*([^\r\n]+)\r?\n([\s\S]*?)```/gi;
+		let m1 = p1.exec(text);
+		while (m1 !== null) {
+			register(m1[1], m1[2], "file-tag");
+			m1 = p1.exec(text);
+		}
+
+		// Pattern 2: ```lang:path.ext (e.g. ```csharp:Form1.cs or ```cs:src/Form1.cs)
+		const p2 = /```[a-zA-Z0-9_-]+:([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)\r?\n([\s\S]*?)```/gi;
+		let m2 = p2.exec(text);
+		while (m2 !== null) {
+			register(m2[1], m2[2], "lang-colon-path");
+			m2 = p2.exec(text);
+		}
+
+		// Pattern 3: ```lang // filepath: path or ```lang // Archivo: path
+		const p3 =
+			/```[a-zA-Z0-9_-]+\s*(?:\/\/|#)\s*(?:filepath|file|archivo|ruta|filename):?\s*([^\r\n]+)\r?\n([\s\S]*?)```/gi;
+		let m3 = p3.exec(text);
+		while (m3 !== null) {
+			register(m3[1], m3[2], "commented-lang-tag");
+			m3 = p3.exec(text);
+		}
+
+		// Pattern 4: ```lang\n// Archivo: path or // File: path.ext or // path.ext
+		const p4 =
+			/```(?:[a-zA-Z0-9_-]+)\r?\n(?:\/\/|#)\s*(?:filepath|file|archivo|ruta|filename)?\s*:?\s*([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)\r?\n([\s\S]*?)```/gi;
+		let m4 = p4.exec(text);
+		while (m4 !== null) {
+			register(m4[1], m4[2], "first-line-comment");
+			m4 = p4.exec(text);
+		}
+
+		// Pattern 5: Preceding Markdown header with filename (e.g. ### 1. Archivo: Form1.cs\n```csharp ... ```)
+		const p5 =
+			/(?:###?\s*(?:\d+[.)]\s*)?(?:[Aa]rchivo|[Ff]ile|[Cc]rear|[Ii]mplementar)?\s*[:`"']?\s*([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)[`"']?\s*\r?\n+)\s*```[a-zA-Z0-9_-]*\r?\n([\s\S]*?)```/gi;
+		let m5 = p5.exec(text);
+		while (m5 !== null) {
+			register(m5[1], m5[2], "preceding-header");
+			m5 = p5.exec(text);
+		}
+
+		// Pattern 6: Fallback class inference for C# and other typed blocks without explicit filename
+		const p6 = /```(?:csharp|cs|dotnet|c#)\r?\n([\s\S]*?)```/gi;
+		let m6 = p6.exec(text);
+		while (m6 !== null) {
+			const body = m6[1];
+			const classMatch = body.match(/(?:public|internal)?\s*(?:partial\s+)?class\s+([A-Za-z0-9_]+)/);
+			if (classMatch && classMatch[1]) {
+				const inferredName = `${classMatch[1]}.cs`;
+				register(inferredName, body, "inferred-class");
+			}
+			m6 = p6.exec(text);
+		}
+
+		return files;
+	}
+
 	private async executeAgentActions(
 		agent: PantheonAgentProfile,
 		text: string,
@@ -527,173 +607,132 @@ export class PantheonOrchestrator {
 	): Promise<string> {
 		let extraResultsText = "";
 
-		// 1. File Writing / Editing (for agents with write capability, e.g. Hephaestus)
+		// 1. File Writing / Editing (for agents with write capability, e.g. Developer, Hephaestus, Refactorer)
 		if (agent.capabilities.write) {
-			// Pattern 1: ```file:path/to/file.ext or ```write:path/to/file.ext
-			const fileBlockRegex = /```(?:file|write|filepath):\s*([^\r\n]+)\r?\n([\s\S]*?)```/gi;
-			let match = fileBlockRegex.exec(text);
-			while (match !== null) {
-				const rawPath = match[1].trim().replace(/^['"]|['"]$/g, "");
-				const content = match[2];
-				if (rawPath && content !== undefined) {
-					try {
-						const fullPath = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(targetCwd, rawPath);
-						if (!this.isPathSafe(fullPath, targetCwd)) {
-							const safetyMsg = `🛡️ [Guardrail de Seguridad]: Intento de escribir fuera del directorio del proyecto bloqueado: "${rawPath}".`;
-							await onEvent({
-								type: "error",
-								agentId: agent.id,
-								error: safetyMsg,
-							});
-							extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió escribir en \`${rawPath}\` porque excede los límites del proyecto.`;
-							match = fileBlockRegex.exec(text);
-							continue;
-						}
-						const dir = path.dirname(fullPath);
-						if (!existsSync(dir)) {
-							mkdirSync(dir, { recursive: true });
-						}
-						writeFileSync(fullPath, content, "utf-8");
-						const lineCount = content.split(/\r?\n/).length;
-						const byteCount = Buffer.byteLength(content, "utf-8");
-
-						await onEvent({
-							type: "tool_start",
-							agentId: agent.id,
-							tool: "write",
-							target: rawPath,
-							input: { path: rawPath, lines: lineCount, bytes: byteCount },
-						});
-
-						const resultMsg = `✓ Archivo "${rawPath}" creado/modificado exitosamente (${lineCount} líneas, ${byteCount} bytes).`;
-						await onEvent({
-							type: "tool_result",
-							agentId: agent.id,
-							tool: "write",
-							target: rawPath,
-							output: resultMsg,
-						});
-
-						extraResultsText += `\n\n> 🛠️ **Acción ejecutada**: Se escribió el archivo \`${rawPath}\` (${lineCount} líneas en disco).`;
-					} catch (err: any) {
-						await onEvent({
-							type: "tool_result",
-							agentId: agent.id,
-							tool: "write",
-							target: rawPath,
-							output: `✗ Error al escribir archivo "${rawPath}": ${err.message || String(err)}`,
-						});
-					}
-				}
-				match = fileBlockRegex.exec(text);
-			}
-
-			// Pattern 2: ```typescript // filepath: path/to/file.ts
-			const commentedFileBlockRegex =
-				/```(?:[a-zA-Z0-9_-]+)\s*(?:\/\/|#)\s*(?:filepath|file):\s*([^\r\n]+)\r?\n([\s\S]*?)```/gi;
-			match = commentedFileBlockRegex.exec(text);
-			while (match !== null) {
-				const rawPath = match[1].trim().replace(/^['"]|['"]$/g, "");
-				const content = match[2];
-				if (rawPath && content !== undefined) {
-					try {
-						const fullPath = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(targetCwd, rawPath);
-						if (!this.isPathSafe(fullPath, targetCwd)) {
-							const safetyMsg = `🛡️ [Guardrail de Seguridad]: Intento de escribir fuera del directorio del proyecto bloqueado: "${rawPath}".`;
-							await onEvent({
-								type: "error",
-								agentId: agent.id,
-								error: safetyMsg,
-							});
-							extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió escribir en \`${rawPath}\` porque excede los límites del proyecto.`;
-							match = commentedFileBlockRegex.exec(text);
-							continue;
-						}
-						const dir = path.dirname(fullPath);
-						if (!existsSync(dir)) {
-							mkdirSync(dir, { recursive: true });
-						}
-						writeFileSync(fullPath, content, "utf-8");
-						const lineCount = content.split(/\r?\n/).length;
-						const byteCount = Buffer.byteLength(content, "utf-8");
-
-						await onEvent({
-							type: "tool_start",
-							agentId: agent.id,
-							tool: "write",
-							target: rawPath,
-							input: { path: rawPath, lines: lineCount, bytes: byteCount },
-						});
-
-						const resultMsg = `✓ Archivo "${rawPath}" actualizado en disco (${lineCount} líneas).`;
-						await onEvent({
-							type: "tool_result",
-							agentId: agent.id,
-							tool: "write",
-							target: rawPath,
-							output: resultMsg,
-						});
-
-						extraResultsText += `\n\n> 🛠️ **Acción ejecutada**: Se escribió el archivo \`${rawPath}\` (${lineCount} líneas en disco).`;
-					} catch (err: any) {
-						await onEvent({
-							type: "tool_result",
-							agentId: agent.id,
-							tool: "write",
-							target: rawPath,
-							output: `✗ Error al escribir archivo "${rawPath}": ${err.message || String(err)}`,
-						});
-					}
-				}
-				match = commentedFileBlockRegex.exec(text);
-			}
-		}
-
-		// 2. Terminal Command / Test Execution (for agents with terminal capability, e.g. Argos)
-		if (agent.capabilities.terminal) {
-			const bashBlockRegex = /```(?:bash|terminal|test|sh):\s*([^\r\n]+)\r?\n?([\s\S]*?)```/gi;
-			let match = bashBlockRegex.exec(text);
-			while (match !== null) {
-				let cmd = match[1].trim();
-				const body = match[2]?.trim();
-				if (body && !cmd) cmd = body;
-
-				if (cmd) {
-					if (this.isDangerousDestructiveCommand(cmd)) {
-						const safetyMsg = `🛡️ [Guardrail de Seguridad Hermes 0.21.0]: Comando destructivo bloqueado automáticamente por seguridad: "${cmd}". Requiere confirmación manual del usuario.`;
+			const filesToWrite = this.extractFilesFromAgentText(text);
+			for (const fileItem of filesToWrite) {
+				const rawPath = fileItem.path;
+				const content = fileItem.content;
+				try {
+					const fullPath = path.isAbsolute(rawPath) ? path.resolve(rawPath) : path.resolve(targetCwd, rawPath);
+					if (!this.isPathSafe(fullPath, targetCwd)) {
+						const safetyMsg = `🛡️ [Guardrail de Seguridad]: Intento de escribir fuera del directorio del proyecto bloqueado: "${rawPath}".`;
 						await onEvent({
 							type: "error",
 							agentId: agent.id,
 							error: safetyMsg,
 						});
-						extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió la ejecución automática del comando destructivo \`${cmd}\`.`;
-					} else {
-						await onEvent({
-							type: "tool_start",
-							agentId: agent.id,
-							tool: "bash",
-							target: cmd,
-							input: { command: cmd },
-						});
-
-						const res = await this.executeCommandLine(cmd, targetCwd);
-						const combinedOutput =
-							(res.stdout + (res.stderr ? `\nSTDERR:\n${res.stderr}` : "")).trim() ||
-							"(Comando completado sin salida)";
-						const isSuccess = res.exitCode === 0;
-
-						await onEvent({
-							type: "tool_result",
-							agentId: agent.id,
-							tool: "bash",
-							target: cmd,
-							output: `Exit Code ${res.exitCode}\n${combinedOutput.slice(0, 2000)}`,
-						});
-
-						extraResultsText += `\n\n### 🩺 Resultado de Ejecución en Terminal (\`${cmd}\`)\n- **Estado**: ${isSuccess ? "✅ Éxito (Exit Code 0)" : `❌ Fallo (Exit Code ${res.exitCode})`}\n\`\`\`text\n${combinedOutput.slice(0, 1500)}\n\`\`\``;
+						extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió escribir en \`${rawPath}\` porque excede los límites del proyecto.`;
+						continue;
 					}
+					const dir = path.dirname(fullPath);
+					if (!existsSync(dir)) {
+						mkdirSync(dir, { recursive: true });
+					}
+					writeFileSync(fullPath, content, "utf-8");
+					const lineCount = content.split(/\r?\n/).length;
+					const byteCount = Buffer.byteLength(content, "utf-8");
+
+					await onEvent({
+						type: "tool_start",
+						agentId: agent.id,
+						tool: "write",
+						target: rawPath,
+						input: { path: rawPath, lines: lineCount, bytes: byteCount },
+					});
+
+					const resultMsg = `✓ Archivo "${rawPath}" creado/modificado exitosamente (${lineCount} líneas, ${byteCount} bytes en disco).`;
+					await onEvent({
+						type: "tool_result",
+						agentId: agent.id,
+						tool: "write",
+						target: rawPath,
+						output: resultMsg,
+					});
+
+					extraResultsText += `\n\n> 🛠️ **Acción ejecutada**: Se escribió el archivo \`${rawPath}\` (${lineCount} líneas en disco).`;
+				} catch (err: any) {
+					await onEvent({
+						type: "tool_result",
+						agentId: agent.id,
+						tool: "write",
+						target: rawPath,
+						output: `✗ Error al escribir archivo "${rawPath}": ${err.message || String(err)}`,
+					});
 				}
-				match = bashBlockRegex.exec(text);
+			}
+		}
+
+		// 2. Terminal Command / Test Execution (for agents with terminal capability, e.g. Tester, Argos)
+		if (agent.capabilities.terminal) {
+			const commandsToRun: string[] = [];
+
+			// Pattern 1: ```bash:command or ```terminal:command
+			const bashColonRegex = /```(?:bash|terminal|test|sh|powershell|cmd):\s*([^\r\n]+)\r?\n?([\s\S]*?)```/gi;
+			let m1 = bashColonRegex.exec(text);
+			while (m1 !== null) {
+				let cmd = m1[1].trim();
+				const body = m1[2]?.trim();
+				if (body && (!cmd || cmd.length === 0)) cmd = body;
+				if (cmd && !commandsToRun.includes(cmd)) commandsToRun.push(cmd);
+				m1 = bashColonRegex.exec(text);
+			}
+
+			// Pattern 2: ```bash\ncommand\n``` (e.g. dotnet test, npm test, pytest)
+			const bashPlainRegex = /```(?:bash|sh|cmd|powershell|terminal)\r?\n([^\r\n]+(?:\r?\n[^\r\n]+)*?)\r?\n```/gi;
+			let m2 = bashPlainRegex.exec(text);
+			while (m2 !== null) {
+				const fullCmd = m2[1].trim();
+				if (
+					fullCmd &&
+					!commandsToRun.includes(fullCmd) &&
+					(fullCmd.startsWith("dotnet") ||
+						fullCmd.startsWith("npm") ||
+						fullCmd.startsWith("pytest") ||
+						fullCmd.startsWith("cargo") ||
+						fullCmd.startsWith("mvn") ||
+						fullCmd.startsWith("python") ||
+						fullCmd.startsWith("node"))
+				) {
+					commandsToRun.push(fullCmd);
+				}
+				m2 = bashPlainRegex.exec(text);
+			}
+
+			for (const cmd of commandsToRun) {
+				if (this.isDangerousDestructiveCommand(cmd)) {
+					const safetyMsg = `🛡️ [Guardrail de Seguridad Hermes 0.21.0]: Comando destructivo bloqueado automáticamente por seguridad: "${cmd}". Requiere confirmación manual del usuario.`;
+					await onEvent({
+						type: "error",
+						agentId: agent.id,
+						error: safetyMsg,
+					});
+					extraResultsText += `\n\n> ⚠️ **Bloqueo de Seguridad**: Se impidió la ejecución automática del comando destructivo \`${cmd}\`.`;
+				} else {
+					await onEvent({
+						type: "tool_start",
+						agentId: agent.id,
+						tool: "bash",
+						target: cmd,
+						input: { command: cmd },
+					});
+
+					const res = await this.executeCommandLine(cmd, targetCwd);
+					const combinedOutput =
+						(res.stdout + (res.stderr ? `\nSTDERR:\n${res.stderr}` : "")).trim() ||
+						"(Comando completado sin salida)";
+					const isSuccess = res.exitCode === 0;
+
+					await onEvent({
+						type: "tool_result",
+						agentId: agent.id,
+						tool: "bash",
+						target: cmd,
+						output: `Exit Code ${res.exitCode}\n${combinedOutput.slice(0, 2000)}`,
+					});
+
+					extraResultsText += `\n\n### 🩺 Resultado de Ejecución en Terminal (\`${cmd}\`)\n- **Estado**: ${isSuccess ? "✅ Éxito (Exit Code 0)" : `❌ Fallo (Exit Code ${res.exitCode})`}\n\`\`\`text\n${combinedOutput.slice(0, 1500)}\n\`\`\``;
+				}
 			}
 		}
 
@@ -1104,17 +1143,69 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 				.map((a) => `@${a.name}`)
 				.join(" / ") || "@Tester";
 
-		const actionProtocol = `\n\n# PROTOCOLO DE ACCIÓN DIRECTA SOBRE EL ESPACIO DE TRABAJO
-1. **Para Escribir o Modificar Archivos (${writerAgents})**:
-   Escribe el bloque de código indicando la ruta del archivo:
-   \`\`\`file:ruta/del/archivo.ext
-   // Código fuente completo
+		const writerMandate = agent.capabilities.write
+			? `\n\n# ⚡ MANDATO EXCLUSIVO Y OBLIGATORIO DE IMPLEMENTACIÓN PARA @${agent.name.toUpperCase()} (CREACIÓN REAL EN DISCO)
+1. Eres el programador/desarrollador. Tu trabajo NO ES explicar teóricamente cómo se haría ni pasarle el informe a otro agente con solo palabras.
+2. Tu deber prioritario y absoluto es ESCRIBIR FÍSICAMENTE EN DISCO EL CÓDIGO FUENTE DE LA SOLUCIÓN.
+3. Debes generar los archivos completos listos para producción con su ruta en cualquiera de estos formatos soportados:
+   \`\`\`csharp // Archivo: Form1.cs
+   // Todo el código C# completo
    \`\`\`
-   El sistema escribirá inmediatamente el archivo en el disco del proyecto. Al terminar de codificar, delega a ${terminalAgents} para que ejecute la verificación.
+   o
+   \`\`\`file:Form1.cs
+   // Todo el código C# completo
+   \`\`\`
+4. El motor de Pantheon detectará cada bloque de archivo y lo GUARDARÁ INMEDIATAMENTE EN DISCO en el proyecto activo ("${projectContext?.path || this.cwd}").
+5. PROHIBICIÓN TERMINANTE: NO delegues a @Tester ni a ningún otro compañero sin haber creado primero los archivos de código. Si no generas bloques de archivo ejecutables, el proyecto no se actualizará y habrás fallado tu tarea.`
+			: "";
+
+		const architectMandate =
+			agent.id.includes("architect") || agent.id.includes("athena")
+				? `\n\n# 🏛️ DIRECTIVA DE ARQUITECTURA PARA @${agent.name.toUpperCase()}
+1. Diseña la arquitectura técnica, patrones, interfaces y especifica con precisión los nombres de archivos y rutas que deben implementarse.
+2. Al finalizar tu diseño, delega a @Developer ordenándole explícitamente qué archivos de código debe escribir en disco.`
+				: "";
+
+		const testerMandate =
+			agent.id.includes("tester") || agent.id.includes("argos")
+				? `\n\n# 🧪 DIRECTIVA DE AUDITORÍA Y QA PARA @${agent.name.toUpperCase()}
+1. Audita el código que acaba de escribir @Developer.
+2. Si creas tests unitarios, escríbelos en disco usando \`\`\`csharp // Archivo: Tests/Form1Tests.cs ... \`\`\`
+3. Si deseas compilar o probar, ejecuta comandos de terminal usando \`\`\`bash\ndotnet test\n\`\`\` o \`\`\`bash\ndotnet build\n\`\`\`.
+4. NO repitas el diseño del arquitecto ni el código del desarrollador.`
+				: "";
+
+		const actionProtocol = `\n\n# PROTOCOLO OBLIGATORIO DE CREACIÓN Y ESCRITURA DE ARCHIVOS EN DISCO (${writerAgents})
+1. **Para Escribir o Modificar Archivos (${writerAgents})**:
+   Escribe bloques de código indicando claramente el nombre del archivo en cualquiera de las siguientes formas:
+   - Bloque con comentario de archivo:
+     \`\`\`csharp // Archivo: Form1.cs
+     // Código fuente completo
+     \`\`\`
+   - Bloque con prefijo file:
+     \`\`\`file:Form1.cs
+     // Código fuente completo
+     \`\`\`
+   - Bloque con lenguaje y nombre:
+     \`\`\`csharp:Form1.cs
+     // Código fuente completo
+     \`\`\`
+   - Encabezado previo:
+     ### Archivo: Form1.cs
+     \`\`\`csharp
+     // Código fuente completo
+     \`\`\`
+   El sistema escribirá inmediatamente cada archivo en el disco del proyecto. Al terminar de escribir todos los archivos, delega a ${terminalAgents} para que ejecute la verificación.
 
 2. **Para Ejecutar Pruebas o Comandos (${terminalAgents})**:
    Escribe el bloque de comando con el formato:
-   \`\`\`bash:dotnet build\`\`\` o \`\`\`bash:dotnet test\`\`\`
+   \`\`\`bash
+   dotnet build
+   \`\`\`
+   o
+   \`\`\`bash
+   dotnet test
+   \`\`\`
    El sistema ejecutará el comando en la terminal real del proyecto y presentará el reporte de calidad.`;
 
 		return `${agent.systemPrompt}
@@ -1122,7 +1213,7 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 Eres parte del escuadrón multi-agente "${squad.name}" (Modo: ${squad.workflowMode}).
 Otros agentes en tu escuadrón:
 ${members}
-${projectSection}${graftSection}${delegationSection}${squadCollaborationProtocol}${actionProtocol}${operationalRules}`;
+${projectSection}${graftSection}${delegationSection}${writerMandate}${architectMandate}${testerMandate}${squadCollaborationProtocol}${actionProtocol}${operationalRules}`;
 	}
 
 	private sanitizeAgentOutput(text: string): string {
