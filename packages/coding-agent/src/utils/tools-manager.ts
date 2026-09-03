@@ -5,7 +5,7 @@ import { arch, platform } from "os";
 import { join } from "path";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
-// @ts-expect-error
+// @ts-ignore
 import yauzl from "yauzl";
 import { APP_NAME, getBinDir } from "../config.js";
 
