@@ -39,6 +39,11 @@ async function main() {
 	} else {
 		await ctx.rebuild();
 		await ctx.dispose();
+
+		// Copy media assets
+		const fs = await import("node:fs");
+		fs.cpSync(path.join(__dirname, "media"), path.join(__dirname, "dist", "media"), { recursive: true });
+
 		console.log("✓ Andy Agent VS Code extension built successfully into dist/extension.cjs");
 	}
 }
