@@ -222,13 +222,13 @@ export const DEFAULT_PANTHEON_AGENTS: PantheonAgentProfile[] = [
 	{
 		id: "devops",
 		name: "DevOps",
-		role: "Infrastructure & Deployment Engineer",
+		role: "Infrastructure, Git & Deployment Engineer",
 		avatar: "🚀",
 		color: "#06B6D4", // Cyan
 		model: "auto/best-coding",
 		temperature: 0.1,
 		systemPrompt:
-			"Eres @DevOps, el Ingeniero de Infraestructura y Despliegue del escuadrón. Tu responsabilidad es configurar entornos de desarrollo y producción, scripts de compilación .NET/C#, Dockerfiles, pipelines de CI/CD y despliegues automatizados.",
+			"Eres @DevOps, el Ingeniero de Infraestructura, Git y Despliegue del escuadrón. Tu responsabilidad es empaquetar, compilar y SINCRONIZAR LOS CAMBIOS DEL PROYECTO CON EL REPOSITORIO GIT. Cuando el equipo (@Developer y @Tester) termina de crear y validar el código, preparas el commit y ejecutas los comandos en terminal (ej: ```bash\ngit add -A && git commit -m \"feat: nueva implementación por escuadrón Andy\" && git push origin main\n```) para que los desarrolladores puedan descargar inmediatamente el código en sus máquinas locales con un simple 'git pull'. Reportas el estado de Git y confirmas la sincronización con el repositorio remoto.",
 		capabilities: {
 			write: true,
 			terminal: true,

@@ -258,7 +258,7 @@ export class PantheonOrchestrator {
 		const allTurnMessages: PantheonMessage[] = [userMsg];
 		const agentsQueue: PantheonAgentProfile[] = [primaryAgent];
 		const executionCounts: Record<string, number> = {};
-		const maxTotalSteps = 4;
+		const maxTotalSteps = 5;
 		let currentStep = 0;
 
 		const isExplicitDirectTarget = Boolean(targetAgentId);
@@ -461,6 +461,23 @@ export class PantheonOrchestrator {
 								currentAgent.id,
 								tester.id,
 								"Auditoría de calidad y ejecución de tests",
+								roomState,
+								onEvent,
+							);
+						}
+					}
+				}
+				// 3. If Tester (or Auditor) just finished testing, automatically delegate to DevOps to sync/push Git:
+				else if (currentAgent.id === "tester" || currentAgent.id === "argos") {
+					const devopsId = squad.memberIds.find((id) => id === "devops");
+					if (devopsId && !(executionCounts[devopsId] > 0)) {
+						const devops = this.registry.getAgent(devopsId);
+						if (devops) {
+							agentsQueue.push(devops);
+							await this.emitAutoDelegation(
+								currentAgent.id,
+								devops.id,
+								"Sincronización Git y publicación de cambios",
 								roomState,
 								onEvent,
 							);
@@ -692,7 +709,8 @@ export class PantheonOrchestrator {
 						fullCmd.startsWith("cargo") ||
 						fullCmd.startsWith("mvn") ||
 						fullCmd.startsWith("python") ||
-						fullCmd.startsWith("node"))
+						fullCmd.startsWith("node") ||
+						fullCmd.startsWith("git"))
 				) {
 					commandsToRun.push(fullCmd);
 				}
@@ -1175,6 +1193,19 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 4. NO repitas el diseño del arquitecto ni el código del desarrollador.`
 				: "";
 
+		const devopsMandate = agent.id.includes("devops")
+			? `\n\n# 🚀 DIRECTIVA DE SINCRONIZACIÓN GIT Y PUBLICACIÓN PARA @${agent.name.toUpperCase()}
+1. El equipo (@Architect, @Developer y @Tester) ha terminado de implementar y auditar los archivos en el servidor.
+2. Tu responsabilidad prioritaria es EMPAQUETAR Y PUBLICAR LOS CAMBIOS EN EL REPOSITORIO GIT para que el usuario pueda sincronizarlos en su PC local (KiloCode / VS Code).
+3. Ejecuta los comandos en un bloque:
+   \`\`\`bash
+   git add -A
+   git commit -m "feat(pantheon): implementación automática por escuadrón Andy Agent"
+   git push origin main
+   \`\`\`
+4. Informa con precisión al usuario qué archivos quedaron commiteados y recuérdale ejecutar \`git pull origin main\` en su PC local para tener los archivos al instante.`
+			: "";
+
 		const actionProtocol = `\n\n# PROTOCOLO OBLIGATORIO DE CREACIÓN Y ESCRITURA DE ARCHIVOS EN DISCO (${writerAgents})
 1. **Para Escribir o Modificar Archivos (${writerAgents})**:
    Escribe bloques de código indicando claramente el nombre del archivo en cualquiera de las siguientes formas:
@@ -1213,7 +1244,7 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 Eres parte del escuadrón multi-agente "${squad.name}" (Modo: ${squad.workflowMode}).
 Otros agentes en tu escuadrón:
 ${members}
-${projectSection}${graftSection}${delegationSection}${writerMandate}${architectMandate}${testerMandate}${squadCollaborationProtocol}${actionProtocol}${operationalRules}`;
+${projectSection}${graftSection}${delegationSection}${writerMandate}${architectMandate}${testerMandate}${devopsMandate}${squadCollaborationProtocol}${actionProtocol}${operationalRules}`;
 	}
 
 	private sanitizeAgentOutput(text: string): string {
