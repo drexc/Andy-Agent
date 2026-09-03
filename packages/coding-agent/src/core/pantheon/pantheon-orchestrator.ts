@@ -1529,7 +1529,7 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 			const startIndex = match.index! + match[0].length;
 			const remaining = text.slice(startIndex);
 			const stopMatch = remaining.match(
-				/(?:\n\s*---|\n\s*#{1,4}\s+|\n\s*📌\s*|\n\s*\*{1,2}(?:Decisi[oó]n|Delegaci[oó]n|Procedo)|@Developer|@Tester)/i,
+				/(?:\n\s*---|\n\s*#{1,4}\s+|\n\s*📌\s*|\n\s*(?:\*{1,2})?(?:Decisi[oó]n|Procedo)\b)/i,
 			);
 			sectionText = (stopMatch ? remaining.slice(0, stopMatch.index) : remaining).trim();
 		} else {
@@ -1547,21 +1547,32 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 			return null;
 		}
 
-		// Parse options (Opción A, Opción B, 1. Opción A, - Opción 1, etc.)
+		// Parse options (Opción A, Opción B, 1. Opción A, - Opción 1, * Opción A, etc.)
 		const options: Array<{ text: string }> = [];
 		const optionLines = sectionText.split(/\r?\n/);
 		const questionLines: string[] = [];
 
-		const optionPattern = /^(?:[\d*+-]+[.)]\s*)?(?:\*{1,2})?Opci[oó]n\s+([A-Za-z0-9]+)(?:\*{1,2})?:?\s*(.+)$/i;
+		const optionPattern =
+			/^(?:[-*+]\s+|\d+[.)]\s+)?(?:\*{1,2})?Opci[oó]n\s+([A-Za-z0-9]+)(?:\*{1,2})?:?\s*(.+)$/i;
 
 		for (const line of optionLines) {
-			const optMatch = line.trim().match(optionPattern);
+			const trimmed = line.trim();
+			if (!trimmed) continue;
+			const optMatch = trimmed.match(optionPattern);
 			if (optMatch) {
 				const cleanText = optMatch[2].replace(/^\*+|\*+$/g, "").trim();
 				options.push({ text: `Opción ${optMatch[1]}: ${cleanText}` });
 				continue;
 			}
-			questionLines.push(line);
+			// Ignore status notes / waiting remarks from question lines
+			if (
+				/^(?:\*{1,2})?(?:⏳|🕒|⌛|\(esperando|esperando|nota:|aviso:|status:)/i.test(trimmed) ||
+				/esperando\s+su\s+respuesta/i.test(trimmed) ||
+				/delegaci[oó]n\s+a\s+@/i.test(trimmed)
+			) {
+				continue;
+			}
+			questionLines.push(trimmed);
 		}
 
 		// Check if there is an "o prefieres" choice inside the question

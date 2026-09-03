@@ -3831,7 +3831,7 @@ ${prompt || ""}`;
 									})}\n\n`,
 								);
 
-								contentToSend = `> ✓ **Archivo preparado para tu equipo local**: \`${cleanRelPath}\` (${event.output || "OK"})\n\n<write_to_file>\n<path>${cleanRelPath}</path>\n<content>\n${fileContent}\n</content>\n</write_to_file>\n\n`;
+								contentToSend = `> ✓ **Archivo preparado para tu equipo local**: \`${cleanRelPath}\` (${event.output || "OK"})\n\n`;
 							} else {
 								contentToSend = `\n\`\`\`bash\n# ${event.target || "comando"} (Exit code: ${event.exitCode ?? 0})\n${event.output || ""}\n\`\`\`\n\n`;
 							}
@@ -3888,8 +3888,9 @@ ${prompt || ""}`;
 								})}\n\n`,
 							);
 
-							// Also emit XML tag for Andy Code XML tool parser
-							contentToSend = `\n\n<ask_followup_question>\n<question>\n${qText}\n</question>\n<follow_up>\n${JSON.stringify(optionsArr)}\n</follow_up>\n</ask_followup_question>\n\n`;
+							// The native tool_calls delta above handles the interactive UI in Andy Code;
+							// do not send raw XML into delta.content as that prints verbatim in chat.
+							contentToSend = "";
 						}
 
 						if (contentToSend) {
@@ -3951,23 +3952,6 @@ ${prompt || ""}`;
 													},
 												},
 											],
-										},
-										finish_reason: null,
-									},
-								],
-							})}\n\n`,
-						);
-						res.write(
-							`data: ${JSON.stringify({
-								id: reqId,
-								object: "chat.completion.chunk",
-								created: Math.floor(Date.now() / 1000),
-								model: returnedModel,
-								choices: [
-									{
-										index: 0,
-										delta: {
-											content: `\n\n<ask_followup_question>\n<question>\n${detectedQ.question}\n</question>\n<follow_up>\n${JSON.stringify(detectedQ.options)}\n</follow_up>\n</ask_followup_question>\n\n`,
 										},
 										finish_reason: null,
 									},
