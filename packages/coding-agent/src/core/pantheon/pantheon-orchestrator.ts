@@ -247,6 +247,10 @@ export class PantheonOrchestrator {
 		for (let len = 2; len <= 30; len++) {
 			if (tail.length < len * 4) continue;
 			const pattern = tail.slice(-len);
+
+			// Ignore patterns that only contain markdown formatting characters (dashes, pipes, spaces, colons, equal signs, asterisks, hashes)
+			if (pattern.replace(/[-=*_|\s:#]/g, "").length === 0) continue;
+
 			const expectedRepetitions = 4;
 			const fullPattern = pattern.repeat(expectedRepetitions);
 			if (tail.endsWith(fullPattern)) {
@@ -489,6 +493,37 @@ export class PantheonOrchestrator {
 				};
 			});
 
+			// When this is a delegated step (currentStep > 1), inject an actionable turn directive
+			// instructing the specific specialist on its immediate duty so it doesn't repeat prior analysis.
+			const activeHistory = [...historyContext];
+			if (currentStep > 1) {
+				const lastAgentMessage = roomState.messages[roomState.messages.length - 1];
+				const lastAgentName = lastAgentMessage?.senderName || "tu compañero de escuadrón";
+
+				let turnDirective = `@${currentAgent.name}: Has recibido el relevo de @${lastAgentName}. Continúa con tu especialidad técnica sin repetir lo ya expuesto.`;
+
+				if (
+					currentAgent.capabilities?.write ||
+					currentAgent.id.includes("developer") ||
+					currentAgent.id.includes("hephaestus")
+				) {
+					turnDirective = `@${currentAgent.name}: El arquitecto (@${lastAgentName}) ha definido el diseño y especificaciones. AHORA ES TU TURNO DE PROGRAMAR: NO repitas el análisis ni hagas resúmenes o tablas conceptuales. DEBES ESCRIBIR FÍSICAMENTE EN DISCO LOS ARCHIVOS DE CÓDIGO COMPLETOS usando bloques de código con su nombre de archivo (por ejemplo: \`\`\`csharp // Archivo: ...\`\`\` o \`\`\`file:... \`\`\`). Empieza a escribir el código de la solución de inmediato.`;
+				} else if (
+					currentAgent.capabilities?.terminal ||
+					currentAgent.id.includes("tester") ||
+					currentAgent.id.includes("argos")
+				) {
+					turnDirective = `@${currentAgent.name}: @${lastAgentName} ha generado la implementación. AHORA ES TU TURNO DE VALIDACIÓN Y CONTROL DE CALIDAD: Audita los archivos generados, escribe los tests necesarios en disco si aplica (\`\`\`csharp // Archivo: ...\`\`\`), y ejecuta los comandos de compilación/prueba en la terminal (por ejemplo: \`\`\`bash\\ndotnet build\\n\`\`\` o \`\`\`bash\\ndotnet test\\n\`\`\`). NO repitas el análisis previo.`;
+				} else if (currentAgent.id.includes("devops")) {
+					turnDirective = `@${currentAgent.name}: El equipo ha finalizado la implementación y auditoría. AHORA ES TU TURNO: Ejecuta los comandos git necesarios para sincronizar y publicar los cambios en el repositorio.`;
+				}
+
+				activeHistory.push({
+					role: "user",
+					content: turnDirective,
+				});
+			}
+
 			await onEvent({
 				type: "agent_start",
 				agentId: currentAgent.id,
@@ -503,7 +538,7 @@ export class PantheonOrchestrator {
 			if (options.llmCaller) {
 				try {
 					const responseStream = await options.llmCaller(
-						historyContext,
+						activeHistory,
 						currentAgent.model,
 						currentAgent.temperature,
 						systemPrompt,

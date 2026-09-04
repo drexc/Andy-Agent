@@ -2857,6 +2857,10 @@ ${prompt || ""}`;
 		for (let len = 2; len <= 60; len++) {
 			if (tail.length < len * 4) continue;
 			const pattern = tail.slice(-len);
+
+			// Ignore patterns that only contain markdown formatting characters (dashes, pipes, spaces, colons, equal signs, asterisks, hashes)
+			if (pattern.replace(/[-=*_|\s:#]/g, "").length === 0) continue;
+
 			const expectedRepetitions = 4;
 			const fullPattern = pattern.repeat(expectedRepetitions);
 			if (tail.endsWith(fullPattern)) {
@@ -3723,6 +3727,7 @@ ${prompt || ""}`;
 						const streamResult = stream(resolvedModel, pContext, {
 							apiKey,
 							temperature: temp,
+							maxTokens: Math.max((resolvedModel as any).maxTokens || 8192, 8192),
 						});
 
 						for await (const event of streamResult) {
@@ -3783,6 +3788,7 @@ ${prompt || ""}`;
 						const response = await complete(resolvedModel, pContext, {
 							apiKey,
 							temperature: temp,
+							maxTokens: Math.max((resolvedModel as any).maxTokens || 8192, 8192),
 						});
 						if (response.usage) {
 							if (response.usage.input) callPromptTokens = response.usage.input;
