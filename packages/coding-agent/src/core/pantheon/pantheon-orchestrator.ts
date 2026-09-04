@@ -409,7 +409,8 @@ export class PantheonOrchestrator {
 		let resolvedStartingAgentId = targetAgentId;
 		if (
 			!resolvedStartingAgentId &&
-			((roomState as any).status === "waiting_user_input" || (roomState as any).lastAskingAgentId)
+			(roomState as any).status === "waiting_user_input" &&
+			(roomState as any).pendingUserQuestion
 		) {
 			const lastAsking = (roomState as any).lastAskingAgentId;
 			if (lastAsking === "architect" || lastAsking === "athena" || lastAsking === "hermes") {
@@ -419,6 +420,23 @@ export class PantheonOrchestrator {
 			roomState.status = "active";
 			delete (roomState as any).pendingUserQuestion;
 			delete (roomState as any).lastAskingAgentId;
+		} else if (!resolvedStartingAgentId) {
+			// Clean any stale question markers
+			delete (roomState as any).pendingUserQuestion;
+			delete (roomState as any).lastAskingAgentId;
+
+			// Check if the user is explicitly telling the team to proceed with implementation after a plan
+			const isResumeOrProceed =
+				/^(?:procede|contin[uú]a|implementa|crea|adelante|dale|hazlo|ok|listo|de acuerdo)\b/i.test(
+					userPrompt.trim(),
+				);
+			if (isResumeOrProceed && roomState.messages.length > 1) {
+				const prevAgentMsg = roomState.messages[roomState.messages.length - 2];
+				if (prevAgentMsg && (prevAgentMsg.senderId === "architect" || prevAgentMsg.senderId === "athena")) {
+					const coderId = squad.memberIds.find((id) => id === "developer" || id === "hephaestus");
+					if (coderId) resolvedStartingAgentId = coderId;
+				}
+			}
 		}
 
 		const activeAgentId = resolvedStartingAgentId || squad.leaderId || "hermes";
@@ -961,13 +979,36 @@ export class PantheonOrchestrator {
 			m7 = p7.exec(text);
 		}
 
-		// Pattern 8: XML tool calls: <write_to_file><path>...</path><content>...</content></write_to_file>
+		// Pattern 8: XML tool calls: <write_to_file>...</write_to_file> or <action name="write_to_file">...</action>
 		const p8 =
-			/<write_to_file>\s*<(?:filePath|path)>([^<]+)<\/(?:filePath|path)>\s*<content>([\s\S]*?)<\/content>\s*<\/write_to_file>/gi;
+			/<(?:write_to_file|action(?:=write_to_file| name=["']write_to_file["']))>([\s\S]*?)<\/(?:write_to_file|action)>/gi;
 		let m8 = p8.exec(text);
 		while (m8 !== null) {
-			register(m8[1].trim(), m8[2], "xml-tool-write");
+			const body = m8[1];
+			const pathMatch = body.match(/<(?:filePath|path|target)>([\s\S]*?)<\/(?:filePath|path|target)>/i);
+			const contentMatch = body.match(/<(?:content|code)>([\s\S]*?)<\/(?:content|code)>/i);
+			if (pathMatch && contentMatch) {
+				register(pathMatch[1].trim(), contentMatch[1], "xml-tool-write");
+			}
 			m8 = p8.exec(text);
+		}
+
+		// Pattern 9: Function-style XML tool calls: <function=write_to_file>... or <function name="write_to_file">...
+		const p9 =
+			/<function(?:=write_to_file| name=["']write_to_file["'])>([\s\S]*?)<\/function>/gi;
+		let m9 = p9.exec(text);
+		while (m9 !== null) {
+			const body = m9[1];
+			const pathMatch = body.match(
+				/<parameter(?:=filePath|=path|=target| name=["']filePath["']| name=["']path["']| name=["']target["'])>([\s\S]*?)<\/parameter>/i,
+			);
+			const contentMatch = body.match(
+				/<parameter(?:=content|=code| name=["']content["']| name=["']code["'])>([\s\S]*?)<\/parameter>/i,
+			);
+			if (pathMatch && contentMatch) {
+				register(pathMatch[1].trim(), contentMatch[1], "xml-function-write");
+			}
+			m9 = p9.exec(text);
 		}
 
 		return files;
