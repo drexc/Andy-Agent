@@ -2,7 +2,8 @@
 
 This page collects day-to-day usage details that do not fit on the quickstart page.
 
-Andy Agent is built around one model-facing tool: a persistent IPython kernel. The kernel retains Python state across turns and acts as a control environment for file operations, project commands, installed Python skills, MCP-backed skills, and recursive subagents. The TypeScript host remains responsible for provider calls, session state, tool execution, scheduling, and child-agent lifecycles.
+Andy Agent is built around one model-facing tool: a persistent Python REPL kernel. The kernel retains Python state across turns and acts as a control environment for file operations, project commands, installed Python skills, MCP-backed skills, and recursive subagents. The TypeScript host remains responsible for provider calls, session state, tool execution, scheduling, and child-agent lifecycles.
+
 
 ## Interactive Mode
 
@@ -104,7 +105,7 @@ See [Sessions](sessions.md) and [Compaction](compaction.md) for details.
 
 Normal interactive sessions are persistent agents backed by isolated worker processes. Closing the TUI detaches the client; use `andy-agent agents`, `andy-agent list`, or `andy-agent attach <agent>` to find and reattach to running work. `andy-agent stop <agent>` stops one root agent, while `andy-agent shutdown` stops all workers and the local supervisor.
 
-Within a session, the model can delegate through the `rlm` callable already available in IPython:
+Within a session, the model can delegate through the `rlm` callable already available in the Python REPL:
 
 ```python
 # Spawn independent children. Each call returns at admission with a child handle,
@@ -343,8 +344,9 @@ andy-agent --model sonnet:high "Solve this complex problem"
 # Limit model cycling
 andy-agent --models "claude-*,gpt-4o"
 
-# Restrict to the built-in IPython tool
+# Restrict to the built-in Python REPL tool
 andy-agent --tools ipython -p "Review the code"
+
 ```
 
 ### Environment Variables
@@ -362,14 +364,16 @@ andy-agent --tools ipython -p "Review the code"
 | `PRIME_API_KEY` | Prime Inference API key; also used for trace sharing when it has `agent_traces` scope |
 | `ANDY_AGENT_TRACES_API_KEY` | Prime API key used only for opt-in trace sharing |
 | `ANDY_AGENT_TRACES_BASE_URL` | Override the Andy Agent trace upload API base URL |
-| `ANDY_AGENT_KERNEL_PYTHON` | Use an existing Python environment with `ipykernel` instead of bootstrapping `~/.andy/agent/kernel-venv` |
+| `ANDY_AGENT_KERNEL_PYTHON` | Use an existing Python environment with `andy-agent-runtime` instead of bootstrapping `~/.andy/agent/kernel-venv` |
+
 | `VISUAL`, `EDITOR` | External editor for Ctrl+G |
 
 The remaining `PI_*` variables are compatibility names still read by the current runtime. They do not change the application name, command, or default `~/.andy/agent` configuration path.
 
 ## Design Principles
 
-Andy Agent keeps the model-facing tool surface small while making the IPython runtime powerful and composable. The built-in `ipython` tool provides durable state, project command execution, Python skills, MCP-backed integrations, and the native `rlm` delegation API without presenting each capability as a separate model tool.
+Andy Agent keeps the model-facing tool surface small while making the Python REPL runtime powerful and composable. The built-in `ipython` tool provides durable state, project command execution, Python skills, MCP-backed integrations, and the native `rlm` delegation API without presenting each capability as a separate model tool.
+
 
 Recursive subagents are a core capability, not an optional extension. The TypeScript host owns every parent and child agent loop so recursion uses the same provider, session, tool, skill, scheduling, usage-accounting, and recovery infrastructure. The Python `rlm` package is a thin host bridge rather than a separate agent implementation.
 

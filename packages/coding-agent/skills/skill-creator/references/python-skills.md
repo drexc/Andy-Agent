@@ -1,6 +1,6 @@
 # Python-Backed Skills
 
-A Python-backed skill is a regular markdown skill that also ships a Python package. Andy Agent installs the package editable into the kernel venv (`~/.andy/agent/kernel-venv` by default, `ANDY_AGENT_KERNEL_VENV` to override) and exposes it in the persistent IPython kernel, so the agent can call it directly instead of shelling out.
+A Python-backed skill is a regular markdown skill that also ships a Python package. Andy Agent installs the package editable into the kernel venv (`~/.andy/agent/kernel-venv` by default, `ANDY_AGENT_KERNEL_VENV` to override) and exposes it in the persistent Python kernel, so the agent can call it directly instead of shelling out.
 
 ## Detection Contract
 

@@ -1,7 +1,7 @@
 """Read-only Andy Agent session observation skill.
 
 All session lookup and data access live in the TypeScript daemon. These
-functions only call the host bridge exposed inside the Andy Agent IPython
+functions only call the host bridge exposed inside the Andy Agent Python
 kernel.
 """
 

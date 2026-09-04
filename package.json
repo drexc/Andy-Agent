@@ -23,7 +23,7 @@
 		"andy-code:build": "cd packages/andy-code && pnpm build",
 		"andy-code:package": "cd packages/andy-code && pnpm vsix && node -e \"const fs = require('fs'); fs.mkdirSync('../../bin', { recursive: true }); fs.copyFileSync('bin/andy-code-0.9.0.vsix', '../../bin/andy-code-0.9.0.vsix'); console.log('Copied to bin/andy-code-0.9.0.vsix');\"",
 		"check": "biome check --write --error-on-warnings . && tsgo --noEmit && npm run check:installer && npm run check:browser-smoke",
-		"check:installer": "node scripts/check-installer-render.mjs",
+		"check:installer": "node scripts/check-installer.mjs",
 		"check:browser-smoke": "node scripts/check-browser-smoke.mjs",
 		"profile:tui": "node scripts/profile-coding-agent-node.mjs --mode tui",
 		"profile:rpc": "node scripts/profile-coding-agent-node.mjs --mode rpc",
@@ -57,8 +57,9 @@
 	"engines": {
 		"node": ">=22.8.0"
 	},
+	"version": "0.9.1",
 	"dependencies": {
-		"@earendil-works/pi-coding-agent": "^0.9.0",
+		"@earendil-works/pi-coding-agent": "^0.9.1",
 		"@nanonets/graft": "^0.16.0",
 		"get-east-asian-width": "^1.6.0"
 	},

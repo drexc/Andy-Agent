@@ -4,7 +4,8 @@
 
 Skills are self-contained capability packages that Andy Agent loads on demand. A skill provides specialized workflows, setup instructions, helper scripts, and reference documentation for specific tasks.
 
-Andy Agent implements the [Agent Skills standard](https://agentskills.io/specification), warning about violations but remaining lenient. It also supports Python-backed skills: a superset of markdown skills that install Python packages into the persistent IPython kernel.
+Andy Agent implements the [Agent Skills standard](https://agentskills.io/specification), warning about violations but remaining lenient. It also supports Python-backed skills: a superset of markdown skills that install Python packages into the persistent Python kernel.
+
 
 ## Table of Contents
 
@@ -71,7 +72,7 @@ export ANDY_AGENT_WEBSEARCH_NUM_RESULTS=5
 
 A `SERPER_API_KEY` in the environment, if set, takes precedence over the stored key.
 
-Once loaded, the model can call it directly in the IPython kernel by import name:
+Once loaded, the model can call it directly in the Python kernel by import name:
 
 ```python
 print(await websearch("latest Andy Agent release"))
@@ -140,7 +141,7 @@ Skills with `disable-model-invocation: true` are hidden from the startup skill l
 
 ## Python-Backed Skills
 
-A Python-backed skill uses the same `SKILL.md` metadata and invocation behavior as a markdown skill, but also provides a Python package for the IPython kernel.
+A Python-backed skill uses the same `SKILL.md` metadata and invocation behavior as a markdown skill, but also provides a Python package for the Python kernel.
 
 ```
 web-search/
@@ -157,7 +158,8 @@ Detection rules:
 - the import name is the skill name with hyphens converted to underscores
 - `src/<import_name>/__init__.py` must exist
 
-For `web-search`, Andy Agent exposes `web_search` in IPython. If the module defines `run()`, the module is wrapped as an async callable:
+For `web-search`, Andy Agent exposes `web_search` in the Python REPL. If the module defines `run()`, the module is wrapped as an async callable:
+
 
 ```python
 await web_search("prime agent skills")
@@ -167,7 +169,8 @@ help(web_search)
 
 Python skills are installed editable into the kernel venv during kernel setup. By default this is `~/.andy/agent/kernel-venv`; set `ANDY_AGENT_KERNEL_VENV` to override it. If `pyproject.toml` changes, Andy Agent rebuilds the kernel venv so dependency changes are picked up.
 
-If you set `ANDY_AGENT_KERNEL_PYTHON`, Andy Agent does not install packages into that environment. The Python must already have `ipykernel`, `andy-agent-runtime`, and the default runtime packages installed. Missing Python skill imports are disabled with a warning and calling the skill raises a `RuntimeError`.
+If you set `ANDY_AGENT_KERNEL_PYTHON`, Andy Agent does not install packages into that environment. The Python must already have a current `andy-agent-runtime` and the default runtime packages installed. Missing Python skill imports are disabled with a warning and calling the skill raises a `RuntimeError`.
+
 
 ### Optional CLI Command
 
@@ -219,7 +222,8 @@ To force the creation workflow explicitly, invoke the built-in skill command:
 Tell the agent three things:
 
 1. **Scope:** use `.andy/agent/skills/<name>/` for a project skill committed with the repository, or `~/.andy/agent/skills/<name>/` for a personal skill.
-2. **Kind:** ask for a markdown skill when the capability is primarily instructions; ask for a Python-backed skill when the agent should call reusable functionality from IPython.
+2. **Kind:** ask for a markdown skill when the capability is primarily instructions; ask for a Python-backed skill when the agent should call reusable functionality from the Python REPL.
+
 3. **Contract:** describe the intended Python call, inputs, output, dependencies, credentials, and verification behavior.
 
 The agent should create `SKILL.md` in both cases. For a Python-backed skill it should also create `pyproject.toml` and `src/<import_name>/__init__.py`, expose a documented callable, and verify that the package imports in the kernel.
