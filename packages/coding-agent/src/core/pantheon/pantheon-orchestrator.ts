@@ -952,28 +952,72 @@ export class PantheonOrchestrator {
 		// 0. Todo List Update (if the agent emitted update_todo_list JSON or XML)
 		let todosData: any[] | null = null;
 		const todoJsonRegex =
-			/\{\s*"(?:tool|name)"\s*:\s*"update_?todo_?list"\s*,\s*"todos"\s*:\s*(\[[\s\S]*?\])\s*\}/i;
+			/\{\s*"(?:tool|name)"\s*:\s*"update_?todo_?list"\s*,\s*"(?:todos|parameters)"\s*:\s*([\s\S]*?)\s*\}/i;
 		const todoMatch = text.match(todoJsonRegex);
 		if (todoMatch) {
 			try {
-				todosData = JSON.parse(todoMatch[1]);
+				let rawData: any = null;
+				try {
+					const fullObj = JSON.parse(todoMatch[0]);
+					rawData = fullObj.todos || (fullObj.parameters && fullObj.parameters.todos);
+				} catch {
+					rawData = JSON.parse(todoMatch[1]);
+				}
+				if (Array.isArray(rawData)) {
+					todosData = rawData;
+				}
 			} catch {}
 		} else {
 			const todoXmlRegex =
-				/<function=update_todo_list>[\s\S]*?<parameter=todos>(\[[\s\S]*?\])<\/parameter>/i;
+				/<function(?:=update_todo_list| name=["']update_todo_list["'])>[\s\S]*?<parameter(?:=todos| name=["']todos["'])>([\s\S]*?)<\/parameter>/i;
 			const xmlMatch = text.match(todoXmlRegex);
 			if (xmlMatch) {
 				try {
-					todosData = JSON.parse(xmlMatch[1]);
+					const parsed = JSON.parse(xmlMatch[1].trim());
+					if (Array.isArray(parsed)) {
+						todosData = parsed;
+					}
 				} catch {}
 			}
 		}
 
 		if (Array.isArray(todosData)) {
+			const normalizedTodos = todosData
+				.map((item: any) => {
+					if (typeof item === "string") {
+						return { content: item.trim(), status: "pending" };
+					}
+					const content = String(
+						item.content ||
+						item.task ||
+						item.title ||
+						item.description ||
+						item.text ||
+						item.name ||
+						item.step ||
+						item.todo ||
+						item.label ||
+						item.summary ||
+						item.active_form ||
+						item.message ||
+						(typeof item.action === "string" ? item.action : "") ||
+						""
+					).trim();
+					const statusLower = String(item.status || "").toLowerCase();
+					const status =
+						statusLower === "completed" || statusLower === "done" || item.completed === true
+							? "completed"
+							: statusLower === "in_progress" || statusLower === "running" || item.in_progress === true
+								? "in_progress"
+								: "pending";
+					return { ...item, content, status };
+				})
+				.filter((item: any) => Boolean(item.content));
+
 			await onEvent({
 				type: "todo_update" as any,
 				agentId: agent.id,
-				todos: todosData,
+				todos: normalizedTodos,
 			});
 		}
 
@@ -1845,50 +1889,107 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 			// Strip leading speaker prefix like [Architect (Software Architect & System Designer)]:
 			.replace(/^\s*\[?[A-Z][a-zA-Z0-9_\s-]+\s*\([^)]+\)\]?\s*:\s*/g, "");
 
+		const getTodoItemText = (item: any): string => {
+			if (typeof item === "string") return item.trim();
+			if (!item || typeof item !== "object") return "";
+			return String(
+				item.content ||
+				item.task ||
+				item.title ||
+				item.description ||
+				item.text ||
+				item.name ||
+				item.step ||
+				item.todo ||
+				item.label ||
+				item.summary ||
+				item.active_form ||
+				item.message ||
+				(typeof item.action === "string" ? item.action : "") ||
+				""
+			).trim();
+		};
+
+		const getTodoItemStatus = (item: any): string => {
+			if (!item || typeof item !== "object") return "⏳";
+			const status = String(item.status || "").toLowerCase();
+			if (status === "completed" || status === "done" || item.completed === true) {
+				return "✅";
+			}
+			if (status === "in_progress" || status === "running" || item.in_progress === true) {
+				return "🔄";
+			}
+			return "⏳";
+		};
+
+		const formatTodoList = (todosData: any): string => {
+			if (typeof todosData === "string") {
+				return todosData
+					.split(/\r?\n/)
+					.map((l) => l.trim())
+					.filter(Boolean)
+					.map((l) => {
+						if (l.match(/^[-*]?\s*\[[xX]\]/)) return `- ✅ **${l.replace(/^[-*]?\s*\[[xX]\]\s*/, "")}**`;
+						if (l.match(/^[-*]?\s*\[[-~]\]/)) return `- 🔄 **${l.replace(/^[-*]?\s*\[[-~]\]\s*/, "")}**`;
+						if (l.match(/^[-*]?\s*\[\s*\]/)) return `- ⏳ **${l.replace(/^[-*]?\s*\[\s*\]\s*/, "")}**`;
+						return l.startsWith("-") ? l : `- ${l}`;
+					})
+					.join("\n");
+			}
+			if (Array.isArray(todosData)) {
+				return todosData
+					.map((item: any) => {
+						const todoText = getTodoItemText(item);
+						if (!todoText) return null;
+						const icon = getTodoItemStatus(item);
+						return `- ${icon} **${todoText}**`;
+					})
+					.filter(Boolean)
+					.join("\n");
+			}
+			return "";
+		};
+
 		// Convert XML update_todo_list to clean Markdown list
 		const todoXmlRegex =
-			/<(?:tool_call>\s*)?<function=update_todo_list>[\s\S]*?<parameter=todos>(\[[\s\S]*?\])<\/parameter>[\s\S]*?(?:<\/tool_call>|<\/function>|$)/i;
+			/<(?:tool_call>\s*)?<function(?:=update_todo_list| name=["']update_todo_list["'])>[\s\S]*?<parameter(?:=todos| name=["']todos["'])>([\s\S]*?)<\/parameter>[\s\S]*?(?:<\/function>\s*<\/tool_call>|<\/tool_call>|<\/function>|$)/i;
 		const xmlTodoMatch = cleaned.match(todoXmlRegex);
 		if (xmlTodoMatch) {
 			try {
-				const todosData = JSON.parse(xmlTodoMatch[1]);
-				if (Array.isArray(todosData)) {
-					const formattedList = todosData
-						.map((item: any) => {
-							const icon =
-								item.status === "completed"
-									? "✅"
-									: item.status === "in_progress"
-										? "🔄"
-										: "⏳";
-							return `- ${icon} **${item.content || item.active_form || item.text || ""}**`;
-						})
-						.join("\n");
+				let rawTodos = xmlTodoMatch[1].trim();
+				let parsedTodos: any = null;
+				try {
+					parsedTodos = JSON.parse(rawTodos);
+				} catch {
+					parsedTodos = rawTodos;
+				}
+				const formattedList = formatTodoList(parsedTodos);
+				if (formattedList) {
 					cleaned = cleaned.replace(xmlTodoMatch[0], `📋 **Plan de Trabajo del Escuadrón**:\n\n${formattedList}\n\n`);
+				} else {
+					cleaned = cleaned.replace(xmlTodoMatch[0], "");
 				}
 			} catch {}
 		}
 
 		// Convert update_todo_list JSON to clean Markdown list
 		const todoJsonRegex =
-			/\{\s*"(?:tool|name)"\s*:\s*"update_?todo_?list"\s*,\s*"todos"\s*:\s*(\[[\s\S]*?\])\s*\}/i;
+			/\{\s*"(?:tool|name)"\s*:\s*"update_?todo_?list"\s*,\s*"(?:todos|parameters)"\s*:\s*([\s\S]*?)\s*\}/i;
 		const todoMatch = cleaned.match(todoJsonRegex);
 		if (todoMatch) {
 			try {
-				const todosData = JSON.parse(todoMatch[1]);
-				if (Array.isArray(todosData)) {
-					const formattedList = todosData
-						.map((item: any) => {
-							const icon =
-								item.status === "completed"
-									? "✅"
-									: item.status === "in_progress"
-										? "🔄"
-										: "⏳";
-							return `- ${icon} **${item.content || item.active_form || item.text || ""}**`;
-						})
-						.join("\n");
+				let rawData: any = null;
+				try {
+					const fullObj = JSON.parse(todoMatch[0]);
+					rawData = fullObj.todos || (fullObj.parameters && fullObj.parameters.todos);
+				} catch {
+					rawData = JSON.parse(todoMatch[1]);
+				}
+				const formattedList = formatTodoList(rawData);
+				if (formattedList) {
 					cleaned = cleaned.replace(todoMatch[0], `📋 **Plan de Trabajo del Escuadrón**:\n\n${formattedList}\n\n`);
+				} else {
+					cleaned = cleaned.replace(todoMatch[0], "");
 				}
 			} catch {}
 		}
@@ -1916,6 +2017,8 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 			.replace(/\[execute\(command=[^\]]*\)\]/gi, "")
 			.replace(/<execute_command>[\s\S]*?<\/execute_command>/gi, "")
 			.replace(/<read_file>[\s\S]*?<\/read_file>/gi, "")
+			// Strip any leftover orphaned tags like </tool_call>, </function>, </parameter>, etc.
+			.replace(/<\/?(?:tool_call|function|parameter|tool_call_start|tool_call_end|function_calls|function_call|arg_key|arg_value|action)(?:=[^>]*|>)/gi, "")
 			.replace(/\n{3,}/g, "\n\n")
 			.trim();
 	}

@@ -3952,8 +3952,36 @@ ${prompt || ""}`;
 						} else if ((event as any).type === "todo_update") {
 							const tu = event as any;
 							const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+							let todosFormatted = "";
+							if (typeof tu.todos === "string") {
+								todosFormatted = tu.todos;
+							} else if (Array.isArray(tu.todos)) {
+								todosFormatted = tu.todos
+									.map((item: any) => {
+										const status = String(item.status || "").toLowerCase();
+										const mark =
+											status === "completed" || status === "done" || item.completed === true
+												? "[x]"
+												: status === "in_progress" || status === "running" || item.in_progress === true
+													? "[-]"
+													: "[ ]";
+										const text = String(
+											item.content ||
+											item.task ||
+											item.title ||
+											item.description ||
+											item.text ||
+											item.name ||
+											""
+										).trim();
+										return text ? `- ${mark} ${text}` : "";
+									})
+									.filter(Boolean)
+									.join("\n");
+							}
+
 							const argsJson = JSON.stringify({
-								todos: tu.todos,
+								todos: todosFormatted || (typeof tu.todos === "object" ? JSON.stringify(tu.todos) : String(tu.todos || "")),
 							});
 
 							toolCallsEmitted.push({
@@ -4363,12 +4391,42 @@ ${prompt || ""}`;
 						} else if ((event as any).type === "todo_update") {
 							const tu = event as any;
 							const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+							let todosFormatted = "";
+							if (typeof tu.todos === "string") {
+								todosFormatted = tu.todos;
+							} else if (Array.isArray(tu.todos)) {
+								todosFormatted = tu.todos
+									.map((item: any) => {
+										const status = String(item.status || "").toLowerCase();
+										const mark =
+											status === "completed" || status === "done" || item.completed === true
+												? "[x]"
+												: status === "in_progress" || status === "running" || item.in_progress === true
+													? "[-]"
+													: "[ ]";
+										const text = String(
+											item.content ||
+											item.task ||
+											item.title ||
+											item.description ||
+											item.text ||
+											item.name ||
+											""
+										).trim();
+										return text ? `- ${mark} ${text}` : "";
+									})
+									.filter(Boolean)
+									.join("\n");
+							}
+
 							toolCallsEmitted.push({
 								id: toolCallId,
 								type: "function",
 								function: {
 									name: "update_todo_list",
-									arguments: JSON.stringify({ todos: tu.todos }),
+									arguments: JSON.stringify({
+										todos: todosFormatted || (typeof tu.todos === "object" ? JSON.stringify(tu.todos) : String(tu.todos || "")),
+									}),
 								},
 							});
 						} else if ((event as any).type === "user_question") {
