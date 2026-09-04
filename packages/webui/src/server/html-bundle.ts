@@ -2782,11 +2782,28 @@ for chunk in response:
     }
 
     async function deleteProject(projectId, projectName) {
-      if (!confirm(\`¿Estás seguro de eliminar el proyecto "\${projectName}" de Andy Agent?\\n\\n(Tus archivos en disco NO serán eliminados).\`)) return;
+      const p = (projectsList || []).find(x => x.id === projectId);
+      const projectPath = p ? p.path : '';
+
+      if (!confirm(\`¿Estás seguro de eliminar el proyecto "\${projectName}" de Andy Agent?\`)) return;
+
+      let deleteFiles = false;
+      if (projectPath) {
+        deleteFiles = confirm(
+          \`¿Deseas eliminar TAMBIÉN la carpeta y todos sus archivos físicos del disco?\\n\\n\` +
+          \`📁 Ruta en disco: \${projectPath}\\n\\n\` +
+          \`• [Aceptar] = BORRAR permanentemente la carpeta y todos sus archivos del disco.\\n\` +
+          \`• [Cancelar] = Mantener los archivos intactos en disco (solo desvincular de la WebUI).\`
+        );
+      }
+
       try {
-        const res = await fetch(\`/api/projects/\${projectId}\`, { method: 'DELETE' });
+        const res = await fetch(\`/api/projects/\${projectId}?deleteFiles=\${deleteFiles}\`, { method: 'DELETE' });
         const data = await res.json();
         if (data.success) {
+          if (data.deletedFiles) {
+            alert(\`El proyecto "\${projectName}" y sus archivos en disco han sido eliminados correctamente.\`);
+          }
           await fetchProjects();
           await fetchSessions();
         } else {

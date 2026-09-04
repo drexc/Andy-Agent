@@ -546,12 +546,17 @@ export class AndyWebUiServer {
 			}
 
 			if (method === "DELETE" && url.startsWith("/api/projects/")) {
-				const projectId = url.split("/")[3];
+				const projectId = url.split("/")[3]?.split("?")[0];
+				const deleteFiles = parsedUrl.searchParams.get("deleteFiles") === "true";
 				try {
-					this.pool.deleteProject(projectId);
-					this.addLog("INFO", "Projects", `Deleted project ${projectId}`);
+					const result = this.pool.deleteProject(projectId, deleteFiles);
+					this.addLog("INFO", "Projects", `Deleted project ${projectId} (deleteFiles: ${result.deletedFiles})`);
 					res.writeHead(200, { "Content-Type": "application/json" });
-					res.end(JSON.stringify({ success: true, activeProject: this.pool.getActiveProject() }));
+					res.end(JSON.stringify({
+						success: true,
+						deletedFiles: result.deletedFiles,
+						activeProject: this.pool.getActiveProject()
+					}));
 				} catch (err: any) {
 					res.writeHead(400, { "Content-Type": "application/json" });
 					res.end(JSON.stringify({ error: err.message || String(err) }));

@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { Model } from "@earendil-works/pi-ai";
@@ -467,12 +467,59 @@ export class WebUiSessionPool {
 		return newProj;
 	}
 
-	public deleteProject(projectId: string): boolean {
+	private isSafeToDeleteWorkspaceDir(targetPath: string): boolean {
+		if (!targetPath || typeof targetPath !== "string" || targetPath.trim() === "") {
+			return false;
+		}
+		const resolved = path.resolve(targetPath);
+		const root = path.parse(resolved).root;
+		if (resolved.toLowerCase() === root.toLowerCase()) return false;
+
+		const homedir = path.resolve(os.homedir());
+		if (resolved.toLowerCase() === homedir.toLowerCase()) return false;
+
+		const cwd = path.resolve(process.cwd());
+		if (resolved.toLowerCase() === cwd.toLowerCase()) return false;
+
+		// Protect system roots and critical global config directories
+		const forbiddenPaths = [
+			root,
+			homedir,
+			cwd,
+			path.join(homedir, ".andy"),
+			path.join(homedir, ".prime"),
+			path.join(homedir, ".gemini"),
+			...(process.platform === "win32"
+				? [
+						process.env.SystemRoot ? path.resolve(process.env.SystemRoot) : "C:\\Windows",
+						process.env.ProgramFiles ? path.resolve(process.env.ProgramFiles) : "C:\\Program Files",
+						process.env["ProgramFiles(x86)"] ? path.resolve(process.env["ProgramFiles(x86)"]) : "C:\\Program Files (x86)",
+						process.env.USERPROFILE ? path.resolve(process.env.USERPROFILE) : homedir,
+				  ]
+				: ["/bin", "/etc", "/lib", "/usr", "/var", "/root", "/home", "/dev", "/sys", "/proc"]),
+		].map((p) => path.resolve(p).toLowerCase());
+
+		const normalizedTarget = resolved.toLowerCase();
+		if (forbiddenPaths.includes(normalizedTarget)) return false;
+
+		// Ensure target directory is not an ancestor of current process working directory
+		if (cwd.toLowerCase().startsWith(normalizedTarget + path.sep.toLowerCase())) return false;
+
+		return true;
+	}
+
+	public deleteProject(projectId: string, deleteFiles = false): { deleted: boolean; deletedFiles: boolean } {
 		if (this.projects.size <= 1) {
 			throw new Error("Cannot delete the only remaining project.");
 		}
 
+		const project = this.projects.get(projectId);
+		if (!project) return { deleted: false, deletedFiles: false };
+
+		const projectPath = project.path;
 		const deleted = this.projects.delete(projectId);
+		let deletedFilesSuccess = false;
+
 		if (deleted) {
 			this.graftEngines.delete(projectId);
 
@@ -492,8 +539,21 @@ export class WebUiSessionPool {
 			} else {
 				this.saveProjects();
 			}
+
+			// Permanently delete files and directories on disk if requested
+			if (deleteFiles && projectPath && existsSync(projectPath)) {
+				if (!this.isSafeToDeleteWorkspaceDir(projectPath)) {
+					throw new Error(`Por seguridad no se puede eliminar el directorio protegido del sistema: ${projectPath}`);
+				}
+				try {
+					rmSync(projectPath, { recursive: true, force: true });
+					deletedFilesSuccess = true;
+				} catch (err: any) {
+					throw new Error(`Proyecto desvinculado, pero ocurrió un error al eliminar los archivos en disco: ${err.message || String(err)}`);
+				}
+			}
 		}
-		return deleted;
+		return { deleted, deletedFiles: deletedFilesSuccess };
 	}
 
 	public getOrCreateGraftEngine(projectId?: string, customPath?: string): GraftEngine {
