@@ -3864,6 +3864,12 @@ ${prompt || ""}`;
 				})}\n\n`,
 			);
 
+			const keepAliveInterval = setInterval(() => {
+				if (!res.writableEnded && !isAborted) {
+					res.write(": keep-alive\n\n");
+				}
+			}, 15000);
+
 			try {
 				await (pantheonOrchestrator as any).executeTurn(
 					squadId,
@@ -4308,6 +4314,9 @@ ${prompt || ""}`;
 					res.write("data: [DONE]\n\n");
 					res.end();
 				}
+			} finally {
+				clearInterval(keepAliveInterval);
+				req.removeListener("close", onClientClose);
 			}
 		} else {
 			// Non-streaming response

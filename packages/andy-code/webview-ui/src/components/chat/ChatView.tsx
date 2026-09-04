@@ -249,10 +249,27 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// would have to true again even if messages didn't change.
 	const lastMessage = useMemo(() => messages.at(-1), [messages])
 	const secondLastMessage = useMemo(() => messages.at(-2), [messages])
-	const activeAskMessage = useMemo(
-		() => messages.findLast((m) => m.type === "ask" && !m.isAnswered),
-		[messages],
-	)
+	const activeAskMessage = useMemo(() => {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const m = messages[i]
+			if (m.type === "ask") {
+				return !m.isAnswered ? m : undefined
+			}
+			// Stop searching if we cross a substantive conversation turn.
+			// An active ask waiting for user input cannot have assistant text, user feedback, or completions after it.
+			if (
+				m.type === "say" &&
+				(m.say === "text" ||
+					m.say === "user_feedback" ||
+					m.say === "task" ||
+					m.say === "completion_result" ||
+					m.say === "subtask_result")
+			) {
+				break
+			}
+		}
+		return undefined
+	}, [messages])
 
 	const volume = typeof soundVolume === "number" ? soundVolume : 0.5
 	const [playNotification] = useSound(`${audioBaseUri}/notification.wav`, { volume, soundEnabled, interrupt: true })
@@ -586,12 +603,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// and should be resolved with optimizations as it's likely a rendering
 		// bug. But as a final guard for now, the cancel button will show if the
 		// last message is not an ask.
-		const hasActiveAsk = modifiedMessages.some(
-			(message) => message.type === "ask" && !message.isAnswered && message.partial !== true,
-		)
-
 		const isToolCurrentlyAsking =
-			hasActiveAsk && clineAsk !== undefined && enableButtons && primaryButtonText !== undefined
+			!!activeAskMessage &&
+			activeAskMessage.partial !== true &&
+			clineAsk !== undefined &&
+			enableButtons &&
+			primaryButtonText !== undefined
 
 		if (isToolCurrentlyAsking) {
 			return false

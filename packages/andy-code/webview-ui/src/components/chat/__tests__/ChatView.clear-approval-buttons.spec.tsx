@@ -198,6 +198,12 @@ const toolAskFollowedByCheckpoint = (): ClineMessage[] => [
 	},
 ]
 
+const resumeTaskFollowedByText = (): ClineMessage[] => [
+	{ type: "say", say: "task", ts: 1, text: "Initial task" },
+	{ type: "ask", ask: "resume_task", ts: 2, text: "", partial: false },
+	{ type: "say", say: "text", ts: 3, text: "Continuing execution with new code..." },
+]
+
 describe("ChatView approval button behavior", () => {
 	beforeEach(() => vi.clearAllMocks())
 
@@ -307,6 +313,19 @@ describe("ChatView approval button behavior", () => {
 			expect(rejectButton).toBeInTheDocument()
 			expect(saveButton).not.toBeDisabled()
 			expect(rejectButton).not.toBeDisabled()
+		})
+	})
+
+	it("does not show resume_task buttons when followed by a subsequent conversation turn", async () => {
+		const { queryByText } = renderChatView()
+
+		await act(async () => {
+			hydrateState(resumeTaskFollowedByText())
+		})
+
+		await waitFor(() => {
+			expect(queryByText("chat:resumeTask.title")).not.toBeInTheDocument()
+			expect(queryByText("chat:terminate.title")).not.toBeInTheDocument()
 		})
 	})
 })

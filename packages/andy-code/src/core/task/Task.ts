@@ -1528,6 +1528,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.askResponseText = undefined;
 		this.askResponseImages = undefined;
 
+		// Ensure the ask message at askTs is marked answered
+		const targetAsk = this.findMessageByTimestamp(askTs);
+		if (targetAsk && !targetAsk.isAnswered) {
+			targetAsk.isAnswered = true;
+			void this.updateClineMessage(targetAsk).catch((error) => {
+				console.error("[Task#ask] updateClineMessage failed:", error);
+			});
+			this.saveClineMessages().catch((error) => {
+				console.error("Failed to save answered ask state:", error);
+			});
+		}
+
 		// Cancel the timeouts if they are still running.
 		timeouts.forEach((timeout) => clearTimeout(timeout));
 
@@ -1591,6 +1603,22 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					console.error("Failed to save answered tool-ask state:", error);
 				});
 			}
+		}
+
+		// Mark any remaining unanswered ask (e.g. resume_task, command, etc.) as answered
+		const lastUnansweredAskIndex = findLastIndex(
+			this.clineMessages,
+			(msg) => msg.type === "ask" && !msg.isAnswered,
+		);
+		if (lastUnansweredAskIndex !== -1) {
+			const askMsg = this.clineMessages[lastUnansweredAskIndex];
+			askMsg.isAnswered = true;
+			void this.updateClineMessage(askMsg).catch((error) => {
+				console.error("[Task#handleWebviewAskResponse] updateClineMessage failed:", error);
+			});
+			this.saveClineMessages().catch((error) => {
+				console.error("Failed to save answered ask state:", error);
+			});
 		}
 	}
 
