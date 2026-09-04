@@ -507,7 +507,7 @@ export class PantheonOrchestrator {
 					currentAgent.id.includes("developer") ||
 					currentAgent.id.includes("hephaestus")
 				) {
-					turnDirective = `@${currentAgent.name}: El arquitecto (@${lastAgentName}) ha definido el diseño y especificaciones. AHORA ES TU TURNO DE PROGRAMAR: NO repitas el análisis ni hagas resúmenes o tablas conceptuales. DEBES ESCRIBIR FÍSICAMENTE EN DISCO LOS ARCHIVOS DE CÓDIGO COMPLETOS usando bloques de código con su nombre de archivo (por ejemplo: \`\`\`csharp // Archivo: ...\`\`\` o \`\`\`file:... \`\`\`). Empieza a escribir el código de la solución de inmediato.`;
+					turnDirective = `@${currentAgent.name}: El arquitecto (@${lastAgentName}) ha definido el diseño y especificaciones. AHORA ES TU TURNO DE PROGRAMAR: NO repitas el análisis ni generes archivos .md de documentación. DEBES ESCRIBIR FÍSICAMENTE EN DISCO TODOS LOS ARCHIVOS DE CÓDIGO FUENTE REALES (.csproj, Program.cs, Form1.cs, Form1.Designer.cs, tests, etc.) en bloques ejecutables con su ruta exacta (ejemplo: \`\`\`xml <!-- Archivo: ... -->\`\`\` y \`\`\`csharp // Archivo: ...\`\`\` o \`\`\`file:...\`\`\`). Empieza a generar todos los archivos de código fuente de inmediato.`;
 				} else if (
 					currentAgent.capabilities?.terminal ||
 					currentAgent.id.includes("tester") ||
@@ -871,27 +871,27 @@ export class PantheonOrchestrator {
 			m2 = p2.exec(text);
 		}
 
-		// Pattern 3: ```lang // filepath: path or ```lang // Archivo: path
+		// Pattern 3: ```lang // filepath: path or ```lang // Archivo: path or ```xml <!-- Archivo: path -->
 		const p3 =
-			/```[a-zA-Z0-9_-]+\s*(?:\/\/|#)\s*(?:filepath|file|archivo|ruta|filename):?\s*([^\r\n]+)\r?\n([\s\S]*?)```/gi;
+			/```[a-zA-Z0-9_-]+\s*(?:\/\/|#|<!--)\s*(?:filepath|file|archivo|ruta|filename)?:?\s*([^\r\n>]+?)(?:\s*-->)?\r?\n([\s\S]*?)```/gi;
 		let m3 = p3.exec(text);
 		while (m3 !== null) {
 			register(m3[1], m3[2], "commented-lang-tag");
 			m3 = p3.exec(text);
 		}
 
-		// Pattern 4: ```lang\n// Archivo: path or // File: path.ext or // path.ext
+		// Pattern 4: Inside code block, first line is a comment with filename (// or # or <!--)
 		const p4 =
-			/```(?:[a-zA-Z0-9_-]+)\r?\n(?:\/\/|#)\s*(?:filepath|file|archivo|ruta|filename)?\s*:?\s*([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)\r?\n([\s\S]*?)```/gi;
+			/```(?:[a-zA-Z0-9_-]*)\r?\n(?:\/\/|#|<!--)\s*(?:filepath|file|archivo|ruta|filename)?\s*:?\s*([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)(?:\s*-->)?\r?\n([\s\S]*?)```/gi;
 		let m4 = p4.exec(text);
 		while (m4 !== null) {
 			register(m4[1], m4[2], "first-line-comment");
 			m4 = p4.exec(text);
 		}
 
-		// Pattern 5: Preceding Markdown header with filename (e.g. ### 1. Archivo: Form1.cs\n```csharp ... ```)
+		// Pattern 5: Preceding Markdown header with filename (e.g. ### 1. Archivo: Form1.cs or #### Form1.cs or **Archivo: Form1.cs**)
 		const p5 =
-			/(?:###?\s*(?:\d+[.)]\s*)?(?:[Aa]rchivo|[Ff]ile|[Cc]rear|[Ii]mplementar)?\s*[:`"']?\s*([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)[`"']?\s*\r?\n+)\s*```[a-zA-Z0-9_-]*\r?\n([\s\S]*?)```/gi;
+			/(?:(?:#{1,6}|\*\*)\s*(?:\d+[.)]\s*)?(?:[Aa]rchivo|[Ff]ile|[Cc]rear|[Ii]mplementar)?\s*[:`"']*\s*([a-zA-Z0-9_./\\-]+\.[a-zA-Z0-9]+)[`"':*]*\s*\r?\n+)\s*```[a-zA-Z0-9_-]*\r?\n([\s\S]*?)```/gi;
 		let m5 = p5.exec(text);
 		while (m5 !== null) {
 			register(m5[1], m5[2], "preceding-header");

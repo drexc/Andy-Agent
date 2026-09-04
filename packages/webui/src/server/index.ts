@@ -4082,7 +4082,7 @@ ${prompt || ""}`;
 						targetAgentId,
 						llmCaller,
 						projectInfo: { path: ideProject.path, name: ideProject.name },
-						yieldOnFileWrite: true,
+						yieldOnFileWrite: false,
 					},
 				);
 
