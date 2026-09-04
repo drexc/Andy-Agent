@@ -128,13 +128,19 @@ export class ApplyDiffTool extends BaseTool<"apply_diff"> {
 			const state = await provider?.getState();
 			const diagnosticsEnabled = state?.diagnosticsEnabled ?? true;
 			const writeDelayMs = state?.writeDelayMs ?? DEFAULT_WRITE_DELAY_MS;
-			const isPreventFocusDisruptionEnabled = experiments.isEnabled(
-				state?.experiments ?? {},
-				EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION,
-			);
 
 			// Check if file is write-protected
 			const isWriteProtected = task.rooProtectedController?.isWriteProtected(relPath) || false;
+
+			const isAutoApprovedWrite = Boolean(
+				state?.autoApprovalEnabled && state?.alwaysAllowWrite && !isWriteProtected,
+			);
+			const isPreventFocusDisruptionEnabled =
+				isAutoApprovedWrite ||
+				experiments.isEnabled(
+					state?.experiments ?? {},
+					EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION,
+				);
 
 			const sharedMessageProps: ClineSayTool = {
 				tool: "appliedDiff",

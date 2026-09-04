@@ -101,10 +101,15 @@ export class WriteToFileTool extends BaseTool<"write_to_file"> {
 			const state = await provider?.getState();
 			const diagnosticsEnabled = state?.diagnosticsEnabled ?? true;
 			const writeDelayMs = state?.writeDelayMs ?? DEFAULT_WRITE_DELAY_MS;
-			const isPreventFocusDisruptionEnabled = experiments.isEnabled(
-				state?.experiments ?? {},
-				EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION,
+			const isAutoApprovedWrite = Boolean(
+				state?.autoApprovalEnabled && state?.alwaysAllowWrite && !isWriteProtected,
 			);
+			const isPreventFocusDisruptionEnabled =
+				isAutoApprovedWrite ||
+				experiments.isEnabled(
+					state?.experiments ?? {},
+					EXPERIMENT_IDS.PREVENT_FOCUS_DISRUPTION,
+				);
 
 			if (isPreventFocusDisruptionEnabled) {
 				task.diffViewProvider.editType = fileExists ? "modify" : "create";
