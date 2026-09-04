@@ -14,6 +14,7 @@ import {
 	getEffectiveApiHistory,
 	getMessagesSinceLastSummary,
 	injectSyntheticToolResults,
+	pruneStringForCondense,
 	summarizeConversation,
 	toolResultToText,
 	toolUseToText,
@@ -1409,6 +1410,34 @@ describe("toolResultToText", () => {
 		const result = toolResultToText(block);
 
 		expect(result).toBe("[Tool Result]");
+	});
+
+	it("should prune large tool_result content to prevent context bloat", () => {
+		const longContent = "A".repeat(5000);
+		const block: Anthropic.Messages.ToolResultBlockParam = {
+			type: "tool_result",
+			tool_use_id: "tool-large",
+			content: longContent,
+		};
+
+		const result = toolResultToText(block);
+
+		expect(result).toContain("[Tool Result]");
+		expect(result).toContain("pruned");
+		expect(result.length).toBeLessThan(longContent.length);
+	});
+});
+
+describe("pruneStringForCondense", () => {
+	it("should leave short strings intact", () => {
+		expect(pruneStringForCondense("Hello world", 100)).toBe("Hello world");
+	});
+
+	it("should prune strings exceeding maxChars and insert notice", () => {
+		const input = "X".repeat(500);
+		const pruned = pruneStringForCondense(input, 100);
+		expect(pruned.length).toBeLessThan(500);
+		expect(pruned).toContain("pruned");
 	});
 });
 

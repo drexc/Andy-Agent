@@ -13,6 +13,37 @@ import { generateFoldedFileContext } from "./foldedFileContext";
 export type { FoldedFileContextOptions, FoldedFileContextResult } from "./foldedFileContext";
 
 /**
+ * Maximum characters to retain for a single tool result when condensing.
+ * Output beyond this threshold is pruned with a truncation note.
+ * This drastically reduces the context payload passed to the summarizer LLM.
+ */
+export const MAX_TOOL_RESULT_CONDENSE_CHARS = 1200;
+
+/**
+ * Maximum characters to retain for an individual tool use argument (e.g. file content, diff).
+ */
+export const MAX_TOOL_INPUT_CONDENSE_CHARS = 1000;
+
+/**
+ * Maximum characters to retain for intermediate plain text message blocks during condensing.
+ */
+export const MAX_INTERMEDIATE_TEXT_CONDENSE_CHARS = 2500;
+
+/**
+ * Prunes a string exceeding maxChars by keeping the beginning and end,
+ * replacing the middle with a concise notice.
+ */
+export function pruneStringForCondense(text: string, maxChars: number): string {
+	if (!text || text.length <= maxChars) {
+		return text;
+	}
+	const keepPrefix = Math.floor(maxChars * 0.65);
+	const keepSuffix = Math.floor(maxChars * 0.25);
+	const prunedCount = text.length - (keepPrefix + keepSuffix);
+	return `${text.slice(0, keepPrefix)}\n... [pruned ${prunedCount} chars for condensation] ...\n${text.slice(text.length - keepSuffix)}`;
+}
+
+/**
  * Converts a tool_use block to a text representation.
  * This allows the conversation to be summarized without requiring the tools parameter.
  */
@@ -23,11 +54,11 @@ export function toolUseToText(block: Anthropic.Messages.ToolUseBlockParam): stri
 			.map(([key, value]) => {
 				const formattedValue =
 					typeof value === "object" && value !== null ? JSON.stringify(value, null, 2) : String(value);
-				return `${key}: ${formattedValue}`;
+				return `${key}: ${pruneStringForCondense(formattedValue, MAX_TOOL_INPUT_CONDENSE_CHARS)}`;
 			})
 			.join("\n");
 	} else {
-		input = String(block.input);
+		input = pruneStringForCondense(String(block.input), MAX_TOOL_INPUT_CONDENSE_CHARS);
 	}
 	return `[Tool Use: ${block.name}]\n${input}`;
 }
@@ -39,12 +70,12 @@ export function toolUseToText(block: Anthropic.Messages.ToolUseBlockParam): stri
 export function toolResultToText(block: Anthropic.Messages.ToolResultBlockParam): string {
 	const errorSuffix = block.is_error ? " (Error)" : "";
 	if (typeof block.content === "string") {
-		return `[Tool Result${errorSuffix}]\n${block.content}`;
+		return `[Tool Result${errorSuffix}]\n${pruneStringForCondense(block.content, MAX_TOOL_RESULT_CONDENSE_CHARS)}`;
 	} else if (Array.isArray(block.content)) {
 		const contentText = block.content
 			.map((contentBlock) => {
 				if (contentBlock.type === "text") {
-					return contentBlock.text;
+					return pruneStringForCondense(contentBlock.text, MAX_TOOL_RESULT_CONDENSE_CHARS);
 				}
 				if (contentBlock.type === "image") {
 					return "[Image]";
@@ -64,13 +95,15 @@ export function toolResultToText(block: Anthropic.Messages.ToolResultBlockParam)
  * By converting to text, we can send the conversation for summarization without the tools parameter.
  *
  * @param content - The message content (string or array of content blocks)
+ * @param pruneText - Whether to prune long plain text content blocks
  * @returns The transformed content with tool blocks converted to text blocks
  */
 export function convertToolBlocksToText(
 	content: string | Anthropic.Messages.ContentBlockParam[],
+	pruneText = false,
 ): string | Anthropic.Messages.ContentBlockParam[] {
 	if (typeof content === "string") {
-		return content;
+		return pruneText ? pruneStringForCondense(content, MAX_INTERMEDIATE_TEXT_CONDENSE_CHARS) : content;
 	}
 
 	return content.map((block) => {
@@ -86,13 +119,19 @@ export function convertToolBlocksToText(
 				text: toolResultToText(block),
 			};
 		}
+		if (block.type === "text" && pruneText) {
+			return {
+				...block,
+				text: pruneStringForCondense(block.text, MAX_INTERMEDIATE_TEXT_CONDENSE_CHARS),
+			};
+		}
 		return block;
 	});
 }
 
 /**
  * Transforms all messages by converting tool_use and tool_result blocks to text representations.
- * This ensures the conversation can be sent for summarization without requiring the tools parameter.
+ * Pruning is applied to intermediate turns to keep context lightweight for fast summarization.
  *
  * @param messages - The messages to transform
  * @returns The transformed messages with tool blocks converted to text
@@ -100,10 +139,14 @@ export function convertToolBlocksToText(
 export function transformMessagesForCondensing<
 	T extends { role: string; content: string | Anthropic.Messages.ContentBlockParam[] },
 >(messages: T[]): T[] {
-	return messages.map((msg) => ({
-		...msg,
-		content: convertToolBlocksToText(msg.content),
-	}));
+	return messages.map((msg, index) => {
+		// Preserve user's original task goal (index 0) and final instructions without text truncation
+		const isBoundaryMessage = index === 0 || index === messages.length - 1;
+		return {
+			...msg,
+			content: convertToolBlocksToText(msg.content, !isBoundaryMessage),
+		};
+	});
 }
 
 export const MIN_CONDENSE_THRESHOLD = 5; // Minimum percentage of context window to trigger condensing
@@ -414,8 +457,11 @@ ${commandBlocks}
 	// Each file gets its own <system-reminder> block as a separate content block
 	if (filesReadByRoo && filesReadByRoo.length > 0 && cwd) {
 		try {
-			const foldedResult = await generateFoldedFileContext(filesReadByRoo, {
+			// Limit to the most recent 10 unique files to avoid slow tree-sitter passes and token bloat
+			const recentFiles = Array.from(new Set(filesReadByRoo)).slice(-10);
+			const foldedResult = await generateFoldedFileContext(recentFiles, {
 				cwd,
+				maxCharacters: 20000,
 				rooIgnoreController,
 			});
 			if (foldedResult.sections.length > 0) {
