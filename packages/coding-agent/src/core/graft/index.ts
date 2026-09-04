@@ -63,6 +63,10 @@ export class GraftEngine {
 		return this.graph.getGraphData();
 	}
 
+	public async exportWiring(graftDir?: string): Promise<string> {
+		return this.graph.exportWiring(graftDir);
+	}
+
 	public async circularDependencies() {
 		await this.graph.ensureIndexed();
 		return this.graph.getCircularDependencies();

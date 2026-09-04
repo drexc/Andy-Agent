@@ -1179,6 +1179,144 @@ export class PantheonOrchestrator {
 			} catch {}
 		}
 
+		// 4. Graft Code Graph Actions (AST Mapping, Blast Radius, Skeletons, Callers, Diagnostics, Wiring export)
+		const graftEngine =
+			targetCwd && targetCwd !== this.cwd ? new GraftEngine(targetCwd) : this.graft;
+
+		// Pattern: ```graft:map or <graft_map> or json graft_map
+		if (
+			/```graft:\s*map\b/i.test(text) ||
+			/<graft_map>/i.test(text) ||
+			/"name"\s*:\s*"graft_map"/i.test(text)
+		) {
+			try {
+				const mapStr = await graftEngine.map();
+				await onEvent({
+					type: "tool_start",
+					agentId: agent.id,
+					tool: "graft_map",
+					target: targetCwd,
+				});
+				await onEvent({
+					type: "tool_result",
+					agentId: agent.id,
+					tool: "graft_map",
+					target: targetCwd,
+					output: mapStr,
+				});
+				extraResultsText += `\n\n### 🏛️ Mapa Arquitectónico Graft (AST):\n\`\`\`text\n${mapStr.slice(0, 3000)}\n\`\`\``;
+			} catch (err: any) {
+				extraResultsText += `\n\n> ✗ Error al generar mapa Graft: ${err.message || String(err)}`;
+			}
+		}
+
+		// Pattern: ```graft:blast <target> or <graft_blast><target>...</target></graft_blast>
+		const blastRegex =
+			/(?:```graft:\s*blast\s+([^\r\n]+)```|<graft_blast>\s*<target>([\s\S]*?)<\/target>\s*<\/graft_blast>)/gi;
+		let blastMatch = blastRegex.exec(text);
+		while (blastMatch !== null) {
+			const target = (blastMatch[1] || blastMatch[2] || "").trim();
+			if (target) {
+				try {
+					const blastRes = await graftEngine.blast(target);
+					await onEvent({
+						type: "tool_start",
+						agentId: agent.id,
+						tool: "graft_blast",
+						target,
+					});
+					const formattedBlast = `- Dependientes directos: ${blastRes.directDependents.length}\n- Dependientes indirectos: ${blastRes.indirectDependents.length}\n- Total de archivos impactados: ${blastRes.totalImpactedFiles}\n${blastRes.directDependents.map((d) => `  * ${d}`).join("\n")}`;
+					await onEvent({
+						type: "tool_result",
+						agentId: agent.id,
+						tool: "graft_blast",
+						target,
+						output: formattedBlast,
+					});
+					extraResultsText += `\n\n### 💥 Radio de Impacto Graft (Blast Radius) para \`${target}\`:\n${formattedBlast}`;
+				} catch {}
+			}
+			blastMatch = blastRegex.exec(text);
+		}
+
+		// Pattern: ```graft:skeleton <file> or <graft_skeleton><filePath>...</filePath></graft_skeleton>
+		const skelRegex =
+			/(?:```graft:\s*skeleton\s+([^\r\n]+)```|<graft_skeleton>\s*<filePath>([\s\S]*?)<\/filePath>\s*<\/graft_skeleton>)/gi;
+		let skelMatch = skelRegex.exec(text);
+		while (skelMatch !== null) {
+			const tf = (skelMatch[1] || skelMatch[2] || "").trim();
+			if (tf) {
+				try {
+					const skel = await graftEngine.skeleton(tf);
+					await onEvent({
+						type: "tool_start",
+						agentId: agent.id,
+						tool: "graft_skeleton",
+						target: tf,
+					});
+					await onEvent({
+						type: "tool_result",
+						agentId: agent.id,
+						tool: "graft_skeleton",
+						target: tf,
+						output: skel,
+					});
+					extraResultsText += `\n\n### 🦴 Esqueleto Estructural Graft de \`${path.basename(tf)}\`:\n\`\`\`typescript\n${skel.slice(0, 3000)}\n\`\`\``;
+				} catch {}
+			}
+			skelMatch = skelRegex.exec(text);
+		}
+
+		// Pattern: ```graft:diagnostics or <graft_diagnostics>
+		if (
+			/```graft:\s*diagnostics\b/i.test(text) ||
+			/<graft_diagnostics>/i.test(text) ||
+			/"name"\s*:\s*"graft_diagnostics"/i.test(text)
+		) {
+			try {
+				const diags = await graftEngine.diagnostics();
+				const summary = `- Dependencias circulares: ${diags.circularDependencies.length}\n- Símbolos de código muerto: ${diags.deadCode.length}\n- Diagnósticos de sintaxis/errores: ${diags.errorCount}`;
+				await onEvent({
+					type: "tool_start",
+					agentId: agent.id,
+					tool: "graft_diagnostics",
+					target: targetCwd,
+				});
+				await onEvent({
+					type: "tool_result",
+					agentId: agent.id,
+					tool: "graft_diagnostics",
+					target: targetCwd,
+					output: summary,
+				});
+				extraResultsText += `\n\n### 🩺 Diagnóstico Estático Graft (AST):\n${summary}`;
+			} catch {}
+		}
+
+		// Pattern: ```graft:build or ```graft:wiring
+		if (
+			/```graft:\s*(?:build|wiring|export)\b/i.test(text) ||
+			/<graft_build>/i.test(text)
+		) {
+			try {
+				const wiringPath = await graftEngine.exportWiring();
+				await onEvent({
+					type: "tool_start",
+					agentId: agent.id,
+					tool: "graft_build",
+					target: wiringPath,
+				});
+				await onEvent({
+					type: "tool_result",
+					agentId: agent.id,
+					tool: "graft_build",
+					target: wiringPath,
+					output: `Graft wiring v0.16.0 exportado a ${wiringPath}`,
+				});
+				extraResultsText += `\n\n> 🌐 **Graft 0.16.0 Build**: Se generó el grafo de cableado \`graft/.graph/wiring.json\` con éxito.`;
+			} catch {}
+		}
+
 		return extraResultsText;
 	}
 

@@ -507,6 +507,27 @@ export class CodeGraph {
 		};
 	}
 
+	/**
+	 * Export code graph wiring conforming to Graft 0.16.0 specification (graft/.graph/wiring.json)
+	 */
+	public async exportWiring(graftDir?: string): Promise<string> {
+		await this.ensureIndexed();
+		const graphData = this.getGraphData();
+		const targetDir = graftDir || join(this.rootDir, "graft", ".graph");
+		if (!existsSync(targetDir)) {
+			mkdirSync(targetDir, { recursive: true });
+		}
+		const wiringPath = join(targetDir, "wiring.json");
+		const wiringPayload = {
+			version: "0.16.0",
+			generator: "andy-agent-graft-engine",
+			timestamp: new Date().toISOString(),
+			...graphData,
+		};
+		await writeFile(wiringPath, JSON.stringify(wiringPayload, null, 2), "utf-8");
+		return wiringPath;
+	}
+
 	private resolveImportPath(importerFile: string, importSource: string): string | undefined {
 		if (!importSource.startsWith(".")) return undefined;
 
