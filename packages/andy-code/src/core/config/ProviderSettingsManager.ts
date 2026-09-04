@@ -71,7 +71,6 @@ export class ProviderSettingsManager {
 					maxTokens: 8192,
 					contextWindow: 128000,
 					supportsImages: false,
-					supportsComputerUse: false,
 					supportsPromptCache: false,
 				},
 			},

@@ -16,6 +16,7 @@ import type { ApiHandlerCreateMessageMetadata, CompletePromptOptions, SingleComp
 import { addCacheBreakpoints } from "../transform/caching/vercel-ai-gateway";
 import { convertToOpenAiMessages } from "../transform/openai-format";
 import type { ApiStream } from "../transform/stream";
+import { NativeToolCallParser } from "../../core/assistant-message/NativeToolCallParser";
 import { NOT_PROVIDED } from "./constants";
 import { RouterProvider } from "./router-provider";
 
@@ -229,6 +230,8 @@ export class AndyGatewayHandler extends RouterProvider implements SingleCompleti
 				}
 
 				const delta = chunk.choices[0]?.delta;
+				const finishReason = chunk.choices[0]?.finish_reason;
+
 				if (delta?.content) {
 					yield {
 						type: "text",
@@ -249,6 +252,15 @@ export class AndyGatewayHandler extends RouterProvider implements SingleCompleti
 					}
 				}
 
+				// Process finish_reason to emit tool_call_end events
+				// This ensures tool calls are finalized from partial to complete execution
+				if (finishReason) {
+					const endEvents = NativeToolCallParser.processFinishReason(finishReason);
+					for (const event of endEvents) {
+						yield event;
+					}
+				}
+
 				if (chunk.usage) {
 					const usage = chunk.usage as AndyGatewayUsage;
 					yield {
@@ -260,6 +272,12 @@ export class AndyGatewayHandler extends RouterProvider implements SingleCompleti
 						totalCost: usage.cost ?? 0,
 					};
 				}
+			}
+
+			// Finalize any remaining unclosed tool calls (e.g. if finish_reason was omitted or stream ended with [DONE])
+			const finalEndEvents = NativeToolCallParser.finalizeRawChunks();
+			for (const event of finalEndEvents) {
+				yield event;
 			}
 		} catch (error) {
 			try {

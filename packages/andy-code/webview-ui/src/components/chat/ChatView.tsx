@@ -291,6 +291,18 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		vscode.postMessage({ type: "playTts", text })
 	}
 
+	// Resets the approval button UI to its hidden/disabled state. Shared by the
+	// manual click handlers, backend-driven messages, and error/resolution states.
+	const clearApprovalButtons = useCallback((disableSending = false) => {
+		if (disableSending) {
+			setSendingDisabled(true)
+		}
+		setClineAsk(undefined)
+		setEnableButtons(false)
+		setPrimaryButtonText(undefined)
+		setSecondaryButtonText(undefined)
+	}, [])
+
 	useDeepCompareEffect(() => {
 		// if last message is an ask, show user ask UI
 		// if user finished a task, then start a new task with a new conversation history since in this moment that the extension is waiting for user response, the user could close the extension and the conversation history would be lost.
@@ -303,6 +315,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					// stamped on the message atomically with addToClineMessages, so the
 					// webview never needs to show -- and then clear -- approval buttons.
 					if (lastMessage.isAnswered) {
+						clearApprovalButtons(false)
 						break
 					}
 					// Reset user response flag when a new ask arrives to allow auto-approval
@@ -339,7 +352,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "tool":
 							setSendingDisabled(isPartial)
 							setClineAsk("tool")
-							setEnableButtons(!isPartial)
+							if (isPartial) {
+								setEnableButtons(false)
+								setPrimaryButtonText(undefined)
+								setSecondaryButtonText(undefined)
+								break
+							}
+							setEnableButtons(true)
 							const tool = JSON.parse(lastMessage.text || "{}") as ClineSayTool
 							switch (tool.tool) {
 								case "editedExistingFile":
@@ -389,7 +408,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "command":
 							setSendingDisabled(isPartial)
 							setClineAsk("command")
-							setEnableButtons(!isPartial)
+							if (isPartial) {
+								setEnableButtons(false)
+								setPrimaryButtonText(undefined)
+								setSecondaryButtonText(undefined)
+								break
+							}
+							setEnableButtons(true)
 							setPrimaryButtonText(t("chat:runCommand.title"))
 							setSecondaryButtonText(t("chat:reject.title"))
 							break
@@ -403,7 +428,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "use_mcp_server":
 							setSendingDisabled(isPartial)
 							setClineAsk("use_mcp_server")
-							setEnableButtons(!isPartial)
+							if (isPartial) {
+								setEnableButtons(false)
+								setPrimaryButtonText(undefined)
+								setSecondaryButtonText(undefined)
+								break
+							}
+							setEnableButtons(true)
 							setPrimaryButtonText(t("chat:approve.title"))
 							setSecondaryButtonText(t("chat:reject.title"))
 							break
@@ -416,7 +447,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							}
 							setSendingDisabled(isPartial)
 							setClineAsk("completion_result")
-							setEnableButtons(!isPartial)
+							if (isPartial) {
+								setEnableButtons(false)
+								setPrimaryButtonText(undefined)
+								setSecondaryButtonText(undefined)
+								break
+							}
+							setEnableButtons(true)
 							setPrimaryButtonText(t("chat:startNewTask.title"))
 							setSecondaryButtonText(undefined)
 							break
@@ -469,10 +506,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							// images the user has pasted while the chat is in progress.
 							// Images are already cleared in the appropriate user-action
 							// handlers (handleSendMessage, handlePrimaryButtonClick, etc.).
-							setClineAsk(undefined)
-							setEnableButtons(false)
-							setPrimaryButtonText(undefined)
-							setSecondaryButtonText(undefined)
+							clearApprovalButtons(false)
 							break
 						case "api_req_finished":
 						case "error":
@@ -483,10 +517,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							// from the interactive ask so they don't stay up after
 							// completion.
 							if (lastMessage.partial !== true && clineAskRef.current === "command_output") {
-								setClineAsk(undefined)
-								setEnableButtons(false)
-								setPrimaryButtonText(undefined)
-								setSecondaryButtonText(undefined)
+								clearApprovalButtons(false)
+							}
+							if (lastMessage.say === "error") {
+								clearApprovalButtons(false)
 							}
 							break
 						case "mcp_server_request_started":
@@ -765,18 +799,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 	}, [inputValue, selectedImages])
 
-	// Resets the approval button UI to its hidden/disabled state. Shared by the
-	// manual click handlers and by the backend-driven clearApprovalButtons
-	// message so auto-approved/denied asks hide the buttons through the same
-	// pathway a manual click uses.
-	const clearApprovalButtons = useCallback(() => {
-		setSendingDisabled(true)
-		setClineAsk(undefined)
-		setEnableButtons(false)
-		setPrimaryButtonText(undefined)
-		setSecondaryButtonText(undefined)
-	}, [])
-
 	// This logic depends on the useEffect[messages] above to set clineAsk,
 	// after which buttons are shown and we then send an askResponse to the
 	// extension.
@@ -847,7 +869,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					break
 			}
 
-			clearApprovalButtons()
+			clearApprovalButtons(true)
 		},
 		[clineAsk, startNewTask, currentTaskItem?.parentTaskId, clearApprovalButtons],
 	)
@@ -894,7 +916,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					vscode.postMessage({ type: "terminalOperation", terminalOperation: "abort" })
 					break
 			}
-			clearApprovalButtons()
+			clearApprovalButtons(true)
 		},
 		[clineAsk, startNewTask, isStreaming, setDidClickCancel, clearApprovalButtons],
 	)

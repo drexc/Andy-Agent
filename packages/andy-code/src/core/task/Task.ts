@@ -1575,8 +1575,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			}
 		}
 
-		// Mark the last tool-approval ask as answered when user approves (or auto-approval)
-		if (askResponse === "yesButtonClicked") {
+		// Mark the last tool-approval ask as answered when user approves or denies (or auto-approval)
+		if (askResponse === "yesButtonClicked" || askResponse === "noButtonClicked") {
 			const lastToolAskIndex = findLastIndex(
 				this.clineMessages,
 				(msg) => msg.type === "ask" && msg.ask === "tool" && !msg.isAnswered,
