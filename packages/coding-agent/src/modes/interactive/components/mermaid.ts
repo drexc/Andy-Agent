@@ -1,5 +1,4 @@
-// @ts-ignore - grok-mermaid type declarations may be missing in some environments
-import { type MermaidArt as _MermaidArt, render as _render, type Span as _Span } from "grok-mermaid";
+import { createRequire } from "node:module";
 import { Marked, type Token } from "marked";
 import type { MermaidRenderingMode } from "../../../core/settings-manager.js";
 import type { Theme } from "../theme/theme.js";
@@ -18,7 +17,24 @@ export interface MermaidArt {
 	warnings: string[];
 }
 
-const render: (src: string) => MermaidArt | null = typeof _render === "function" ? _render : (_src: string) => null;
+type RenderFn = (src: string) => MermaidArt | null;
+
+let _render: RenderFn | null = null;
+try {
+	const req = createRequire(import.meta.url);
+	const mod = req("grok-mermaid");
+	if (typeof mod?.render === "function") {
+		_render = mod.render;
+	} else if (typeof mod?.default?.render === "function") {
+		_render = mod.default.render;
+	} else if (typeof mod === "function") {
+		_render = mod;
+	}
+} catch {
+	_render = null;
+}
+
+const render: RenderFn = typeof _render === "function" ? _render : (_src: string) => null;
 
 const markdownParser = new Marked();
 
