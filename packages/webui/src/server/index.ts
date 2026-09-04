@@ -3970,6 +3970,17 @@ ${prompt || ""}`;
 						}
 
 						if (contentToSend) {
+							// Strip any pseudo-tool XML from streaming content delta
+							contentToSend = contentToSend
+								.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, "")
+								.replace(/<ask_followup_question>[\s\S]*?<\/ask_followup_question>/gi, "")
+								.replace(/<tool_call>[\s\S]*$/gi, "")
+								.replace(/<ask_followup_question>[\s\S]*$/gi, "")
+								.replace(/<function=[^>]+>[\s\S]*?<\/function>/gi, "")
+								.replace(/<parameter=[^>]+>[\s\S]*?<\/parameter>/gi, "");
+
+							if (!contentToSend) return;
+
 							// Circuit breaker for multi-agent bridge stream
 							const loopCheck = self.detectRepetitionLoop(accumulatedFullText + contentToSend);
 							if (loopCheck.isLooping) {

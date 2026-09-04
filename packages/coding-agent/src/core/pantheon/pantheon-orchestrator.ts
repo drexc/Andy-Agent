@@ -74,6 +74,113 @@ export interface UserActionRequired {
 
 export type PantheonEventCallback = (event: PantheonExecutionEvent) => void | Promise<void>;
 
+export class PantheonStreamFilter {
+	private buffer = "";
+	private inToolBlock = false;
+	private hasProcessedLeadingSpeaker = false;
+	private emittedAnyContent = false;
+
+	public feed(chunk: string): string {
+		this.buffer += chunk;
+		let output = "";
+
+		// 1. Strip leading speaker prefix like [Architect (Software Architect & System Designer)]:
+		if (!this.hasProcessedLeadingSpeaker) {
+			const trimmed = this.buffer.trimStart();
+			if (trimmed.startsWith("[") && trimmed.includes("]:")) {
+				const afterPrefix = trimmed.replace(/^\[[^\]]+\]:\s*/, "");
+				this.buffer = afterPrefix;
+				this.hasProcessedLeadingSpeaker = true;
+			} else if (this.buffer.length > 50 || (!trimmed.startsWith("[") && this.buffer.length > 5)) {
+				this.hasProcessedLeadingSpeaker = true;
+			}
+		}
+
+		while (this.buffer.length > 0) {
+			if (this.inToolBlock) {
+				// Check for closing tags of outer tool blocks
+				const closeMatch = this.buffer.match(
+					/<\/(?:tool_call|ask_followup_question|write_to_file|execute_command|read_file)>/i,
+				);
+				if (closeMatch) {
+					const endIdx = closeMatch.index! + closeMatch[0].length;
+					this.buffer = this.buffer.slice(endIdx);
+					this.inToolBlock = false;
+				} else {
+					// Check for JSON tool end
+					if (this.buffer.trimStart().startsWith("{") && this.buffer.includes("}")) {
+						const lastBrace = this.buffer.lastIndexOf("}");
+						this.buffer = this.buffer.slice(lastBrace + 1);
+						this.inToolBlock = false;
+					} else {
+						// Still in tool block: don't emit anything
+						if (this.buffer.length > 200) {
+							this.buffer = this.buffer.slice(-200);
+						}
+						break;
+					}
+				}
+			} else {
+				// Check for leading or inline tool tags
+				const openTagMatch = this.buffer.match(
+					/<(?:tool_call|ask_followup_question|write_to_file|execute_command|read_file|function=|<\|tool_call)/i,
+				);
+				const openJsonMatch = this.buffer.match(/\{\s*"(?:tool|name)"\s*:\s*"/i);
+
+				let earliestIdx = -1;
+
+				if (openTagMatch) {
+					earliestIdx = openTagMatch.index!;
+				}
+				if (openJsonMatch && (earliestIdx === -1 || openJsonMatch.index! < earliestIdx)) {
+					earliestIdx = openJsonMatch.index!;
+				}
+
+				if (earliestIdx !== -1) {
+					output += this.buffer.slice(0, earliestIdx);
+					this.buffer = this.buffer.slice(earliestIdx);
+					this.inToolBlock = true;
+				} else {
+					// Check if buffer ends with a potential opening tag like "<" or "<tool"
+					const partialTagMatch = this.buffer.match(/<[a-zA-Z_=-]*$/);
+					const partialJsonMatch = this.buffer.match(/\{[\s"]*(?:t|to|too|tool|n|na|nam|name)?$/);
+
+					if (partialTagMatch) {
+						output += this.buffer.slice(0, partialTagMatch.index!);
+						this.buffer = partialTagMatch[0];
+						break;
+					} else if (partialJsonMatch) {
+						output += this.buffer.slice(0, partialJsonMatch.index!);
+						this.buffer = partialJsonMatch[0];
+						break;
+					} else {
+						output += this.buffer;
+						this.buffer = "";
+					}
+				}
+			}
+		}
+
+		if (output) this.emittedAnyContent = true;
+		return output;
+	}
+
+	public flush(): string {
+		if (this.inToolBlock) {
+			this.buffer = "";
+			return "";
+		}
+		const out = this.buffer;
+		this.buffer = "";
+		if (out) this.emittedAnyContent = true;
+		return out;
+	}
+
+	public hasEmitted(): boolean {
+		return this.emittedAnyContent;
+	}
+}
+
 export class PantheonOrchestrator {
 	private readonly registry: PantheonRegistry;
 	private readonly graft: GraftEngine;
@@ -394,13 +501,10 @@ export class PantheonOrchestrator {
 							await onEvent({ type: "delta", agentId: currentAgent.id, delta: sanitized });
 						}
 					} else if (responseStream && Symbol.asyncIterator in responseStream) {
-						let streamBuffer = "";
-						let isLeadingJsonTool = false;
-						let hasProcessedHeader = false;
+						const filter = new PantheonStreamFilter();
 
 						for await (const chunk of responseStream) {
 							fullResponseText += chunk;
-							streamBuffer += chunk;
 
 							// Circuit breaker: detect degenerate LLM repetition loops (e.g. -🚀-🚀-🚀...)
 							const loopCheck = this.detectRepetitionLoop(fullResponseText);
@@ -412,40 +516,22 @@ export class PantheonOrchestrator {
 								break;
 							}
 
-							if (!hasProcessedHeader) {
-								const trimmed = streamBuffer.trimStart();
-								// Wait until we have enough tokens to detect if it starts with [Name]: or {"tool":
-								if (trimmed.startsWith("{") && (trimmed.includes('"tool"') || trimmed.includes('"name"') || trimmed.length > 50)) {
-									isLeadingJsonTool = trimmed.includes('"tool"') || trimmed.includes('"name"');
-									hasProcessedHeader = true;
-									if (!isLeadingJsonTool) {
-										await onEvent({ type: "delta", agentId: currentAgent.id, delta: streamBuffer });
-										streamBuffer = "";
-									}
-								} else if (trimmed.startsWith("[") && trimmed.includes("]:")) {
-									// Strip leading speaker prefix like [Architect (...)]:
-									const afterPrefix = trimmed.replace(/^\[[^\]]+\]:\s*/, "");
-									if (afterPrefix.startsWith("{") && (afterPrefix.includes('"tool"') || afterPrefix.includes('"name"'))) {
-										isLeadingJsonTool = true;
-									} else {
-										await onEvent({ type: "delta", agentId: currentAgent.id, delta: afterPrefix });
-										streamBuffer = "";
-									}
-									hasProcessedHeader = true;
-								} else if (streamBuffer.length > 60) {
-									hasProcessedHeader = true;
-									await onEvent({ type: "delta", agentId: currentAgent.id, delta: streamBuffer });
-									streamBuffer = "";
-								}
-							} else if (!isLeadingJsonTool) {
-								await onEvent({ type: "delta", agentId: currentAgent.id, delta: chunk });
+							const cleanDelta = filter.feed(chunk);
+							if (cleanDelta) {
+								await onEvent({ type: "delta", agentId: currentAgent.id, delta: cleanDelta });
 							}
 						}
 
-						// If it was a leading JSON tool (like update_todo_list), format it now as Markdown and emit!
-						if (isLeadingJsonTool) {
+						const finalDelta = filter.flush();
+						if (finalDelta) {
+							await onEvent({ type: "delta", agentId: currentAgent.id, delta: finalDelta });
+						}
+
+						// If the agent only emitted tool calls (like update_todo_list) without chat text,
+						// format the todo plan into Markdown and emit so the user sees the plan in chat
+						if (!filter.hasEmitted()) {
 							const sanitized = this.sanitizeAgentOutput(fullResponseText);
-							if (sanitized) {
+							if (sanitized && !sanitized.includes("<ask_followup_question>")) {
 								await onEvent({ type: "delta", agentId: currentAgent.id, delta: sanitized });
 							}
 						}
@@ -813,21 +899,32 @@ export class PantheonOrchestrator {
 	): Promise<string> {
 		let extraResultsText = "";
 
-		// 0. Todo List Update (if the agent emitted update_todo_list JSON)
+		// 0. Todo List Update (if the agent emitted update_todo_list JSON or XML)
+		let todosData: any[] | null = null;
 		const todoJsonRegex =
 			/\{\s*"(?:tool|name)"\s*:\s*"update_?todo_?list"\s*,\s*"todos"\s*:\s*(\[[\s\S]*?\])\s*\}/i;
 		const todoMatch = text.match(todoJsonRegex);
 		if (todoMatch) {
 			try {
-				const todosData = JSON.parse(todoMatch[1]);
-				if (Array.isArray(todosData)) {
-					await onEvent({
-						type: "todo_update" as any,
-						agentId: agent.id,
-						todos: todosData,
-					});
-				}
+				todosData = JSON.parse(todoMatch[1]);
 			} catch {}
+		} else {
+			const todoXmlRegex =
+				/<function=update_todo_list>[\s\S]*?<parameter=todos>(\[[\s\S]*?\])<\/parameter>/i;
+			const xmlMatch = text.match(todoXmlRegex);
+			if (xmlMatch) {
+				try {
+					todosData = JSON.parse(xmlMatch[1]);
+				} catch {}
+			}
+		}
+
+		if (Array.isArray(todosData)) {
+			await onEvent({
+				type: "todo_update" as any,
+				agentId: agent.id,
+				todos: todosData,
+			});
 		}
 
 		// 1. File Writing / Editing (for agents with write capability, e.g. Developer, Hephaestus, Refactorer)
@@ -1549,11 +1646,31 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 		if (!text) return "";
 		let cleaned = text
 			// Strip leading speaker prefix like [Architect (Software Architect & System Designer)]:
-			.replace(/^\s*\[?[A-Z][a-zA-Z0-9_\s-]+\s*\([^)]+\)\]?\s*:\s*/g, "")
-			.replace(/<\|tool_call_start\|>[\s\S]*?<\|tool_call_end\|>/gi, "")
-			.replace(/<\|tool_call_start\|>[\s\S]*$/gi, "")
-			.replace(/<\|im_start\|>[\s\S]*?<\|im_end\|>/gi, "")
-			.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, "");
+			.replace(/^\s*\[?[A-Z][a-zA-Z0-9_\s-]+\s*\([^)]+\)\]?\s*:\s*/g, "");
+
+		// Convert XML update_todo_list to clean Markdown list
+		const todoXmlRegex =
+			/<(?:tool_call>\s*)?<function=update_todo_list>[\s\S]*?<parameter=todos>(\[[\s\S]*?\])<\/parameter>[\s\S]*?(?:<\/tool_call>|<\/function>|$)/i;
+		const xmlTodoMatch = cleaned.match(todoXmlRegex);
+		if (xmlTodoMatch) {
+			try {
+				const todosData = JSON.parse(xmlTodoMatch[1]);
+				if (Array.isArray(todosData)) {
+					const formattedList = todosData
+						.map((item: any) => {
+							const icon =
+								item.status === "completed"
+									? "✅"
+									: item.status === "in_progress"
+										? "🔄"
+										: "⏳";
+							return `- ${icon} **${item.content || item.active_form || item.text || ""}**`;
+						})
+						.join("\n");
+					cleaned = cleaned.replace(xmlTodoMatch[0], `📋 **Plan de Trabajo del Escuadrón**:\n\n${formattedList}\n\n`);
+				}
+			} catch {}
+		}
 
 		// Convert update_todo_list JSON to clean Markdown list
 		const todoJsonRegex =
@@ -1580,6 +1697,19 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 		}
 
 		return cleaned
+			.replace(/<\|tool_call_start\|>[\s\S]*?<\|tool_call_end\|>/gi, "")
+			.replace(/<\|tool_call_start\|>[\s\S]*$/gi, "")
+			.replace(/<\|im_start\|>[\s\S]*?<\|im_end\|>/gi, "")
+			.replace(/<tool_call>[\s\S]*?<\/tool_call>/gi, "")
+			.replace(/<tool_call>[\s\S]*$/gi, "")
+			.replace(/<ask_followup_question>[\s\S]*?<\/ask_followup_question>/gi, "")
+			.replace(/<ask_followup_question>[\s\S]*$/gi, "")
+			.replace(/<question>[\s\S]*?<\/question>/gi, "")
+			.replace(/<question>[\s\S]*$/gi, "")
+			.replace(/<follow_up>[\s\S]*?<\/follow_up>/gi, "")
+			.replace(/<follow_up>[\s\S]*$/gi, "")
+			.replace(/<function=[^>]+>[\s\S]*?<\/function>/gi, "")
+			.replace(/<parameter=[^>]+>[\s\S]*?<\/parameter>/gi, "")
 			.replace(
 				/\{\s*"name"\s*:\s*"(?:read_file|execute_command|write_to_file|run_command|terminal|read|write)"\s*,\s*"arguments"\s*:\s*\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}\s*\}/gi,
 				"",
@@ -1636,16 +1766,21 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 		let question = "";
 		let rawMatch = "";
 
-		// 1. Direct XML tag check
-		const xmlMatch = text.match(
-			/<ask_followup_question>[\s\S]*?<question>([\s\S]*?)<\/question>[\s\S]*?(?:<follow_up>([\s\S]*?)<\/follow_up>)?[\s\S]*?<\/ask_followup_question>/i,
-		);
-		if (xmlMatch) {
+		// 1. Direct XML tag check (robust to unclosed tags and truncated outputs)
+		if (text.includes("<ask_followup_question>") || text.includes("<question>")) {
 			rawMatch = "XML_ask_followup";
-			question = xmlMatch[1].trim();
-			if (xmlMatch[2]) {
+			const qMatch = text.match(/<question>([\s\S]*?)(?:<\/question>|<\/ask_followup_question>|$)/i);
+			if (qMatch) {
+				question = qMatch[1].trim();
+			} else {
+				const afterTag = text.split(/<ask_followup_question>/i)[1] || "";
+				question = afterTag.trim();
+			}
+
+			const followUpMatch = text.match(/<follow_up>([\s\S]*?)(?:<\/follow_up>|<\/ask_followup_question>|$)/i);
+			if (followUpMatch) {
 				try {
-					const parsed = JSON.parse(xmlMatch[2].trim());
+					const parsed = JSON.parse(followUpMatch[1].trim());
 					if (Array.isArray(parsed)) {
 						for (const item of parsed) {
 							const optText =
@@ -1762,7 +1897,14 @@ ${projectSection}${graftSection}${delegationSection}${writerMandate}${architectM
 		}
 
 		if (options.length === 0) {
-			options.push({ text: "Confirmar y Continuar" }, { text: "Modificar Requerimiento" });
+			if (rawMatch === "XML_ask_followup") {
+				options.push(
+					{ text: "Opción A: Proceder con la implementación de las fases" },
+					{ text: "Opción B: Revisar o ajustar el diseño arquitectónico" },
+				);
+			} else {
+				options.push({ text: "Confirmar y Continuar" }, { text: "Modificar Requerimiento" });
+			}
 		}
 
 		return {
