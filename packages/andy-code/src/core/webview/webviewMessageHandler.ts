@@ -1276,22 +1276,20 @@ export const webviewMessageHandler = async (
 				options: { provider: providerIdentifiers.opencodeGo, apiKey: opencodeGoApiKey },
 			});
 
-			// Kenari's /models endpoint is public — it returns the full model list with no
-			// Authorization header — so it's fetched unconditionally like openrouter/vercel-ai-gateway
-			// above. Gating it behind a key meant the picker stayed empty (and fell back to the default
-			// model) whenever the key wasn't yet in apiConfiguration at fetch time. The key is still
-			// forwarded when present.
+			// Kenari is conditional on apiKey to prevent unwanted background network requests to kenari.id
 			const kenariApiKey = message?.values?.kenariApiKey ?? apiConfiguration.kenariApiKey;
 
-			// Refresh the cache when a new key is explicitly provided (e.g. the Refresh Models button).
-			if (message?.values?.kenariApiKey) {
-				await flushModels({ provider: providerIdentifiers.kenari, apiKey: kenariApiKey }, true);
-			}
+			if (kenariApiKey) {
+				// Refresh the cache when a new key is explicitly provided (e.g. the Refresh Models button).
+				if (message?.values?.kenariApiKey) {
+					await flushModels({ provider: providerIdentifiers.kenari, apiKey: kenariApiKey }, true);
+				}
 
-			candidates.push({
-				key: providerIdentifiers.kenari,
-				options: { provider: providerIdentifiers.kenari, apiKey: kenariApiKey },
-			});
+				candidates.push({
+					key: providerIdentifiers.kenari,
+					options: { provider: providerIdentifiers.kenari, apiKey: kenariApiKey },
+				});
+			}
 
 			// NanoGPT's detailed catalog is public, while an optional key can expose a
 			// different allowlist. Prefer an explicitly supplied unsaved key and use the

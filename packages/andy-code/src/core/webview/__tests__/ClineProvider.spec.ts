@@ -3567,6 +3567,7 @@ describe("ClineProvider - Router Models", () => {
 				requestyApiKey: "requesty-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
+				kenariApiKey: "kenari-key",
 			},
 		} as any);
 
