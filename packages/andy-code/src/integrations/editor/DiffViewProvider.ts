@@ -895,6 +895,7 @@ export class DiffViewProvider {
 			const DIFF_EDITOR_TIMEOUT = 10_000; // ms
 
 			let timeoutId: NodeJS.Timeout | undefined;
+			let pollIntervalId: NodeJS.Timeout | undefined;
 			const disposables: vscode.Disposable[] = [];
 
 			const cleanup = () => {
@@ -902,9 +903,35 @@ export class DiffViewProvider {
 					clearTimeout(timeoutId);
 					timeoutId = undefined;
 				}
+				if (pollIntervalId) {
+					clearInterval(pollIntervalId);
+					pollIntervalId = undefined;
+				}
 				disposables.forEach((d) => d.dispose());
 				disposables.length = 0;
 			};
+
+			const checkVisible = (): boolean => {
+				const editor = vscode.window.visibleTextEditors.find(
+					(e) => e.document.uri.scheme === "file" && arePathsEqual(e.document.uri.fsPath, uri.fsPath),
+				);
+				if (editor) {
+					cleanup();
+					resolve(editor);
+					return true;
+				}
+				return false;
+			};
+
+			// Check immediately if already visible
+			if (checkVisible()) {
+				return;
+			}
+
+			// Poll periodically to catch editors opened without triggering onDidChangeVisibleTextEditors
+			pollIntervalId = setInterval(() => {
+				checkVisible();
+			}, 100);
 
 			// Set timeout for the entire operation
 			timeoutId = setTimeout(() => {
@@ -970,7 +997,8 @@ export class DiffViewProvider {
 				})
 				.then(
 					() => {
-						// Command executed successfully, now wait for the editor to appear
+						// Command executed successfully, check immediately for the editor
+						checkVisible();
 					},
 					(err: any) => {
 						cleanup();

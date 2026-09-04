@@ -1300,18 +1300,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const autoApprovalDecision = isAutoAnswered ? approval.decision : undefined;
 
 		if (partial !== undefined) {
-			const lastMessage = this.clineMessages.at(-1);
-
-			const isUpdatingPreviousPartial =
-				lastMessage && lastMessage.partial && lastMessage.type === "ask" && lastMessage.ask === type;
+			const lastPartialIndex = this.clineMessages.findLastIndex(
+				(m) => m.type === "ask" && m.ask === type && m.partial === true,
+			);
+			const isUpdatingPreviousPartial = lastPartialIndex !== -1;
+			const targetPartialMessage = isUpdatingPreviousPartial ? this.clineMessages[lastPartialIndex] : undefined;
 
 			if (partial) {
-				if (isUpdatingPreviousPartial) {
+				if (isUpdatingPreviousPartial && targetPartialMessage) {
 					// Existing partial message, so update it.
-					lastMessage.text = text;
-					lastMessage.partial = partial;
-					lastMessage.progressStatus = progressStatus;
-					lastMessage.isProtected = isProtected;
+					targetPartialMessage.text = text;
+					targetPartialMessage.partial = partial;
+					targetPartialMessage.progressStatus = progressStatus;
+					targetPartialMessage.isProtected = isProtected;
 					// TODO: Be more efficient about saving and posting only new
 					// data or one whole message at a time so ignore partial for
 					// saves, and only post parts of partial message instead of
@@ -1320,7 +1321,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// the `RooCodeEventName.Message` emit can synchronously throw
 					// if any consumer-attached listener does, which would surface
 					// here as an unhandled rejection. Log it instead.
-					this.updateClineMessage(lastMessage).catch((error) => {
+					this.updateClineMessage(targetPartialMessage).catch((error) => {
 						console.error("[Task#ask] updateClineMessage failed:", error);
 					});
 					// console.log("Task#ask: current ask promise was ignored (#1)")
@@ -1335,7 +1336,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					throw new AskIgnoredError("new partial");
 				}
 			} else {
-				if (isUpdatingPreviousPartial) {
+				if (isUpdatingPreviousPartial && targetPartialMessage) {
 					// This is the complete version of a previously partial
 					// message, so replace the partial with the complete version.
 					this.askResponse = undefined;
@@ -1353,20 +1354,20 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// lists, it's likely because the key prop is not stable.
 					// So in this case we must make sure that the message ts is
 					// never altered after first setting it.
-					askTs = lastMessage.ts;
+					askTs = targetPartialMessage.ts;
 					this.lastMessageTs = askTs;
-					lastMessage.text = text;
-					lastMessage.partial = false;
-					lastMessage.progressStatus = progressStatus;
-					lastMessage.isProtected = isProtected;
+					targetPartialMessage.text = text;
+					targetPartialMessage.partial = false;
+					targetPartialMessage.progressStatus = progressStatus;
+					targetPartialMessage.isProtected = isProtected;
 					if (isAutoAnswered) {
-						lastMessage.isAnswered = true;
-						lastMessage.autoApprovalDecision = autoApprovalDecision;
+						targetPartialMessage.isAnswered = true;
+						targetPartialMessage.autoApprovalDecision = autoApprovalDecision;
 					}
 					await this.saveClineMessages();
 					// Fire-and-forget: see updateClineMessage call above for the
 					// rationale on the .catch arm.
-					this.updateClineMessage(lastMessage).catch((error) => {
+					this.updateClineMessage(targetPartialMessage).catch((error) => {
 						console.error("[Task#ask] updateClineMessage failed:", error);
 					});
 				} else {

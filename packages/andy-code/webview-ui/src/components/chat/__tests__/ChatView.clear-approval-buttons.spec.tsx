@@ -106,6 +106,7 @@ vi.mock("react-i18next", () => ({
 }))
 
 const RUN_BUTTON_LABEL = "chat:runCommand.title"
+const SAVE_BUTTON_LABEL = "chat:save.title"
 const DENY_BUTTON_LABEL = "chat:reject.title"
 const START_NEW_TASK_BUTTON_LABEL = "chat:startNewTask.title"
 const SEE_NEW_CHANGES_BUTTON_LABEL = "chat:seeNewChanges.title"
@@ -177,6 +178,24 @@ const askOnlyCompletionWithCheckpoint = (): ClineMessage[] => [
 		checkpoint: { suppressMessage: true },
 	},
 	{ type: "ask", ask: "completion_result", ts: 3, text: "Task complete", partial: false },
+]
+
+const toolAskFollowedByCheckpoint = (): ClineMessage[] => [
+	{ type: "say", say: "task", ts: 1, text: "Initial task" },
+	{
+		type: "ask",
+		ask: "tool",
+		ts: 2,
+		text: JSON.stringify({ tool: "editedExistingFile", path: "test.txt" }),
+		partial: false,
+	},
+	{
+		type: "say",
+		say: "checkpoint_saved",
+		ts: 3,
+		text: "checkpoint-hash",
+		checkpoint: { commitHash: "abc" },
+	},
 ]
 
 describe("ChatView approval button behavior", () => {
@@ -272,5 +291,22 @@ describe("ChatView approval button behavior", () => {
 
 		fireEvent.click(getByText(START_NEW_TASK_BUTTON_LABEL))
 		expect(vscode.postMessage).toHaveBeenCalledWith({ type: "clearTask" })
+	})
+
+	it("shows and enables Save/Reject buttons when a tool ask is followed by checkpoint_saved", async () => {
+		const { getByText } = renderChatView()
+
+		await act(async () => {
+			hydrateState(toolAskFollowedByCheckpoint())
+		})
+
+		await waitFor(() => {
+			const saveButton = getByText(SAVE_BUTTON_LABEL)
+			const rejectButton = getByText(DENY_BUTTON_LABEL)
+			expect(saveButton).toBeInTheDocument()
+			expect(rejectButton).toBeInTheDocument()
+			expect(saveButton).not.toBeDisabled()
+			expect(rejectButton).not.toBeDisabled()
+		})
 	})
 })

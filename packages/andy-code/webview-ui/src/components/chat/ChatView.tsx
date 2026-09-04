@@ -249,6 +249,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	// would have to true again even if messages didn't change.
 	const lastMessage = useMemo(() => messages.at(-1), [messages])
 	const secondLastMessage = useMemo(() => messages.at(-2), [messages])
+	const activeAskMessage = useMemo(
+		() => messages.findLast((m) => m.type === "ask" && !m.isAnswered),
+		[messages],
+	)
 
 	const volume = typeof soundVolume === "number" ? soundVolume : 0.5
 	const [playNotification] = useSound(`${audioBaseUri}/notification.wav`, { volume, soundEnabled, interrupt: true })
@@ -304,218 +308,193 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	}, [])
 
 	useDeepCompareEffect(() => {
-		// if last message is an ask, show user ask UI
-		// if user finished a task, then start a new task with a new conversation history since in this moment that the extension is waiting for user response, the user could close the extension and the conversation history would be lost.
-		// basically as long as a task is active, the conversation history will be persisted
-		if (lastMessage) {
-			switch (lastMessage.type) {
-				case "ask":
-					// Skip button setup when the ask was already resolved by the backend
-					// before the state snapshot reached the webview. isAnswered:true is
-					// stamped on the message atomically with addToClineMessages, so the
-					// webview never needs to show -- and then clear -- approval buttons.
-					if (lastMessage.isAnswered) {
-						clearApprovalButtons(false)
+		// Prioritize active unanswered ask UI even if a non-interactive say
+		// (like checkpoint_saved) was appended after the ask in clineMessages.
+		if (activeAskMessage) {
+			userRespondedRef.current = false
+			const isPartial = activeAskMessage.partial === true
+			switch (activeAskMessage.ask) {
+				case "api_req_failed":
+					playSound("progress_loop")
+					setSendingDisabled(true)
+					setClineAsk("api_req_failed")
+					setEnableButtons(true)
+					setPrimaryButtonText(t("chat:retry.title"))
+					setSecondaryButtonText(t("chat:startNewTask.title"))
+					break
+				case "mistake_limit_reached":
+					playSound("progress_loop")
+					setSendingDisabled(false)
+					setClineAsk("mistake_limit_reached")
+					setEnableButtons(true)
+					setPrimaryButtonText(t("chat:proceedAnyways.title"))
+					setSecondaryButtonText(t("chat:startNewTask.title"))
+					break
+				case "followup":
+					setSendingDisabled(isPartial)
+					setClineAsk("followup")
+					setEnableButtons(true)
+					setPrimaryButtonText(undefined)
+					setSecondaryButtonText(undefined)
+					break
+				case "tool":
+					setSendingDisabled(isPartial)
+					setClineAsk("tool")
+					if (isPartial) {
+						setEnableButtons(false)
+						setPrimaryButtonText(undefined)
+						setSecondaryButtonText(undefined)
 						break
 					}
-					// Reset user response flag when a new ask arrives to allow auto-approval
-					userRespondedRef.current = false
-					const isPartial = lastMessage.partial === true
-					switch (lastMessage.ask) {
-						case "api_req_failed":
-							playSound("progress_loop")
-							setSendingDisabled(true)
-							setClineAsk("api_req_failed")
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:retry.title"))
-							setSecondaryButtonText(t("chat:startNewTask.title"))
-							break
-						case "mistake_limit_reached":
-							playSound("progress_loop")
-							setSendingDisabled(false)
-							setClineAsk("mistake_limit_reached")
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:proceedAnyways.title"))
-							setSecondaryButtonText(t("chat:startNewTask.title"))
-							break
-						case "followup":
-							setSendingDisabled(isPartial)
-							setClineAsk("followup")
-							// setting enable buttons to `false` would trigger a focus grab when
-							// the text area is enabled which is undesirable.
-							// We have no buttons for this tool, so no problem having them "enabled"
-							// to workaround this issue.  See #1358.
-							setEnableButtons(true)
-							setPrimaryButtonText(undefined)
-							setSecondaryButtonText(undefined)
-							break
-						case "tool":
-							setSendingDisabled(isPartial)
-							setClineAsk("tool")
-							if (isPartial) {
-								setEnableButtons(false)
-								setPrimaryButtonText(undefined)
-								setSecondaryButtonText(undefined)
-								break
-							}
-							setEnableButtons(true)
-							const tool = JSON.parse(lastMessage.text || "{}") as ClineSayTool
-							switch (tool.tool) {
-								case "editedExistingFile":
-								case "appliedDiff":
-								case "newFileCreated":
-									if (tool.batchDiffs && Array.isArray(tool.batchDiffs)) {
-										setPrimaryButtonText(t("chat:edit-batch.approve.title"))
-										setSecondaryButtonText(t("chat:edit-batch.deny.title"))
-									} else {
-										setPrimaryButtonText(t("chat:save.title"))
-										setSecondaryButtonText(t("chat:reject.title"))
-									}
-									break
-								case "generateImage":
-									setPrimaryButtonText(t("chat:save.title"))
-									setSecondaryButtonText(t("chat:reject.title"))
-									break
-								case "finishTask":
-									setPrimaryButtonText(t("chat:completeSubtaskAndReturn"))
-									setSecondaryButtonText(undefined)
-									break
-								case "readFile":
-									if (tool.batchFiles && Array.isArray(tool.batchFiles)) {
-										setPrimaryButtonText(t("chat:read-batch.approve.title"))
-										setSecondaryButtonText(t("chat:read-batch.deny.title"))
-									} else {
-										setPrimaryButtonText(t("chat:approve.title"))
-										setSecondaryButtonText(t("chat:reject.title"))
-									}
-									break
-								case "listFilesTopLevel":
-								case "listFilesRecursive":
-									if (tool.batchDirs && Array.isArray(tool.batchDirs)) {
-										setPrimaryButtonText(t("chat:list-batch.approve.title"))
-										setSecondaryButtonText(t("chat:list-batch.deny.title"))
-									} else {
-										setPrimaryButtonText(t("chat:approve.title"))
-										setSecondaryButtonText(t("chat:reject.title"))
-									}
-									break
-								default:
-									setPrimaryButtonText(t("chat:approve.title"))
-									setSecondaryButtonText(t("chat:reject.title"))
-									break
+					setEnableButtons(true)
+					let tool: Partial<ClineSayTool> = {}
+					try {
+						tool = JSON.parse(activeAskMessage.text || "{}")
+					} catch (e) {
+						console.error("[ChatView] Failed to parse tool ask text:", e)
+					}
+					switch (tool.tool) {
+						case "editedExistingFile":
+						case "appliedDiff":
+						case "newFileCreated":
+							if (tool.batchDiffs && Array.isArray(tool.batchDiffs)) {
+								setPrimaryButtonText(t("chat:edit-batch.approve.title"))
+								setSecondaryButtonText(t("chat:edit-batch.deny.title"))
+							} else {
+								setPrimaryButtonText(t("chat:save.title"))
+								setSecondaryButtonText(t("chat:reject.title"))
 							}
 							break
-						case "command":
-							setSendingDisabled(isPartial)
-							setClineAsk("command")
-							if (isPartial) {
-								setEnableButtons(false)
-								setPrimaryButtonText(undefined)
-								setSecondaryButtonText(undefined)
-								break
-							}
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:runCommand.title"))
+						case "generateImage":
+							setPrimaryButtonText(t("chat:save.title"))
 							setSecondaryButtonText(t("chat:reject.title"))
 							break
-						case "command_output":
-							setSendingDisabled(false)
-							setClineAsk("command_output")
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:proceedWhileRunning.title"))
-							setSecondaryButtonText(t("chat:killCommand.title"))
+						case "finishTask":
+							setPrimaryButtonText(t("chat:completeSubtaskAndReturn"))
+							setSecondaryButtonText(undefined)
 							break
-						case "use_mcp_server":
-							setSendingDisabled(isPartial)
-							setClineAsk("use_mcp_server")
-							if (isPartial) {
-								setEnableButtons(false)
-								setPrimaryButtonText(undefined)
-								setSecondaryButtonText(undefined)
-								break
+						case "readFile":
+							if (tool.batchFiles && Array.isArray(tool.batchFiles)) {
+								setPrimaryButtonText(t("chat:read-batch.approve.title"))
+								setSecondaryButtonText(t("chat:read-batch.deny.title"))
+							} else {
+								setPrimaryButtonText(t("chat:approve.title"))
+								setSecondaryButtonText(t("chat:reject.title"))
 							}
-							setEnableButtons(true)
+							break
+						case "listFilesTopLevel":
+						case "listFilesRecursive":
+							if (tool.batchDirs && Array.isArray(tool.batchDirs)) {
+								setPrimaryButtonText(t("chat:list-batch.approve.title"))
+								setSecondaryButtonText(t("chat:list-batch.deny.title"))
+							} else {
+								setPrimaryButtonText(t("chat:approve.title"))
+								setSecondaryButtonText(t("chat:reject.title"))
+							}
+							break
+						default:
 							setPrimaryButtonText(t("chat:approve.title"))
 							setSecondaryButtonText(t("chat:reject.title"))
 							break
-						case "completion_result":
-							// Extension waiting for feedback, but we can just present a new task button.
-							// Kilo-style change inspection/restoration buttons are rendered inline on the completion row.
-							// Only play celebration sound if there are no queued messages.
-							if (!isPartial && messageQueue.length === 0) {
-								playSound("celebration")
-							}
-							setSendingDisabled(isPartial)
-							setClineAsk("completion_result")
-							if (isPartial) {
-								setEnableButtons(false)
-								setPrimaryButtonText(undefined)
-								setSecondaryButtonText(undefined)
-								break
-							}
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:startNewTask.title"))
-							setSecondaryButtonText(undefined)
-							break
-						case "resume_task":
-							setSendingDisabled(false)
-							setClineAsk("resume_task")
-							setEnableButtons(true)
-							// For completed subtasks, show "Start New Task" instead of "Resume"
-							// A subtask is considered completed if:
-							// - It has a parentTaskId AND
-							// - Its messages contain a completion_result (either ask or say)
-							const isCompletedSubtask =
-								currentTaskItem?.parentTaskId &&
-								messages.some(
-									(msg) => msg.ask === "completion_result" || msg.say === "completion_result",
-								)
-							if (isCompletedSubtask) {
-								setPrimaryButtonText(t("chat:startNewTask.title"))
-								setSecondaryButtonText(undefined)
-							} else {
-								setPrimaryButtonText(t("chat:resumeTask.title"))
-								setSecondaryButtonText(t("chat:terminate.title"))
-							}
-							setDidClickCancel(false) // special case where we reset the cancel button state
-							break
-						case "resume_completed_task":
-							setSendingDisabled(false)
-							setClineAsk("resume_completed_task")
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:startNewTask.title"))
-							setSecondaryButtonText(undefined)
-							setDidClickCancel(false)
-							break
+					}
+					break
+				case "command":
+					setSendingDisabled(isPartial)
+					setClineAsk("command")
+					if (isPartial) {
+						setEnableButtons(false)
+						setPrimaryButtonText(undefined)
+						setSecondaryButtonText(undefined)
+						break
+					}
+					setEnableButtons(true)
+					setPrimaryButtonText(t("chat:runCommand.title"))
+					setSecondaryButtonText(t("chat:reject.title"))
+					break
+				case "command_output":
+					setSendingDisabled(false)
+					setClineAsk("command_output")
+					setEnableButtons(true)
+					setPrimaryButtonText(t("chat:proceedWhileRunning.title"))
+					setSecondaryButtonText(t("chat:killCommand.title"))
+					break
+				case "use_mcp_server":
+					setSendingDisabled(isPartial)
+					setClineAsk("use_mcp_server")
+					if (isPartial) {
+						setEnableButtons(false)
+						setPrimaryButtonText(undefined)
+						setSecondaryButtonText(undefined)
+						break
+					}
+					setEnableButtons(true)
+					setPrimaryButtonText(t("chat:approve.title"))
+					setSecondaryButtonText(t("chat:reject.title"))
+					break
+				case "completion_result":
+					if (!isPartial && messageQueue.length === 0) {
+						playSound("celebration")
+					}
+					setSendingDisabled(isPartial)
+					setClineAsk("completion_result")
+					if (isPartial) {
+						setEnableButtons(false)
+						setPrimaryButtonText(undefined)
+						setSecondaryButtonText(undefined)
+						break
+					}
+					setEnableButtons(true)
+					setPrimaryButtonText(t("chat:startNewTask.title"))
+					setSecondaryButtonText(undefined)
+					break
+				case "resume_task":
+					setSendingDisabled(false)
+					setClineAsk("resume_task")
+					setEnableButtons(true)
+					const isCompletedSubtask =
+						currentTaskItem?.parentTaskId &&
+						messages.some(
+							(msg) => msg.ask === "completion_result" || msg.say === "completion_result",
+						)
+					if (isCompletedSubtask) {
+						setPrimaryButtonText(t("chat:startNewTask.title"))
+						setSecondaryButtonText(undefined)
+					} else {
+						setPrimaryButtonText(t("chat:resumeTask.title"))
+						setSecondaryButtonText(t("chat:terminate.title"))
+					}
+					setDidClickCancel(false)
+					break
+				case "resume_completed_task":
+					setSendingDisabled(false)
+					setClineAsk("resume_completed_task")
+					setEnableButtons(true)
+					setPrimaryButtonText(t("chat:startNewTask.title"))
+					setSecondaryButtonText(undefined)
+					setDidClickCancel(false)
+					break
+			}
+		} else if (lastMessage) {
+			switch (lastMessage.type) {
+				case "ask":
+					if (lastMessage.isAnswered) {
+						clearApprovalButtons(false)
 					}
 					break
 				case "say":
-					// Don't want to reset since there could be a "say" after
-					// an "ask" while ask is waiting for response.
 					switch (lastMessage.say) {
 						case "api_req_retry_delayed":
 						case "api_req_rate_limit_wait":
 							setSendingDisabled(true)
 							break
 						case "api_req_started":
-							// Clear button state when a new API request starts
-							// This fixes buttons persisting when the task continues
 							setSendingDisabled(true)
-							// Note: Do NOT clear selectedImages here. This handler fires
-							// every time the backend starts an API call, which would wipe
-							// images the user has pasted while the chat is in progress.
-							// Images are already cleared in the appropriate user-action
-							// handlers (handleSendMessage, handlePrimaryButtonClick, etc.).
 							clearApprovalButtons(false)
 							break
 						case "api_req_finished":
 						case "error":
 						case "text":
 						case "command_output":
-							// A non-partial command_output say means the command
-							// finished; clear any lingering Proceed/Kill controls
-							// from the interactive ask so they don't stay up after
-							// completion.
 							if (lastMessage.partial !== true && clineAskRef.current === "command_output") {
 								clearApprovalButtons(false)
 							}
@@ -530,8 +509,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					}
 					break
 			}
+		} else {
+			clearApprovalButtons(false)
 		}
-	}, [lastMessage, secondLastMessage])
+	}, [activeAskMessage, lastMessage, secondLastMessage])
 
 	// Update button text when messages change (e.g., completion_result is added) for subtasks in resume_task state
 	useEffect(() => {
@@ -605,10 +586,12 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// and should be resolved with optimizations as it's likely a rendering
 		// bug. But as a final guard for now, the cancel button will show if the
 		// last message is not an ask.
-		const isLastAsk = !!modifiedMessages.at(-1)?.ask
+		const hasActiveAsk = modifiedMessages.some(
+			(message) => message.type === "ask" && !message.isAnswered && message.partial !== true,
+		)
 
 		const isToolCurrentlyAsking =
-			isLastAsk && clineAsk !== undefined && enableButtons && primaryButtonText !== undefined
+			hasActiveAsk && clineAsk !== undefined && enableButtons && primaryButtonText !== undefined
 
 		if (isToolCurrentlyAsking) {
 			return false
@@ -657,15 +640,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// Reset user response flag for new message
 		userRespondedRef.current = false
 
-		// Only reset message-specific state, preserving mode.
+		// Reset message-specific state, preserving mode.
 		setInputValue("")
 		setSendingDisabled(true)
 		setSelectedImages([])
 		setClineAsk(undefined)
 		setEnableButtons(false)
-		// Do not reset mode here as it should persist.
-		// setPrimaryButtonText(undefined)
-		// setSecondaryButtonText(undefined)
+		setPrimaryButtonText(undefined)
+		setSecondaryButtonText(undefined)
 	}, [])
 
 	/**
