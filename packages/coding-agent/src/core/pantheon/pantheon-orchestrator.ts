@@ -82,6 +82,8 @@ export class PantheonStreamFilter {
 
 	public feed(chunk: string): string {
 		this.buffer += chunk;
+		// Strip HTML <br> tags that models frequently insert before or around tool blocks
+		this.buffer = this.buffer.replace(/<br\s*\/?>/gi, "");
 		let output = "";
 
 		// 1. Strip leading speaker prefix like [Architect (Software Architect & System Designer)]:
@@ -98,13 +100,20 @@ export class PantheonStreamFilter {
 
 		while (this.buffer.length > 0) {
 			if (this.inToolBlock) {
-				// Check for closing tags of outer tool blocks
+				// Check for closing tags of outer tool blocks or functions
 				const closeMatch = this.buffer.match(
-					/<\/(?:tool_call|ask_followup_question|write_to_file|execute_command|read_file)>/i,
+					/<\/(?:tool_call|ask_followup_question|write_to_file|execute_command|read_file|function|parameter|action|function_calls|function_call)>/i,
 				);
 				if (closeMatch) {
 					const endIdx = closeMatch.index! + closeMatch[0].length;
 					this.buffer = this.buffer.slice(endIdx);
+					// Continue consuming any immediately adjacent closing tags or whitespace
+					const trailingTagsMatch = this.buffer.match(
+						/^(?:\s|<\/(?:tool_call|function|parameter|action|read_file|write_to_file|execute_command)>)+/i,
+					);
+					if (trailingTagsMatch) {
+						this.buffer = this.buffer.slice(trailingTagsMatch[0].length);
+					}
 					this.inToolBlock = false;
 				} else {
 					// Check for JSON tool end
@@ -121,9 +130,18 @@ export class PantheonStreamFilter {
 					}
 				}
 			} else {
-				// Check for leading or inline tool tags
+				// Check for orphaned closing tags at start of buffer
+				const orphanCloseMatch = this.buffer.match(
+					/^\s*<\/(?:tool_call|function|parameter|read_file|write_to_file|execute_command|action|function_calls|function_call)>/i,
+				);
+				if (orphanCloseMatch) {
+					this.buffer = this.buffer.slice(orphanCloseMatch[0].length);
+					continue;
+				}
+
+				// Check for leading or inline tool tags (open)
 				const openTagMatch = this.buffer.match(
-					/<(?:tool_call|ask_followup_question|write_to_file|execute_command|read_file|function=|<\|tool_call)/i,
+					/<(?:tool_call|ask_followup_question|write_to_file|execute_command|read_file|function\b|parameter\b|<\|tool_call)/i,
 				);
 				const openJsonMatch = this.buffer.match(/\{\s*"(?:tool|name)"\s*:\s*"/i);
 
@@ -136,13 +154,23 @@ export class PantheonStreamFilter {
 					earliestIdx = openJsonMatch.index!;
 				}
 
+				// Also check if an orphaned close tag appears later in the text
+				const inlineOrphanCloseMatch = this.buffer.match(
+					/<\/(?:tool_call|function|parameter|read_file|write_to_file|execute_command|action|function_calls|function_call)>/i,
+				);
+				if (inlineOrphanCloseMatch && (earliestIdx === -1 || inlineOrphanCloseMatch.index! < earliestIdx)) {
+					output += this.buffer.slice(0, inlineOrphanCloseMatch.index!);
+					this.buffer = this.buffer.slice(inlineOrphanCloseMatch.index! + inlineOrphanCloseMatch[0].length);
+					continue;
+				}
+
 				if (earliestIdx !== -1) {
 					output += this.buffer.slice(0, earliestIdx);
 					this.buffer = this.buffer.slice(earliestIdx);
 					this.inToolBlock = true;
 				} else {
-					// Check if buffer ends with a potential opening tag like "<" or "<tool"
-					const partialTagMatch = this.buffer.match(/<[a-zA-Z_=-]*$/);
+					// Check if buffer ends with a potential opening or closing tag
+					const partialTagMatch = this.buffer.match(/<\/?(?:[a-zA-Z_=-]*)$/);
 					const partialJsonMatch = this.buffer.match(/\{[\s"]*(?:t|to|too|tool|n|na|nam|name)?$/);
 
 					if (partialTagMatch) {
@@ -170,7 +198,11 @@ export class PantheonStreamFilter {
 			this.buffer = "";
 			return "";
 		}
-		const out = this.buffer;
+		// Clean any trailing orphaned tags before flushing
+		let out = this.buffer.replace(
+			/<\/?(?:tool_call|function|parameter|read_file|write_to_file|execute_command|action|function_calls|function_call)(?:=[^>]*| [^>]*|>)/gi,
+			"",
+		);
 		this.buffer = "";
 		if (out) this.emittedAnyContent = true;
 		return out;
@@ -1224,6 +1256,16 @@ export class PantheonOrchestrator {
 			xrm = xmlReadRegex.exec(text);
 		}
 
+		// Function-style tool calls: <function=read_file><parameter=path>...</parameter></function>
+		const fnReadRegex =
+			/<function(?:=read_file| name=["']read_file["'])>[\s\S]*?<parameter(?:=file_path|=path| name=["']file_path["']| name=["']path["'])>([\s\S]*?)<\/parameter>/gi;
+		let frm = fnReadRegex.exec(text);
+		while (frm !== null) {
+			const tf = frm[1].trim();
+			if (tf && !filesToRead.includes(tf)) filesToRead.push(tf);
+			frm = fnReadRegex.exec(text);
+		}
+
 		for (const targetFile of filesToRead) {
 			try {
 				let fullPath = path.isAbsolute(targetFile) ? path.resolve(targetFile) : path.resolve(targetCwd, targetFile);
@@ -1797,7 +1839,8 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
    // Todo el código C# completo
    \`\`\`
 4. El motor de Pantheon detectará cada bloque de archivo y lo GUARDARÁ INMEDIATAMENTE EN DISCO en el proyecto activo ("${projectContext?.path || this.cwd}").
-5. PROHIBICIÓN TERMINANTE: NO delegues a @Tester ni a ningún otro compañero sin haber creado primero los archivos de código. Si no generas bloques de archivo ejecutables, el proyecto no se actualizará y habrás fallado tu tarea.`
+5. PROHIBICIÓN TERMINANTE: NO delegues a @Tester ni a ningún otro compañero sin haber creado primero los archivos de código. Si no generas bloques de archivo ejecutables, el proyecto no se actualizará y habrás fallado tu tarea.
+6. PROHIBICIÓN TERMINANTE DE GENERAR PSEUDO-HERRAMIENTAS O ETIQUETAS XML: NUNCA escribas <tool_call>, <function...>, <read_file>, ni digas "primero necesito leer los archivos existentes". Toda la información, clases, interfaces y modelos ya están arriba en tu contexto. Tu ÚNICO deber es escribir de inmediato los bloques de código completos \`\`\`file:ruta/archivo.ext ...\`\`\`.`
 			: "";
 
 		const architectMandate =
