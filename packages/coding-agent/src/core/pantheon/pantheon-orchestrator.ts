@@ -467,6 +467,7 @@ export class PantheonOrchestrator {
 				const cleanContent = m.content
 					.replace(/^\s*\[?[A-Z][a-zA-Z0-9_\s-]+\s*\([^)]+\)\]?\s*:\s*/g, "")
 					.replace(/\{\s*"(?:tool|name)"\s*:\s*"update_?todo_?list"[\s\S]*?\}\s*$/gi, "")
+					.replace(/\b@?AxonHub\b/gi, "")
 					.trim();
 				return {
 					role: isUserOrSystem ? "user" : "assistant",
@@ -1538,7 +1539,8 @@ Has sido invocado en cadena porque otro miembro de tu escuadrón te delegó una 
 5. **Acceso Directo y Total al Proyecto Activo**: Ya te encuentras ejecutando dentro del espacio de trabajo del proyecto activo ("${projectContext?.name || path.basename(this.cwd)}" en "${projectContext?.path || this.cwd}"). Toda la estructura de archivos, clases, interfaces públicas, manifiestos (.csproj / .sln), modelos C# y documentación técnica de protocolos (incluyendo hojas Excel .xlsx decodificadas) ya están completamente leídos e incluidos arriba en tu contexto.
 6. **PROHIBICIÓN ESTRICTA DE DECIR "NO PUEDO ACCEDER", "NECESITO LOS ARCHIVOS" O PEDIR QUE EL USUARIO COMPARTA CÓDIGO**: NUNCA digas "NO PUEDO Acceder a tu Filesystem", "Necesito los Archivos Fuente para Proceder", "no tengo acceso al código" ni pidas que el usuario comparta archivos o ejecute "Get-ChildItem", "tree /F", "dir". Tienes el código fuente C# completo arriba en "Interfaces y Estructuras Públicas del Código Fuente", las tablas en "Especificación de Protocolo desde Archivo Excel" y la estructura en "Árbol de Archivos del Proyecto". Realiza el análisis comparativo, auditoría, diseño o implementación de inmediato con los datos provistos.
 7. **Programación Inmediata Sin Preguntas Retóricas**: No pidas confirmación para empezar ni preguntes "¿deseas que proceda?". Entrega de inmediato el diseño arquitectónico y el CÓDIGO FUENTE COMPLETO implementado.
-8. **Especialización Inmediata en tu Escuadrón**:\n${specializationBullets}`;
+8. **Tratamiento al Usuario**: Trata al usuario con profesionalismo y respeto. NUNCA inventes pseudónimos, apodos ni nombres ficticios como "AxonHub" para referirte a él; dirígete a él de manera neutral o por el nombre que él mismo indique.
+9. **Especialización Inmediata en tu Escuadrón**:\n${specializationBullets}`;
 
 		const writerAgents =
 			squadAgents

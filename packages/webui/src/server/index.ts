@@ -3635,8 +3635,9 @@ ${prompt || ""}`;
 				if (tText.includes("Get-ChildItem") || tText.includes("NO PUEDO Acceder") || tText.includes("tree /F")) {
 					continue;
 				}
-				if (tText) {
-					historySnippet += `- ${roleLabel}: ${tText.slice(0, 300)}\n`;
+				const sanitizedTText = tText.replace(/\b@?AxonHub\b/gi, "").trim();
+				if (sanitizedTText) {
+					historySnippet += `- ${roleLabel}: ${sanitizedTText.slice(0, 300)}\n`;
 				}
 			}
 			prompt = `${prompt}\n\n${historySnippet}`;
