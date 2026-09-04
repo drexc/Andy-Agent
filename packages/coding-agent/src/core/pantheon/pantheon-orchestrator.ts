@@ -1275,7 +1275,7 @@ export class PantheonOrchestrator {
 		) {
 			try {
 				const diags = await graftEngine.diagnostics();
-				const summary = `- Dependencias circulares: ${diags.circularDependencies.length}\n- Símbolos de código muerto: ${diags.deadCode.length}\n- Diagnósticos de sintaxis/errores: ${diags.errorCount}`;
+				const summary = `- Archivos analizados: ${diags.totalFilesChecked}\n- Errores sintácticos/estructurales: ${diags.errorCount}\n- Advertencias: ${diags.warningCount}\n- Estado: ${diags.clean ? "Limpio" : "Requiere atención"}`;
 				await onEvent({
 					type: "tool_start",
 					agentId: agent.id,

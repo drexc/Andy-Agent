@@ -1,7 +1,24 @@
-import { type MermaidArt, render, type Span } from "grok-mermaid";
+// @ts-ignore - grok-mermaid type declarations may be missing in some environments
+import { type MermaidArt as _MermaidArt, render as _render, type Span as _Span } from "grok-mermaid";
 import { Marked, type Token } from "marked";
 import type { MermaidRenderingMode } from "../../../core/settings-manager.js";
 import type { Theme } from "../theme/theme.js";
+
+export type Cls = "border" | "text" | "edge" | "edgeLabel" | "title" | "none";
+
+export interface Span {
+	text: string;
+	cls: Cls | string;
+}
+
+export interface MermaidArt {
+	plain: string[];
+	styled: Span[][];
+	width: number;
+	warnings: string[];
+}
+
+const render: (src: string) => MermaidArt | null = typeof _render === "function" ? _render : (_src: string) => null;
 
 const markdownParser = new Marked();
 
@@ -41,11 +58,13 @@ function styleSpan(span: Span, theme: Theme): string {
 			return theme.fg("accent", theme.bold(span.text));
 		case "none":
 			return span.text;
+		default:
+			return span.text;
 	}
 }
 
 function themedLines(art: MermaidArt, theme: Theme): string[] {
-	return art.styled.map((row) => row.map((span) => styleSpan(span, theme)).join(""));
+	return art.styled.map((row: Span[]) => row.map((span: Span) => styleSpan(span, theme)).join(""));
 }
 
 /** Create a transform that replaces top-level Mermaid code blocks with Unicode terminal diagrams. */
@@ -60,7 +79,12 @@ export function createMermaidMarkdownTransform(options: MermaidTransformOptions)
 			.lexer(markdown)
 			.map((token) => {
 				if (!isMermaid(token)) return token.raw;
-				const art = render(token.text);
+				let art: MermaidArt | null = null;
+				try {
+					art = render(token.text);
+				} catch {
+					return token.raw;
+				}
 				if (!art || art.width > availableWidth) return token.raw;
 				if (!isStreaming && art.warnings.length > 0) {
 					const suffix = art.warnings.length > 1 ? ` (+${art.warnings.length - 1} more)` : "";

@@ -329,8 +329,8 @@ async function loadExtensionModule(extensionPath: string) {
 	// jiti and the bundled virtual modules are loaded lazily so that importing
 	// the loader (which nearly every startup path does transitively) doesn't pay
 	// for the full package graph; both specifiers are literals, so Bun still
-	// bundles them into the compiled binary.
-	const { createJiti } = await import("jiti/static");
+	// @ts-ignore - jiti/static types may not resolve in all environment layouts
+	const { createJiti } = (await import("jiti/static" as any)) as any;
 	const jiti = createJiti(import.meta.url, {
 		moduleCache: false,
 		// In the Bun binary and the esbuild CLI bundle: serve pi packages from

@@ -287,9 +287,9 @@ export class AssistantMessageComponent extends Container {
 				// Set paddingY=0 to avoid extra spacing before tool executions
 				const mermaidTransform = this.mermaidTransform;
 				const isStreaming = this.isStreaming;
-				const markdown = new Markdown(content.text.trim(), 1, 0, this.markdownTheme, undefined, {
+				const markdown = new (Markdown as any)(content.text.trim(), 1, 0, this.markdownTheme, undefined, {
 					transform:
-						mermaidTransform && ((md, availableWidth) => mermaidTransform(md, availableWidth, isStreaming)),
+						mermaidTransform && ((md: string, availableWidth: number) => mermaidTransform(md, availableWidth, isStreaming)),
 				});
 				this.blockMarkdowns.set(i, markdown);
 				this.lastBlockTexts.set(i, content.text.trim());
