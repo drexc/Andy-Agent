@@ -2215,17 +2215,45 @@ ${prompt || ""}`;
 					};
 
 					async function* textStream() {
-						try {
-							const eventStream = stream(targetModel!, context, streamOptions);
-							for await (const ev of eventStream) {
-								if (ev.type === "text_delta") {
-									yield ev.delta;
-								} else if (ev.type === "error") {
-									yield `\n[Error del proveedor: ${ev.error?.errorMessage || "Inferencia fallida"}]`;
+						const maxRetries = 3;
+						let yieldedAny = false;
+						let lastError: string | undefined;
+
+						for (let attempt = 1; attempt <= maxRetries; attempt++) {
+							lastError = undefined;
+							try {
+								const eventStream = stream(targetModel!, context, streamOptions);
+								for await (const ev of eventStream) {
+									if (ev.type === "text_delta") {
+										yieldedAny = true;
+										yield ev.delta;
+									} else if (ev.type === "error") {
+										lastError = ev.error?.errorMessage || "Error en stream del proveedor de IA";
+									}
 								}
+							} catch (err: any) {
+								lastError = err.message || String(err);
 							}
-						} catch (err: any) {
-							yield `\n[Error al conectar con ${modelId}: ${err.message || String(err)}]`;
+
+							if (yieldedAny) {
+								return;
+							}
+
+							const isTransient =
+								lastError &&
+								/503|429|busy|capacity|rate limit|structurally heavy|overloaded|temporarily unavailable/i.test(lastError);
+
+							if (isTransient && attempt < maxRetries) {
+								const delayMs = attempt * 1500;
+								await new Promise((r) => setTimeout(r, delayMs));
+								continue;
+							}
+
+							break;
+						}
+
+						if (!yieldedAny && lastError) {
+							yield `\n[Error del proveedor: ${lastError}]`;
 						}
 					}
 
@@ -3681,41 +3709,67 @@ ${prompt || ""}`;
 				const apiKey = auth.ok ? auth.apiKey : undefined;
 				let hasYielded = false;
 				let streamError: string | undefined;
-				try {
-					const streamResult = stream(resolvedModel, pContext, {
-						apiKey,
-						temperature: temp,
-					});
+				const maxRetries = 3;
 
-					for await (const event of streamResult) {
-						if (event.type === "text_delta" && event.delta) {
-							hasYielded = true;
-							agentResponseText += event.delta;
+				for (let attempt = 1; attempt <= maxRetries; attempt++) {
+					streamError = undefined;
+					try {
+						const streamResult = stream(resolvedModel, pContext, {
+							apiKey,
+							temperature: temp,
+						});
 
-							// Repetition Circuit Breaker
-							const loopCheck = self.detectRepetitionLoop(agentResponseText);
-							if (loopCheck.isLooping && loopCheck.pattern) {
-								self.addLog(
-									"WARN",
-									"Pantheon Bridge",
-									`[LLM Caller Circuit Breaker] Repetition loop detected ("${loopCheck.pattern}"). Terminating stream.`,
-								);
-								break;
+						for await (const event of streamResult) {
+							if (event.type === "text_delta" && event.delta) {
+								hasYielded = true;
+								agentResponseText += event.delta;
+
+								// Repetition Circuit Breaker
+								const loopCheck = self.detectRepetitionLoop(agentResponseText);
+								if (loopCheck.isLooping && loopCheck.pattern) {
+									self.addLog(
+										"WARN",
+										"Pantheon Bridge",
+										`[LLM Caller Circuit Breaker] Repetition loop detected ("${loopCheck.pattern}"). Terminating stream.`,
+									);
+									break;
+								}
+
+								yield event.delta;
+							} else if (event.type === "done") {
+								if (event.message?.usage) {
+									if (event.message.usage.input) callPromptTokens = event.message.usage.input;
+									if (event.message.usage.output) callCompletionTokens = event.message.usage.output;
+									if (event.message.usage.cacheRead) callCacheRead = event.message.usage.cacheRead;
+								}
+							} else if (event.type === "error") {
+								streamError = event.error?.errorMessage || "Error en stream del proveedor de IA";
 							}
-
-							yield event.delta;
-						} else if (event.type === "done") {
-							if (event.message?.usage) {
-								if (event.message.usage.input) callPromptTokens = event.message.usage.input;
-								if (event.message.usage.output) callCompletionTokens = event.message.usage.output;
-								if (event.message.usage.cacheRead) callCacheRead = event.message.usage.cacheRead;
-							}
-						} else if (event.type === "error") {
-							streamError = event.error?.errorMessage || "Error en stream del proveedor de IA";
 						}
+					} catch (err: any) {
+						streamError = err.message || String(err);
 					}
-				} catch (err: any) {
-					streamError = err.message || String(err);
+
+					if (hasYielded) {
+						break;
+					}
+
+					const isTransient =
+						streamError &&
+						/503|429|busy|capacity|rate limit|structurally heavy|overloaded|temporarily unavailable/i.test(streamError);
+
+					if (isTransient && attempt < maxRetries) {
+						const delayMs = attempt * 1500;
+						self.addLog(
+							"WARN",
+							"Pantheon Bridge",
+							`[LLM Retry] Proveedor ocupado o capacidad saturada (${streamError}). Reintentando en ${delayMs}ms (intento ${attempt}/${maxRetries})...`,
+						);
+						await new Promise((r) => setTimeout(r, delayMs));
+						continue;
+					}
+
+					break;
 				}
 
 				if (!hasYielded) {
@@ -3730,7 +3784,14 @@ ${prompt || ""}`;
 							if (response.usage.cacheRead) callCacheRead = response.usage.cacheRead;
 						}
 						if (response.stopReason === "error") {
-							yield `\n\n[Error del proveedor de IA: ${response.errorMessage || streamError || "Inferencia fallida"}]`;
+							const finalErrMsg = response.errorMessage || streamError || "Inferencia fallida";
+							const isTransient =
+								/503|429|busy|capacity|rate limit|structurally heavy|overloaded|temporarily unavailable/i.test(finalErrMsg);
+							if (isTransient) {
+								yield `\n\n[Capacidad del proveedor temporalmente ocupada (503 / Alta demanda). Se reintentó automáticamente 3 veces sin éxito. Por favor espera unos instantes antes de enviar la siguiente instrucción o reduce el alcance de la tarea.]`;
+							} else {
+								yield `\n\n[Error del proveedor de IA: ${finalErrMsg}]`;
+							}
 						} else {
 							for (const part of response.content) {
 								if (part.type === "text" && part.text) {
@@ -3744,7 +3805,8 @@ ${prompt || ""}`;
 							}
 						}
 					} catch (fallbackErr: any) {
-						yield `\n\n[Error al invocar modelo: ${fallbackErr.message || streamError || String(fallbackErr)}]`;
+						const finalErrMsg = fallbackErr.message || streamError || String(fallbackErr);
+						yield `\n\n[Error al invocar modelo: ${finalErrMsg}]`;
 					}
 				}
 

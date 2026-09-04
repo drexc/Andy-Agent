@@ -1337,7 +1337,7 @@ export class PantheonOrchestrator {
 			};
 
 			scanDir(targetCwd);
-			fileList = scanned.slice(0, 200).join("\n");
+			fileList = scanned.slice(0, 80).join("\n");
 			if (scanned.length === 0) {
 				fileList = "(Directorio vacío o recién inicializado)";
 			}
@@ -1345,11 +1345,11 @@ export class PantheonOrchestrator {
 			// Read key manifest files
 			if (manifestFiles.length > 0) {
 				const manifests: string[] = [];
-				for (const mf of manifestFiles.slice(0, 5)) {
+				for (const mf of manifestFiles.slice(0, 3)) {
 					try {
 						const rel = path.relative(targetCwd, mf).replace(/\\/g, "/");
 						const content = readFileSync(mf, "utf-8").trim();
-						manifests.push(`### 📦 ${rel}\n\`\`\`xml\n${content.slice(0, 2000)}\n\`\`\``);
+						manifests.push(`### 📦 ${rel}\n\`\`\`xml\n${content.slice(0, 1000)}\n\`\`\``);
 					} catch {}
 				}
 				manifestSummary = manifests.join("\n\n");
@@ -1357,14 +1357,19 @@ export class PantheonOrchestrator {
 
 			// Extract public interfaces, models, classes and documentation
 			const snippets: string[] = [];
+			let currentSnippetsChars = 0;
+			const MAX_SNIPPETS_CHARS = 30000; // Strict budget (~7,500 tokens) to avoid OmniRoute 503 "Structurally heavy" load shedding
 
 			// 1. Decode Excel / protocol documentation files
 			if (docFiles.length > 0) {
-				for (const df of docFiles.slice(0, 3)) {
+				for (const df of docFiles.slice(0, 2)) {
+					if (currentSnippetsChars >= MAX_SNIPPETS_CHARS) break;
 					try {
 						const xlsxText = await this.extractXlsxText(df);
 						if (xlsxText) {
-							snippets.push(xlsxText);
+							const snippet = xlsxText.slice(0, 5000);
+							snippets.push(snippet);
+							currentSnippetsChars += snippet.length;
 						}
 					} catch {}
 				}
@@ -1387,15 +1392,18 @@ export class PantheonOrchestrator {
 			});
 
 			if (sourceFiles.length > 0) {
-				for (const sf of sourceFiles.slice(0, 40)) {
+				for (const sf of sourceFiles.slice(0, 15)) {
+					if (currentSnippetsChars >= MAX_SNIPPETS_CHARS) break;
 					try {
 						const rel = path.relative(targetCwd, sf).replace(/\\/g, "/");
 						const content = readFileSync(sf, "utf-8");
 						const ext = path.extname(sf).slice(1) || "cs";
 
-						// If file is small (< 15KB), include full content for complete context
-						if (content.length <= 15000) {
-							snippets.push(`### 🔍 ${rel} (Código Completo):\n\`\`\`${ext}\n${content}\n\`\`\``);
+						// If file is small (< 4KB), include full content for context
+						if (content.length <= 4000) {
+							const snippet = `### 🔍 ${rel} (Código Completo):\n\`\`\`${ext}\n${content}\n\`\`\``;
+							snippets.push(snippet);
+							currentSnippetsChars += snippet.length;
 						} else {
 							// For larger files, extract declarations, signatures, public methods, events, properties, and constants
 							const lines = content.split(/\r?\n/);
@@ -1410,13 +1418,13 @@ export class PantheonOrchestrator {
 									/namespace\s+|using\s+/i.test(l),
 							);
 							if (relevantLines.length > 0) {
-								snippets.push(
-									`### 🔍 ${rel} (Estructura/Signaturas públicas, constantes de protocolo y eventos):\n\`\`\`${ext}\n${relevantLines.slice(0, 180).join("\n")}\n\`\`\``,
-								);
+								const snippet = `### 🔍 ${rel} (Estructura/Signaturas públicas y constantes):\n\`\`\`${ext}\n${relevantLines.slice(0, 60).join("\n")}\n\`\`\``;
+								snippets.push(snippet);
+								currentSnippetsChars += snippet.length;
 							} else {
-								snippets.push(
-									`### 🔍 ${rel} (Muestra inicial):\n\`\`\`${ext}\n${content.slice(0, 4000)}\n\`\`\``,
-								);
+								const snippet = `### 🔍 ${rel} (Muestra inicial):\n\`\`\`${ext}\n${content.slice(0, 1500)}\n\`\`\``;
+								snippets.push(snippet);
+								currentSnippetsChars += snippet.length;
 							}
 						}
 					} catch {}
