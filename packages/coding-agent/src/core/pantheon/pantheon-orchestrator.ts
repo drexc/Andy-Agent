@@ -341,15 +341,29 @@ export class PantheonOrchestrator {
 			// Map common role aliases if not matched by exact name
 			if (!found) {
 				if (/developer|coder|programador|dev|backend|frontend/i.test(mentionedName)) {
-					found = this.registry.getAgent("hephaestus");
+					found = squad.memberIds.includes("developer")
+						? this.registry.getAgent("developer")
+						: this.registry.getAgent("hephaestus");
 				} else if (/architect|arquitecto|designer/i.test(mentionedName)) {
-					found = this.registry.getAgent("athena");
-				} else if (/tester|auditor|qa|refactorer|devops|quality/i.test(mentionedName)) {
-					found = this.registry.getAgent("argos");
+					found = squad.memberIds.includes("architect")
+						? this.registry.getAgent("architect")
+						: this.registry.getAgent("athena");
+				} else if (/tester|auditor|qa|quality/i.test(mentionedName)) {
+					found = squad.memberIds.includes("tester")
+						? this.registry.getAgent("tester")
+						: this.registry.getAgent("argos");
+				} else if (/refactorer|refactor/i.test(mentionedName)) {
+					found = this.registry.getAgent("refactorer");
+				} else if (/devops|ops|deployment/i.test(mentionedName)) {
+					found = this.registry.getAgent("devops");
+				} else if (/debugger|debug/i.test(mentionedName)) {
+					found = this.registry.getAgent("debugger");
 				} else if (/researcher|investigador|search/i.test(mentionedName)) {
 					found = this.registry.getAgent("pythia");
 				} else if (/leader|lider|orchestrator/i.test(mentionedName)) {
-					found = this.registry.getAgent("hermes");
+					found = squad.memberIds.includes("architect")
+						? this.registry.getAgent("architect")
+						: this.registry.getAgent("hermes");
 				}
 			}
 			if (found) targetAgentId = found.id;

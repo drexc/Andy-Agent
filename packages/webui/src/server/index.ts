@@ -4087,7 +4087,10 @@ ${prompt || ""}`;
 						const toolCallId = `call_${randomUUID().slice(0, 9)}`;
 						const argsJson = JSON.stringify({
 							question: detectedQ.question,
-							follow_up: detectedQ.options,
+							follow_up: (detectedQ.options || []).map((o: any) => ({
+								text: typeof o === "string" ? o : o.text,
+								mode: null,
+							})),
 						});
 						toolCallsEmitted.push({
 							id: toolCallId,
@@ -4124,8 +4127,110 @@ ${prompt || ""}`;
 								],
 							})}\n\n`,
 						);
+					} else if (Array.isArray(body?.tools) && body.tools.length > 0) {
+						// Autonomous agent loops (e.g. Andy Code / Cline / Roo Code) require at least one tool call per turn.
+						// If the multi-agent squad finished without writing files or asking a question, emit attempt_completion.
+						const clientTools: any[] = body.tools;
+						const hasTool = (name: string) =>
+							clientTools.some((t: any) => t?.function?.name === name || t?.name === name);
+
+						if (hasTool("attempt_completion")) {
+							const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+							const trimmed = accumulatedFullText.trim();
+							const completionResult =
+								trimmed.length > 500
+									? `Intervención del escuadrón (${returnedModel}) completada. Revisa el análisis y detalles generados arriba.`
+									: trimmed || "Intervención del escuadrón completada con éxito.";
+
+							const argsJson = JSON.stringify({
+								result: completionResult,
+							});
+
+							toolCallsEmitted.push({
+								id: toolCallId,
+								type: "function",
+								function: {
+									name: "attempt_completion",
+									arguments: argsJson,
+								},
+							});
+
+							res.write(
+								`data: ${JSON.stringify({
+									id: reqId,
+									object: "chat.completion.chunk",
+									created: Math.floor(Date.now() / 1000),
+									model: returnedModel,
+									choices: [
+										{
+											index: 0,
+											delta: {
+												tool_calls: [
+													{
+													index: 0,
+													id: toolCallId,
+													type: "function",
+													function: {
+														name: "attempt_completion",
+														arguments: argsJson,
+													},
+												},
+											],
+										},
+										finish_reason: null,
+									},
+								],
+							})}\n\n`,
+						);
+					} else if (hasTool("ask_followup_question")) {
+						const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+						const argsJson = JSON.stringify({
+							question: "El escuadrón ha completado este turno. ¿Cómo deseas continuar?",
+							follow_up: [
+								{ text: "Continuar con el siguiente paso", mode: null },
+								{ text: "Dar instrucciones adicionales", mode: null },
+							],
+						});
+
+						toolCallsEmitted.push({
+							id: toolCallId,
+							type: "function",
+							function: {
+								name: "ask_followup_question",
+								arguments: argsJson,
+							},
+						});
+
+						res.write(
+							`data: ${JSON.stringify({
+								id: reqId,
+								object: "chat.completion.chunk",
+								created: Math.floor(Date.now() / 1000),
+								model: returnedModel,
+								choices: [
+									{
+										index: 0,
+										delta: {
+											tool_calls: [
+												{
+													index: 0,
+													id: toolCallId,
+													type: "function",
+													function: {
+														name: "ask_followup_question",
+														arguments: argsJson,
+													},
+												},
+											],
+										},
+										finish_reason: null,
+									},
+								],
+							})}\n\n`,
+						);
 					}
 				}
+			}
 
 				// Context window usage must reflect the active turn prompt size (not cumulative internal sub-agent loops)
 				const finalPromptTokens = Math.max(1, Math.ceil((prompt.length + 800) / 3.8));
@@ -4240,6 +4345,34 @@ ${prompt || ""}`;
 							}
 						} else if (event.type === "agent_finish") {
 							accumulatedFullText += "\n";
+						} else if ((event as any).type === "todo_update") {
+							const tu = event as any;
+							const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+							toolCallsEmitted.push({
+								id: toolCallId,
+								type: "function",
+								function: {
+									name: "update_todo_list",
+									arguments: JSON.stringify({ todos: tu.todos }),
+								},
+							});
+						} else if ((event as any).type === "user_question") {
+							const uq = event as any;
+							const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+							toolCallsEmitted.push({
+								id: toolCallId,
+								type: "function",
+								function: {
+									name: "ask_followup_question",
+									arguments: JSON.stringify({
+										question: uq.question || "Acción necesaria por usuario",
+										follow_up: (uq.options || []).map((o: any) => ({
+											text: typeof o === "string" ? o : o.text,
+											mode: null,
+										})),
+									}),
+								},
+							});
 						}
 					},
 					{
@@ -4250,6 +4383,66 @@ ${prompt || ""}`;
 				);
 			} catch (err: any) {
 				accumulatedFullText += `\n\n[Error en escuadrón: ${err.message}]`;
+			}
+
+			// Fallback safety check for non-streaming: check if user action or tool call is required
+			if (toolCallsEmitted.length === 0) {
+				const detectedQ = (pantheonOrchestrator as any).detectUserActionRequired(accumulatedFullText);
+				if (detectedQ) {
+					const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+					toolCallsEmitted.push({
+						id: toolCallId,
+						type: "function",
+						function: {
+							name: "ask_followup_question",
+							arguments: JSON.stringify({
+								question: detectedQ.question,
+								follow_up: (detectedQ.options || []).map((o: any) => ({
+									text: typeof o === "string" ? o : o.text,
+									mode: null,
+								})),
+							}),
+						},
+					});
+				} else if (Array.isArray(body?.tools) && body.tools.length > 0) {
+					const clientTools: any[] = body.tools;
+					const hasTool = (name: string) =>
+						clientTools.some((t: any) => t?.function?.name === name || t?.name === name);
+
+					if (hasTool("attempt_completion")) {
+						const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+						const trimmed = accumulatedFullText.trim();
+						const completionResult =
+							trimmed.length > 500
+								? `Intervención del escuadrón (${returnedModel}) completada. Revisa el análisis y detalles generados arriba.`
+								: trimmed || "Intervención del escuadrón completada con éxito.";
+
+						toolCallsEmitted.push({
+							id: toolCallId,
+							type: "function",
+							function: {
+								name: "attempt_completion",
+								arguments: JSON.stringify({ result: completionResult }),
+							},
+						});
+					} else if (hasTool("ask_followup_question")) {
+						const toolCallId = `call_${randomUUID().slice(0, 9)}`;
+						toolCallsEmitted.push({
+							id: toolCallId,
+							type: "function",
+							function: {
+								name: "ask_followup_question",
+								arguments: JSON.stringify({
+									question: "El escuadrón ha completado este turno. ¿Cómo deseas continuar?",
+									follow_up: [
+										{ text: "Continuar con el siguiente paso", mode: null },
+										{ text: "Dar instrucciones adicionales", mode: null },
+									],
+								}),
+							},
+						});
+					}
+				}
 			}
 
 			const finalPromptTokens =
